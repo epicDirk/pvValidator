@@ -1,3 +1,37 @@
 # pvValidator
 
-Tool to validate PVs
+Tool to validate EPICS PVs
+
+Requirements: 
+- python (v 3 preferred)
+- c++
+- swig ( http://www.swig.org )
+- EPICS 7
+
+Compilation:
+Source your EPICS environment then do
+`make`
+`make install`
+
+It will do a local installation of the python modules.
+
+Then you can run the CLI **pvValidator.py**
+```
+> pvValidator.py -h
+usage: pvValidator.py [-h] [-V] (-d | -s IOCSERVER | -i PVFILE) [-o CSVFILE]
+                      [--noapi]
+
+EPICS PV Validation Tool
+
+optional arguments:
+  -h, --help                        show this help message and exit
+  -V, --version                     print version and exit
+  -d, --discover                    discover IOC Servers and exit
+  -s IOCSERVER, --server IOCSERVER  IOC server IP or GUID to get PV list
+                                    (online validation)
+  -i PVFILE, --inpvfile PVFILE      input PV list file (offline validation)
+  -o CSVFILE, --outcsvfile CSVFILE  write Validation Table direclty on csv
+                                    file (do not start interactive session)
+  --noapi                           check only PV format and rules, skip
+                                    connection to Naming Service
+```
