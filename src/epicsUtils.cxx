@@ -155,6 +155,7 @@ string epicsUtils::getServerList(){
 }
 
 string epicsUtils::HasAlias(string pv){
+    /*
     pvac::ClientProvider provider("pva");
     pvac::ClientChannel channel(provider.connect(pv+".NAME$"));
     stringstream pvstream;
@@ -171,8 +172,9 @@ string epicsUtils::HasAlias(string pv){
         pvout << ((char)stoi(token)) ;    
     if (pv != pvout.str())
         return pvout.str();
-    else
+    else*/
         return "";
+        
 }
 
 
