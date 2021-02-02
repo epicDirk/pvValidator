@@ -3,7 +3,7 @@
 Tool to validate EPICS PVs
 
 **Requirements**: 
-- python develop tool (v 3 preferred)
+- python development tool (python3-dev preferred)
 - c++
 - swig ( http://www.swig.org )
 - EPICS 7
