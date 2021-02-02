@@ -2,14 +2,14 @@
 
 Tool to validate EPICS PVs
 
-Requirements: 
+**Requirements**: 
 - python (v 3 preferred)
 - c++
 - swig ( http://www.swig.org )
 - EPICS 7
 
-Compilation:
-Source your EPICS environment then do
+**Compilation**:
+- Source your EPICS environment then do
 `make` and 
 `make install`
 
