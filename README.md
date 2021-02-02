@@ -10,7 +10,7 @@ Requirements:
 
 Compilation:
 Source your EPICS environment then do
-`make`
+`make` and 
 `make install`
 
 It will do a local installation of the python modules.
