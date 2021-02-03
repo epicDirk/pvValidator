@@ -9,6 +9,7 @@ Tool to validate EPICS PVs
 - EPICS 7
 
 **Compilation**:
+- Export PYBINDPATH env variable to the python binding include path (e.g. export PYBINDPATH=/usr/include/pythonXXX)
 - Source your EPICS environment then do
 `make` and 
 `make install`
