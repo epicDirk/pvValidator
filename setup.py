@@ -10,7 +10,7 @@ setup(name="pvValidatorUtils",
       author_email='alfio.rizzo@ess.eu',
       license='GPL',
       platforms = ['Linux','WSL'],
-      scripts=['bin/pvValidator.py']
+      scripts=['bin/pvValidator.py'],
       install_requires=['requests']
 )
 
