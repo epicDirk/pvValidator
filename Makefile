@@ -2,22 +2,24 @@ EPICS=$(EPICS_BASE)
 ARCH=$(EPICS_HOST_ARCH)
 CMOD=epicsUtils
 MOD = pvValidatorUtils
-INCPY2 = -I/usr/include/python2.7
-INCPY3 = -I/usr/include/python3.7
+PYBIND = $(PYBINDPATH)
+
 SRC = src
 LIB = lib
 
 EPICSINC = -I$(EPICS)/include -I$(EPICS)/include/compiler/gcc -I$(EPICS)/include/pv\
  -I$(EPICS)/include/os/Linux -I$(SRC)  
 
+INC = $(EPICSINC) -I$(PYBIND)
 
-ifdef PY2
-    INC = $(EPICSINC) $(INCPY2)
-    PY = python2
-else
-    INC = $(EPICSINC) $(INCPY3)
-    PY = python
+ifeq ($(findstring python2,$(PYBIND)),python2)
+	PY = python2
 endif
+
+ifeq ($(findstring python3,$(PYBIND)),python3)
+	PY = python3
+endif
+
 
 LPATH= $(EPICS)/lib/$(ARCH)
 ELIBS = -L$(LPATH) -lpvAccessCA -lpvAccess -lpvData -lca -lCom
