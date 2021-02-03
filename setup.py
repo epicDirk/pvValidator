@@ -11,5 +11,6 @@ setup(name="pvValidatorUtils",
       license='GPL',
       platforms = ['Linux','WSL'],
       scripts=['bin/pvValidator.py']
+      install_requires=['requests']
 )
 
