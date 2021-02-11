@@ -1,4 +1,4 @@
-# pvValidator
+# pvValidator.py
 
 Tool to validate EPICS PVs
 
