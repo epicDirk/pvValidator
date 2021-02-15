@@ -1,13 +1,22 @@
 import sys
 import requests
 from . import tabview
+from . import epicsUtils
 import itertools
-import pkg_resources
-version =  pkg_resources.require("pvValidatorUtils")[0].version
+from pkg_resources import get_distribution
+from email import message_from_string
 import csv
 
 class pvUtils:
     def __init__(self,pvepics,checkonlyfmt,pvfile,csvfile):
+        self.version = get_distribution("pvValidatorUtils").version
+        pkginfo = get_distribution("pvValidatorUtils").get_metadata("PKG-INFO")
+        meta = message_from_string(pkginfo)
+        self.author = meta.get("Author")
+        self.email = meta.get("Author-email")
+        self.license = meta.get("License")
+        self.platform = meta.get_all("Platform")
+        self.epicsinfo = epicsUtils().getVersion
         self.pvepics = pvepics
         self.checkonlyfmt = checkonlyfmt
         self.pvfile = pvfile
@@ -24,7 +33,7 @@ class pvUtils:
         self.sumtitle = "PV Summary"
         self.ioctitle = "Validation Summary"
         self.data = []
-        self.Title = "pvValidator %s" % version
+        self.Title = "pvValidator %s" % self.version
         self.Widths = [6,9,10,6,6,25,60,30]
         self.headers = {'accept': 'application/json'}
         self.urlparts = "https://naming.esss.lu.se/rest/parts/mnemonic/"
@@ -84,7 +93,7 @@ class pvUtils:
                 comm = "OK Format, Rule Fail"
                 self.PVRuleFail +=1
             elif ( self.VFormD[pv] and self.VRuleD[pv] and self.checkonlyfmt):
-                comm = "OK Format, Ok Rule"
+                comm = "OK Format, OK Rule"
             elif ( self.VFormD[pv] and self.VRuleD[pv] and ((not self.checkonlyfmt) and self.VNameD[pv])):
                 comm = "VALID"
             elif ( self.VFormD[pv] and self.VRuleD[pv] and ((not self.checkonlyfmt) and (not self.VNameD[pv]))):
@@ -109,12 +118,19 @@ class pvUtils:
 
         if (self.checkonlyfmt):
             Info += "The Validation through Naming Service was skipped\n"
-            Info += "The Total PVs are = %i\nThe PVs Not Valid are = %i (wrong format)\nThe PVs Rule Fail are = %i\nThe PVs Internal are=%i\n" %( self.PVTot,self.PVNotValid,self.PVRuleFail,self.PVInternal )
+            Info += "The Total PVs are = %i\nThe PVs Not Valid are = %i (wrong format)\nThe PVs Rule Fail are = %i\nThe PVs Internal are = %i\n" %( self.PVTot,self.PVNotValid,self.PVRuleFail,self.PVInternal )
         else:
-            Info += "The Total PVs are = %i\nThe PVs Not Valid are = %i\nThe PVs Internal are=%i\n" %( self.PVTot,self.PVNotValid,self.PVInternal )
+            Info += "The Total PVs are = %i\nThe PVs Not Valid are = %i\nThe PVs Internal are = %i\n" %( self.PVTot,self.PVNotValid,self.PVInternal )
         
         i = self._GetDataInfo()
-        Readme = "pvValidator"
+        Readme = "pvValidator %s\n" % self.version
+        Readme += "Author: %s\n" % self.author
+        Readme += "Author email: %s\n" % self.email
+        Readme += "Platform: %s\n" % self.platform
+        Readme += "%s\n" % self.epicsinfo
+        Readme += "pvValidator is an EPICS PV validation tool based on the \"ESS RULES FOR EPICS PV PROPERTY\" document (ESS-XXXXXXX)\n"
+        Readme += "pvValidator is realeased under the %s license (ESS - 2021)\n" %self.license
+        
         if (self.csvfile == None):
             tabview.view(self.data,info=Info,Title=self.Title,column_widths=self.Widths,datainfo=i,sumtitle=self.sumtitle,ioctitle=self.ioctitle,readme=Readme)
         else:
@@ -162,15 +178,54 @@ class pvUtils:
     def _CheckPropRules(self):
         PVErrList = []
         PVWarnList = []
+        errs = "Error: The PV Property is not unique" 
         for dev,plist in self.PVDict.items():
             for p1,p2 in itertools.combinations(plist, 2):
+                pv1 = dev+":"+p1
+                pv2 = dev+":"+p2
                 if p1.lower() == p2.lower():
-                    pv1 = dev+":"+p1
-                    pv2 = dev+":"+p2
-                    self.datainfo[pv1] += "Error: The PV Property is not unique (check %s)\n" % pv2
-                    self.datainfo[pv2] += "Error: The PV Property is not unique (check %s)\n" % pv1
+                    self.datainfo[pv1] += "%s (case issue, check %s)\n" % (errs,pv2)
+                    self.datainfo[pv2] += "%s (case issue, check %s)\n" % (errs,pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
+                if p1 == p2.replace("O","0") or p1== p2.replace("0","O"):
+                    self.datainfo[pv1] += "%s (0 O issue, check %s)\n" % (errs,pv2)
+                    self.datainfo[pv2] += "%s (0 O issue, check %s)\n" % (errs,pv1)
+                    PVErrList.append(pv1)
+                    PVErrList.append(pv2)
+                if p1 == p2.replace("VV","W") or p1== p2.replace("W","VV"):
+                    self.datainfo[pv1] += "%s (VV W issue, check %s)\n" % (errs,pv2)
+                    self.datainfo[pv2] += "%s (VV W issue, check %s)\n" % (errs,pv1)
+                    PVErrList.append(pv1)
+                    PVErrList.append(pv2)
+                if p1 == p2.replace("1","I") or p1== p2.replace("I","1"):
+                    self.datainfo[pv1] += "%s (1 I issue, check %s)\n" % (errs,pv2)
+                    self.datainfo[pv2] += "%s (1 I issue, check %s)\n" % (errs,pv1)
+                    PVErrList.append(pv1)
+                    PVErrList.append(pv2)
+                
+                if p1 == p2.replace("1","l") or p1== p2.replace("l","1"):
+                    self.datainfo[pv1] += "%s (1 l issue, check %s)\n" % (errs,pv2)
+                    self.datainfo[pv2] += "%s (1 l issue, check %s)\n" % (errs,pv1)
+                    PVErrList.append(pv1)
+                    PVErrList.append(pv2)
+
+                if p1 == p2.replace("I","l") or p1== p2.replace("l","I"):
+                    self.datainfo[pv1] += "%s (l I issue, check %s)\n" % (errs,pv2)
+                    self.datainfo[pv2] += "%s (l I issue, check %s)\n" % (errs,pv1)
+                    PVErrList.append(pv1)
+                    PVErrList.append(pv2)
+
+                if (p1.find("0") ==  p2.find("0")) and (p1.find("0") !=-1):
+                    if (p1.endswith("0") and p2.endswith("0")) or (not p1.endswith("0") and not p2.endswith("0")):
+                        if p1.replace("0","") == p2.replace("0",""):
+                            self.datainfo[pv1] += "%s (leading zero issue, check %s)\n" % (errs,pv2)
+                            self.datainfo[pv2] += "%s (leading zero issue, check %s)\n" % (errs,pv1)
+                            PVErrList.append(pv1)
+                            PVErrList.append(pv2)
+ 
+                
+
             for prop in plist:
                 
                 
@@ -207,7 +262,9 @@ class pvUtils:
                 if prop[0].isdigit() or (prop[0] in self.charnotallow) or (prop[0] == "_") or (prop[0]=="-"):
                     self.datainfo[pv] += "Error: The PV Property does not start alphabetical\n"
                     PVErrList.append(pv)
-
+                if prop[0].islower():
+                    self.datainfo[pv] += "Warning: The PV Property does nost start in upper case\n"
+                    PVWarnList.append(pv)
         
         
         for dev,plist in self.PVDict.items():

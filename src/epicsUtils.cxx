@@ -631,9 +631,10 @@ epicsUtils::epicsUtils(){
                     EPICS_PVD_DEVELOPMENT_FLAG);
     
 
-    ss << pvaver.getVersionString() << " ; ";
-    ss << pvdver.getVersionString() << " ; ";
-    ss << "Epics Version "<< EPICS_VERSION_FULL;
+    ss << "Compiled with EPICS:\n\t"<< EPICS_VERSION_FULL << "\n";
+    ss << "\t" << pvaver.getVersionString() << "\n";
+    ss << "\t" << pvdver.getVersionString() << "\n";
+
     
     getVersion = ss.str();
     
