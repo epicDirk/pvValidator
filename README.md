@@ -1,9 +1,9 @@
-# pvValidator
+# pvValidator.py
 
 Tool to validate EPICS PVs
 
 **Requirements**: 
-- python 2 or 3 development tool (`python3-dev` preferred)
+- python 2 or 3 development tool ( `python(3)-dev(el)` ) 
 - c++
 - swig ( http://www.swig.org ), you can install it via `apt` (debian/ubuntu) or `dnf/yum` (fedora/centos)
 - EPICS 7
