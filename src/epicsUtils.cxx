@@ -14,16 +14,16 @@ const char epicsUtils::lookup[16] = {
 epicsUtils::epicsUtils(bool servdisc){
     timeOut = 3.0;
     SET_LOG_LEVEL(logLevelError);
-    
+
     if ( servdisc ) {
         discoverServers(timeOut);
-        stringstream ss;       
+        stringstream ss;
         for (ServerMap::const_iterator iter = serverMap.begin();
                 iter != serverMap.end();
                 iter++)
         {
-                
-                
+
+
             const ServerEntry& entry = iter->second;
 
             ss << "GUID 0x" << entry.guid << " version " << (int)entry.version << ": "
@@ -37,8 +37,8 @@ epicsUtils::epicsUtils(bool servdisc){
                     ss << " ";
             }
             ss << " ]\n" ;
-                
-                
+
+
         }
         serverlist = ss.str();
         if (serverlist.length() == 0)
@@ -50,7 +50,7 @@ epicsUtils::epicsUtils(bool servdisc){
 
 epicsUtils::epicsUtils(string serverAddress){
     timeOut = 3.0;
-    SET_LOG_LEVEL(logLevelError); 
+    SET_LOG_LEVEL(logLevelError);
 
     if (serverAddress.length() == 0) {
         cerr << "Error: The server cannot be empty string" << endl;
@@ -64,13 +64,13 @@ epicsUtils::epicsUtils(string serverAddress){
         byGUIDSearch = true;
     else
         byGUIDSearch = false;
-    
-    
+
+
     if ( byGUIDSearch )
         discoverServers(timeOut);
-    
+
            // by GUID search
-        
+
     if (byGUIDSearch)
     {
             bool resolved = false;
@@ -87,7 +87,7 @@ epicsUtils::epicsUtils(string serverAddress){
                         // TODO for now we take only first server address
                         serverAddress = inetAddressToString(entry.addresses[0]);
                         resolved = true;
-                        
+
                 }
             }
 
@@ -97,7 +97,7 @@ epicsUtils::epicsUtils(string serverAddress){
                 _Exit(10);
             }
     }
-        
+
     StructureConstPtr argstype(getFieldCreate()->createFieldBuilder()
                                        ->setId("epics:nt/NTURI:1.0")
                                        ->add("scheme", pvString)
@@ -113,7 +113,7 @@ epicsUtils::epicsUtils(string serverAddress){
     args->getSubFieldT<PVString>("path")->put("server");
     args->getSubFieldT<PVString>("query.op")->put("channels");
 
-        
+
 
     PVStructure::shared_pointer ret;
     try {
@@ -122,30 +122,30 @@ epicsUtils::epicsUtils(string serverAddress){
                           ChannelProvider::shared_pointer(),
                           serverAddress);
 
-            
+
             ret = rpc.request(args, timeOut, true);
         } catch(std::exception& e) {
             std::cerr<<"Error: "<<e.what()<<"\n";
-            
+
             _Exit(10);
     }
 
-        
-        
+
+
     PVStringArray::shared_pointer pvs(ret->getSubField<PVStringArray>("value"));
 
     PVStringArray::const_svector val(pvs->view());
 
-        
-        
-    std::copy(val.begin(),val.end(),std::back_inserter(pvstringlist));
-        
-            
 
-      
-        
-    
-        
+
+    std::copy(val.begin(),val.end(),std::back_inserter(pvstringlist));
+
+
+
+
+
+
+
 
 
 };
@@ -168,13 +168,13 @@ string epicsUtils::HasAlias(string pv){
     stringstream pvout;
     string token;
     stringstream instream(pvstr);
-    while (getline(instream, token, ',')) 
-        pvout << ((char)stoi(token)) ;    
+    while (getline(instream, token, ','))
+        pvout << ((char)stoi(token)) ;
     if (pv != pvout.str())
         return pvout.str();
     else*/
         return "";
-        
+
 }
 
 
@@ -629,17 +629,15 @@ epicsUtils::epicsUtils(){
                     EPICS_PVD_MINOR_VERSION,
                     EPICS_PVD_MAINTENANCE_VERSION,
                     EPICS_PVD_DEVELOPMENT_FLAG);
-    
+
 
     ss << "Compiled with EPICS:\n\t"<< EPICS_VERSION_FULL << "\n";
     ss << "\t" << pvaver.getVersionString() << "\n";
     ss << "\t" << pvdver.getVersionString() << "\n";
 
-    
+
     getVersion = ss.str();
-    
-       
+
+
 
 };
-
-

@@ -16,7 +16,7 @@ namespace epics{
 
     }
     namespace pvAccess{
-        
+
     }
 }
 
@@ -27,4 +27,3 @@ namespace epics{
 %}
 
 %include "epicsUtils.h"
-

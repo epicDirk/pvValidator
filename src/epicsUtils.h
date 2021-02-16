@@ -62,7 +62,7 @@ class epicsUtils {
         string serverlist;
         string getServerList();
         string getVersion;
-        string getAddress;  
+        string getAddress;
     private:
 #if defined(_WIN32) && !defined(_MINGW)
         FILE *popen(const char*, const char *);
@@ -78,12 +78,9 @@ class epicsUtils {
         bool discoverServers(double );
         bool byGUIDSearch;
         double timeOut ;
-        
-              
 
-        
+
+
+
 
 };
-
-
-

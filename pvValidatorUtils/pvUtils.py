@@ -1,11 +1,12 @@
-import sys
-import requests
-from . import tabview
-from . import epicsUtils
-import itertools
-from pkg_resources import get_distribution
-from email import message_from_string
 import csv
+import itertools
+import sys
+from email import message_from_string
+
+import requests
+from pkg_resources import get_distribution
+
+from . import epicsUtils, tabview
 
 
 class pvUtils:
