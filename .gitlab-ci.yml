@@ -1,0 +1,10 @@
+---
+include:
+  - 'https://gitlab.esss.lu.se/ics-infrastructure/gitlab-ci-yml/raw/master/PreCommit.gitlab-ci.yml'
+  - 'https://gitlab.esss.lu.se/ics-infrastructure/gitlab-ci-yml/raw/master/ArtifactoryPyPI.gitlab-ci.yml'
+
+stages:
+  - check
+  - build
+  - test
+  - release
