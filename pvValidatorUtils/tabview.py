@@ -19,8 +19,6 @@ from curses.textpad import Textbox
 from operator import itemgetter
 from textwrap import wrap
 
-# import shlex
-
 
 class ReloadException(Exception):
     def __init__(self, start_pos, column_width, column_gap, column_widths, search_str):
