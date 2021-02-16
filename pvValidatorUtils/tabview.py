@@ -9,7 +9,7 @@ import _curses
 import curses
 import curses.ascii
 import locale
-import io
+#import io
 import os
 import re
 import string
@@ -19,7 +19,7 @@ from curses.textpad import Textbox
 from operator import itemgetter
 from textwrap import wrap
 import unicodedata
-import shlex
+#import shlex
 
 
 
@@ -319,7 +319,7 @@ class Viewer:
         xp = self.x + self.win_x
         d = self.data[yp][6]
 
-        if self.datainfo !=None:
+        if (self.datainfo is not None):
             s = "\n"+self.datainfo[d]
         else:
             return
@@ -704,8 +704,6 @@ class Viewer:
                      '+': self.column_gap_up,
                      '<': self.column_width_all_down,
                      '>': self.column_width_all_up,
-                     #',': self.column_width_down,
-                     #'.': self.column_width_up,
                      'a': self.sort_by_column_natural,
                      'A': self.sort_by_column_natural_reverse,
                      '#': self.sort_by_column_numeric,
@@ -958,7 +956,7 @@ class Viewer:
             it.append(j)
         
             for y in range(0, len(self.data)):
-                yc = y + self.header_offset
+                #yc = y + self.header_offset
                 j = []
                 for x in range(0, self.num_data_columns):
                     
