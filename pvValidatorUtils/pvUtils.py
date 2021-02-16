@@ -21,11 +21,11 @@ class pvUtils:
         self.checkonlyfmt = checkonlyfmt
         self.pvfile = pvfile
         self.csvfile = csvfile
-        if (pvfile !=None):
+        if (pvfile is not None):
             with open(pvfile,'r') as pvf:
                 Lines = pvf.readlines()
-            for l in Lines:
-                self.pvepics.pvstringlist.push_back(l.strip())
+            for lin in Lines:
+                self.pvepics.pvstringlist.push_back(lin.strip())
         
         self.pvlist = self.pvepics.pvstringlist
         self.address = self.pvepics.getAddress
@@ -131,7 +131,7 @@ class pvUtils:
         Readme += "pvValidator is an EPICS PV validation tool based on the \"ESS RULES FOR EPICS PV PROPERTY\" document (ESS-XXXXXXX)\n"
         Readme += "pvValidator is realeased under the %s license (ESS - 2021)\n" %self.license
         
-        if (self.csvfile == None):
+        if (self.csvfile is None):
             tabview.view(self.data,info=Info,Title=self.Title,column_widths=self.Widths,datainfo=i,sumtitle=self.sumtitle,ioctitle=self.ioctitle,readme=Readme)
         else:
             self.data[0].append(self.sumtitle)
