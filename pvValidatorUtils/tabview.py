@@ -9,7 +9,8 @@ import _curses
 import curses
 import curses.ascii
 import locale
-#import io
+
+# import io
 import os
 import re
 import string
@@ -19,20 +20,12 @@ from curses.textpad import Textbox
 from operator import itemgetter
 from textwrap import wrap
 import unicodedata
-#import shlex
 
-
-
-
-
-
-
-
+# import shlex
 
 
 class ReloadException(Exception):
-    def __init__(self, start_pos, column_width, column_gap, column_widths,
-                 search_str):
+    def __init__(self, start_pos, column_width, column_gap, column_widths, search_str):
         self.start_pos = start_pos
         self.column_width_mode = column_width
         self.column_gap = column_gap
@@ -53,24 +46,24 @@ class Viewer:
             start_pos, column_width, column_gap, trunc_char, column_widths,
             search_str, double_width
     """
+
     def __init__(self, *args, **kwargs):
         # Fix for python curses resize bug:
         # http://bugs.python.org/issue2675
-        os.unsetenv('LINES')
-        os.unsetenv('COLUMNS')
+        os.unsetenv("LINES")
+        os.unsetenv("COLUMNS")
         self.scr = args[0]
         self.data = [[str(j) for j in i] for i in args[1]]
-        self.info = kwargs.get('info')
+        self.info = kwargs.get("info")
         self.header_offset_orig = 7
         self.header = self.data[0]
-        self.Title = kwargs.get('Title')
-        self.datainfo = kwargs.get('datainfo')
-        self.summarytitle = kwargs.get('sumtitle')
-        self.ioctitle = kwargs.get('ioctitle')
-        self.sread = kwargs.get('readme')
+        self.Title = kwargs.get("Title")
+        self.datainfo = kwargs.get("datainfo")
+        self.summarytitle = kwargs.get("sumtitle")
+        self.ioctitle = kwargs.get("ioctitle")
+        self.sread = kwargs.get("readme")
         self.searchres = False
-        if len(self.data) > 1 and \
-                not any(self._is_num(cell) for cell in self.header):
+        if len(self.data) > 1 and not any(self._is_num(cell) for cell in self.header):
             del self.data[0]
             self.header_offset = self.header_offset_orig
         else:
@@ -79,23 +72,24 @@ class Viewer:
             # first line is NOT a header
             self.header_offset = self.header_offset_orig - 1
         self.num_data_columns = len(self.data[0])
-        self._init_double_width(kwargs.get('double_width'))
-        self.column_width_mode = kwargs.get('column_width')
-        self.column_gap = kwargs.get('column_gap')
-        self._init_column_widths(kwargs.get('column_width'),
-                                 kwargs.get('column_widths'))
+        self._init_double_width(kwargs.get("double_width"))
+        self.column_width_mode = kwargs.get("column_width")
+        self.column_gap = kwargs.get("column_gap")
+        self._init_column_widths(
+            kwargs.get("column_width"), kwargs.get("column_widths")
+        )
         try:
-            kwargs.get('trunc_char').encode(sys.stdout.encoding or 'utf-8')
-            self.trunc_char = kwargs.get('trunc_char')
+            kwargs.get("trunc_char").encode(sys.stdout.encoding or "utf-8")
+            self.trunc_char = kwargs.get("trunc_char")
         except (UnicodeDecodeError, UnicodeError):
-            self.trunc_char = '>'
+            self.trunc_char = ">"
 
         self.x, self.y = 0, 0
         self.win_x, self.win_y = 0, 0
         self.max_y, self.max_x = 0, 0
         self.num_columns = 0
         self.vis_columns = 0
-        self.init_search = self.search_str = kwargs.get('search_str')
+        self.init_search = self.search_str = kwargs.get("search_str")
         self._input_win_open = 0
         self.modifier = str()
         self.define_keys()
@@ -103,22 +97,21 @@ class Viewer:
         self.display()
         # Handle goto initial position (either (y,x), [y] or y)
         try:
-            self.goto_y(kwargs.get('start_pos')[0])
+            self.goto_y(kwargs.get("start_pos")[0])
         except TypeError:
-            self.goto_y(kwargs.get('start_pos'))
+            self.goto_y(kwargs.get("start_pos"))
         try:
-            self.goto_x(kwargs.get('start_pos')[1])
+            self.goto_x(kwargs.get("start_pos")[1])
         except (IndexError, TypeError):
             pass
 
-    def addstr(self,*args):
+    def addstr(self, *args):
         scr, args = args[0], args[1:]
         return scr.addstr(*args)
 
-    def insstr(self,*args):
+    def insstr(self, *args):
         scr, args = args[0], args[1:]
         return scr.insstr(*args)
-
 
     def _is_num(self, cell):
         try:
@@ -152,8 +145,7 @@ class Viewer:
 
     def column_xw(self, x):
         """Return the position and width of the requested column"""
-        xp = sum(self.column_width[self.win_x:self.win_x + x]) \
-            + x * self.column_gap
+        xp = sum(self.column_width[self.win_x : self.win_x + x]) + x * self.column_gap
         w = max(0, min(self.max_x - xp, self.column_width[self.win_x + x]))
         return xp, w
 
@@ -162,9 +154,13 @@ class Viewer:
 
     def reload(self):
         start_pos = (self.y + self.win_y + 1, self.x + self.win_x + 1)
-        raise ReloadException(start_pos, self.column_width_mode,
-                              self.column_gap, self.column_width,
-                              self.search_str)
+        raise ReloadException(
+            start_pos,
+            self.column_width_mode,
+            self.column_gap,
+            self.column_width,
+            self.search_str,
+        )
 
     def consume_modifier(self, default=1):
         m = int(self.modifier) if len(self.modifier) else default
@@ -244,7 +240,7 @@ class Viewer:
         self.save_y, self.save_x = self.y + self.win_y, self.x + self.win_x
 
     def goto_mark(self):
-        if hasattr(self, 'save_y'):
+        if hasattr(self, "save_y"):
             self.goto_yx(self.save_y + 1, self.save_x + 1)
 
     def home(self):
@@ -252,8 +248,11 @@ class Viewer:
 
     def goto_y(self, y):
         y = max(min(len(self.data), y), 1)
-        if self.win_y < y <= self.win_y + \
-                (self.max_y - self.header_offset - self._input_win_open):
+        if (
+            self.win_y
+            < y
+            <= self.win_y + (self.max_y - self.header_offset - self._input_win_open)
+        ):
             # same screen, change y appropriately.
             self.y = y - 1 - self.win_y
         elif y <= self.win_y:
@@ -262,10 +261,8 @@ class Viewer:
             self.win_y = y - 1
         else:
             # going forward
-            self.win_y = y - (self.max_y - self.header_offset -
-                              self._input_win_open)
-            self.y = (self.max_y - self.header_offset -
-                      self._input_win_open) - 1
+            self.win_y = y - (self.max_y - self.header_offset - self._input_win_open)
+            self.y = (self.max_y - self.header_offset - self._input_win_open) - 1
 
     def goto_row(self):
         m = self.consume_modifier(len(self.data))
@@ -313,32 +310,31 @@ class Viewer:
             return
         TextBox(self.scr, data=s, title=self.location_string(yp, xp))()
         self.resize()
-    
+
     def show_row(self):
         yp = self.y + self.win_y
-        #xp = self.x + self.win_x
+        # xp = self.x + self.win_x
         d = self.data[yp][6]
 
-        if (self.datainfo is not None):
-            s = "\n"+self.datainfo[d]
+        if self.datainfo is not None:
+            s = "\n" + self.datainfo[d]
         else:
             return
-        TextBox(self.scr, data=s, title=self.summarytitle+" --> "+d)()
+        TextBox(self.scr, data=s, title=self.summarytitle + " --> " + d)()
         self.resize()
 
     def show_info(self):
         """Display program information in a pop-up window
         """
-        s = "\n"+self.info 
-        
+        s = "\n" + self.info
+
         TextBox(self.scr, data=s, title=self.ioctitle)()
         self.resize()
-      
+
     def readme(self):
-        s = "\n"+self.sread
+        s = "\n" + self.sread
         TextBox(self.scr, data=s, title="README")()
         self.resize()
-
 
     def _search_validator(self, ch):
         """Fix Enter and backspace for textbox.
@@ -355,30 +351,27 @@ class Viewer:
                 if c in string.printable:
                     res = self.textpad.gather().strip().lower()
                     self.search_str = res + chr(ch)
-                    self.search_str = self.search_str.lower().strip() 
+                    self.search_str = self.search_str.lower().strip()
                     self.search_results(look_in_cur=True)
                     self.display()
             return ch
-    
-    
-    def _input_validator(self,ch):
+
+    def _input_validator(self, ch):
         if ch == curses.ascii.NL:  # Enter
             return curses.ascii.BEL
         elif ch == 127:  # Backspace
             return 8
         else:
             if 0 < ch < 256:
-                #c = chr(ch)
+                # c = chr(ch)
                 pass
 
             return ch
 
-
-
     def search(self):
         """Open search window, get input and set the search string."""
-        
-        scr2 = curses.newwin(3, self.max_x -100, self.max_y - 3, 0)
+
+        scr2 = curses.newwin(3, self.max_x - 100, self.max_y - 3, 0)
         scr3 = scr2.derwin(1, self.max_x - 120, 1, 9)
         scr2.box()
         scr2.move(1, 1)
@@ -389,7 +382,7 @@ class Viewer:
         self.textpad = Textbox(scr3, insert_mode=True)
         self.search_str = self.textpad.edit(self._search_validator)
         self.search_str = self.search_str.lower().strip()
-        
+
         try:
             curses.curs_set(0)
         except _curses.error:
@@ -424,10 +417,12 @@ class Viewer:
             else:
                 # Skip back to the top if at the end of the data
                 yp = xp = 0
-        search_order = [self._search_cur_line_r,
-                        self._search_next_line_to_end,
-                        self._search_next_line_from_beg,
-                        self._search_cur_line_l]
+        search_order = [
+            self._search_cur_line_r,
+            self._search_next_line_to_end,
+            self._search_next_line_from_beg,
+            self._search_cur_line_l,
+        ]
         for search in search_order:
             y, x, res = search(data, yp, xp)
             if res is True:
@@ -475,7 +470,7 @@ class Viewer:
     def _search_next_line_to_end(self, data, yp, xp):
         """ Search from next line to the end """
         res = done = False
-        for y, line in enumerate(data[yp + 1:]):
+        for y, line in enumerate(data[yp + 1 :]):
             for x, item in enumerate(line):
                 if self.search_str in item.lower():
                     done = True
@@ -534,15 +529,17 @@ class Viewer:
         self.recalculate_layout()
 
     def column_width_all_down(self):
-        self.column_width = [max(1, self.column_width[i] -
-                                 max(1, int(self.column_width[i] * 0.2)))
-                             for i in range(0, self.num_data_columns)]
+        self.column_width = [
+            max(1, self.column_width[i] - max(1, int(self.column_width[i] * 0.2)))
+            for i in range(0, self.num_data_columns)
+        ]
         self.recalculate_layout()
 
     def column_width_all_up(self):
-        self.column_width = [max(1, self.column_width[i] +
-                                 max(1, int(self.column_width[i] * 0.2)))
-                             for i in range(0, self.num_data_columns)]
+        self.column_width = [
+            max(1, self.column_width[i] + max(1, int(self.column_width[i] * 0.2)))
+            for i in range(0, self.num_data_columns)
+        ]
         self.recalculate_layout()
 
     def column_width_down(self):
@@ -557,14 +554,17 @@ class Viewer:
 
     def sort_by_column_numeric(self):
         xp = self.x + self.win_x
-        self.data = sorted(self.data, key=lambda x:
-                           self.float_string_key(itemgetter(xp)(x)))
+        self.data = sorted(
+            self.data, key=lambda x: self.float_string_key(itemgetter(xp)(x))
+        )
 
     def sort_by_column_numeric_reverse(self):
         xp = self.x + self.win_x
-        self.data = sorted(self.data, key=lambda x:
-                           self.float_string_key(itemgetter(xp)(x)),
-                           reverse=True)
+        self.data = sorted(
+            self.data,
+            key=lambda x: self.float_string_key(itemgetter(xp)(x)),
+            reverse=True,
+        )
 
     def sort_by_column(self):
         xp = self.x + self.win_x
@@ -586,11 +586,12 @@ class Viewer:
         """ Sort the given iterable in the way that humans expect.
         From StackOverflow: http://goo.gl/nGBUrQ
         """
+
         def convert(text):
             return int(text) if text.isdigit() else text
 
         def alphanum_key(item):
-            return [convert(c) for c in re.split('([0-9]+)', key(item))]
+            return [convert(c) for c in re.split("([0-9]+)", key(item))]
 
         return sorted(ls, key=alphanum_key, reverse=rev)
 
@@ -612,10 +613,10 @@ class Viewer:
             self.column_width_mode = min(int(self.modifier), self.max_x)
             self.modifier = str()
         except ValueError:
-            if self.column_width_mode == 'mode':
-                self.column_width_mode = 'max'
+            if self.column_width_mode == "mode":
+                self.column_width_mode = "max"
             else:
-                self.column_width_mode = 'mode'
+                self.column_width_mode = "mode"
         self._get_column_widths(self.column_width_mode)
         self.recalculate_layout()
 
@@ -633,111 +634,113 @@ class Viewer:
         self.recalculate_layout()
 
     def help_keys(self):
-        keylist = str("\nKeybindings:\n"
-                 "---------------\n"
-                 "F1 or ?                  Show this list of keybindings\n"
-                 "Cursor keys or h,j,k,l   Move the highlighted row, scrolling if required.\n"
-                 "Q or q                   Quit\n"             
-                 "i                        Show README in pop-up\n"
-                 "Enter                    View full PV Summary in pop-up window.\n"
-                 "v                        Show Validation Summary in pop-up window\n"       
-                 "Ctrl-w                   Write output csv file\n"
-                 "Home, ^, Ctrl-a          Move to the start of this line\n"
-                 "End, $, Ctrl-e           Move to the end of this line\n"
-                 "[num]|                   Goto column <num>, or first column\n"
-                 "                             if num not given\n"
-                 "PgUp/PgDn or J/K         Move a page up or down\n"
-                 "H,L                      Page left or right\n"
-                 "g                        Goto top of current column\n"
-                 "[num]G                   Goto line <num> or bottom of current column\n"
-                 "                             if num not given\n"
-                 "Insert or m              Memorize this position\n"
-                 "Delete or '              Return to memorized position (if any)\n"      
-                 "/                        Search (not case sensitive, result highlighted in red)\n"
-                 "n                        Next search result\n"
-                 "p                        Previous search result\n"
-                 "t                        Toggle fixed header row\n"
-                 "< >                      Decrease/Increase column width (all columns)\n"
-                 #", .                      Decrease/Increase column width (current column)\n"
-                 "- +                      Decrease/Increase column gap\n"
-                 "s                        Sort the table by the current column (ascending)\n"
-                 "S                        Sort the table by the current column (descending)\n"
-                 "a                        'Natural Sort' the table (ascending)\n"
-                 "A                        'Natural Sort' the table (descending)\n"
-                 "#                        Sort numerically by the current column (ascending)\n"
-                 "@                        Sort numerically by the current column (descending)\n"
-                 "r                        Reload data. Also resets sort order\n"
-                 "[num]c                   Toggle variable column width mode (mode/max),\n"
-                 "                             or set width to [num]\n"
-                 "[num]C                   Maximize current column, or set width to [num]\n"
-                 "[num][                   Skip to (nth) change in row value (backward)\n"
-                 "[num]]                   Skip to (nth) change in row value (forward)\n"
-                 "[num]{                   Skip to (nth) change in column value (backward)\n"
-                 "[num]}                   Skip to (nth) change in column value (forward)")
-    
+        keylist = str(
+            "\nKeybindings:\n"
+            "---------------\n"
+            "F1 or ?                  Show this list of keybindings\n"
+            "Cursor keys or h,j,k,l   Move the highlighted row, scrolling if required.\n"
+            "Q or q                   Quit\n"
+            "i                        Show README in pop-up\n"
+            "Enter                    View full PV Summary in pop-up window.\n"
+            "v                        Show Validation Summary in pop-up window\n"
+            "Ctrl-w                   Write output csv file\n"
+            "Home, ^, Ctrl-a          Move to the start of this line\n"
+            "End, $, Ctrl-e           Move to the end of this line\n"
+            "[num]|                   Goto column <num>, or first column\n"
+            "                             if num not given\n"
+            "PgUp/PgDn or J/K         Move a page up or down\n"
+            "H,L                      Page left or right\n"
+            "g                        Goto top of current column\n"
+            "[num]G                   Goto line <num> or bottom of current column\n"
+            "                             if num not given\n"
+            "Insert or m              Memorize this position\n"
+            "Delete or '              Return to memorized position (if any)\n"
+            "/                        Search (not case sensitive, result highlighted in red)\n"
+            "n                        Next search result\n"
+            "p                        Previous search result\n"
+            "t                        Toggle fixed header row\n"
+            "< >                      Decrease/Increase column width (all columns)\n"
+            # ", .                      Decrease/Increase column width (current column)\n"
+            "- +                      Decrease/Increase column gap\n"
+            "s                        Sort the table by the current column (ascending)\n"
+            "S                        Sort the table by the current column (descending)\n"
+            "a                        'Natural Sort' the table (ascending)\n"
+            "A                        'Natural Sort' the table (descending)\n"
+            "#                        Sort numerically by the current column (ascending)\n"
+            "@                        Sort numerically by the current column (descending)\n"
+            "r                        Reload data. Also resets sort order\n"
+            "[num]c                   Toggle variable column width mode (mode/max),\n"
+            "                             or set width to [num]\n"
+            "[num]C                   Maximize current column, or set width to [num]\n"
+            "[num][                   Skip to (nth) change in row value (backward)\n"
+            "[num]]                   Skip to (nth) change in row value (forward)\n"
+            "[num]{                   Skip to (nth) change in column value (backward)\n"
+            "[num]}                   Skip to (nth) change in column value (forward)"
+        )
+
         return keylist
 
-    
     def define_keys(self):
-        self.keys = {'j': self.down,
-                     'k': self.up,
-                     'h': self.left,
-                     'l': self.right,
-                     'J': self.page_down,
-                     'K': self.page_up,
-                     'm': self.mark,
-                     "'": self.goto_mark,
-                     'L': self.page_right,
-                     'H': self.page_left,
-                     'q': self.quit,
-                     'Q': self.quit,
-                     '$': self.line_end,
-                     '^': self.line_home,
-                     'g': self.home,
-                     'G': self.goto_row,
-                     '|': self.goto_col,
-                     '\n': self.show_row,
-                     '/': self.search,
-                     'n': self.search_results,
-                     'p': self.search_results_prev,
-                     't': self.toggle_header,
-                     '-': self.column_gap_down,
-                     '+': self.column_gap_up,
-                     '<': self.column_width_all_down,
-                     '>': self.column_width_all_up,
-                     'a': self.sort_by_column_natural,
-                     'A': self.sort_by_column_natural_reverse,
-                     '#': self.sort_by_column_numeric,
-                     '@': self.sort_by_column_numeric_reverse,
-                     's': self.sort_by_column,
-                     'S': self.sort_by_column_reverse,
-                     'r': self.reload,
-                     'c': self.toggle_column_width,
-                     'C': self.set_current_column_width,
-                     ']': self.skip_to_row_change,
-                     '[': self.skip_to_row_change_reverse,
-                     '}': self.skip_to_col_change,
-                     '{': self.skip_to_col_change_reverse,
-                     '?': self.help,
-                     'i': self.readme,
-                     'v': self.show_info,
-                     curses.KEY_F1: self.help,
-                     curses.KEY_UP: self.up,
-                     curses.KEY_DOWN: self.down,
-                     curses.KEY_LEFT: self.left,
-                     curses.KEY_RIGHT: self.right,
-                     curses.KEY_HOME: self.line_home,
-                     curses.KEY_END: self.line_end,
-                     curses.KEY_PPAGE: self.page_up,
-                     curses.KEY_NPAGE: self.page_down,
-                     curses.KEY_IC: self.mark,
-                     curses.KEY_DC: self.goto_mark,
-                     curses.KEY_ENTER: self.show_row,
-                     curses.ascii.ctrl('a'): self.line_home,
-                     curses.ascii.ctrl('e'): self.line_end,
-                     curses.ascii.ctrl('l'): self.scr.redrawwin, 
-                     curses.ascii.ctrl('w'): self.save_csvfile
-                     }
+        self.keys = {
+            "j": self.down,
+            "k": self.up,
+            "h": self.left,
+            "l": self.right,
+            "J": self.page_down,
+            "K": self.page_up,
+            "m": self.mark,
+            "'": self.goto_mark,
+            "L": self.page_right,
+            "H": self.page_left,
+            "q": self.quit,
+            "Q": self.quit,
+            "$": self.line_end,
+            "^": self.line_home,
+            "g": self.home,
+            "G": self.goto_row,
+            "|": self.goto_col,
+            "\n": self.show_row,
+            "/": self.search,
+            "n": self.search_results,
+            "p": self.search_results_prev,
+            "t": self.toggle_header,
+            "-": self.column_gap_down,
+            "+": self.column_gap_up,
+            "<": self.column_width_all_down,
+            ">": self.column_width_all_up,
+            "a": self.sort_by_column_natural,
+            "A": self.sort_by_column_natural_reverse,
+            "#": self.sort_by_column_numeric,
+            "@": self.sort_by_column_numeric_reverse,
+            "s": self.sort_by_column,
+            "S": self.sort_by_column_reverse,
+            "r": self.reload,
+            "c": self.toggle_column_width,
+            "C": self.set_current_column_width,
+            "]": self.skip_to_row_change,
+            "[": self.skip_to_row_change_reverse,
+            "}": self.skip_to_col_change,
+            "{": self.skip_to_col_change_reverse,
+            "?": self.help,
+            "i": self.readme,
+            "v": self.show_info,
+            curses.KEY_F1: self.help,
+            curses.KEY_UP: self.up,
+            curses.KEY_DOWN: self.down,
+            curses.KEY_LEFT: self.left,
+            curses.KEY_RIGHT: self.right,
+            curses.KEY_HOME: self.line_home,
+            curses.KEY_END: self.line_end,
+            curses.KEY_PPAGE: self.page_up,
+            curses.KEY_NPAGE: self.page_down,
+            curses.KEY_IC: self.mark,
+            curses.KEY_DC: self.goto_mark,
+            curses.KEY_ENTER: self.show_row,
+            curses.ascii.ctrl("a"): self.line_home,
+            curses.ascii.ctrl("e"): self.line_end,
+            curses.ascii.ctrl("l"): self.scr.redrawwin,
+            curses.ascii.ctrl("w"): self.save_csvfile,
+        }
 
     def run(self):
         # Clear the screen and display the menu of keys
@@ -782,8 +785,7 @@ class Viewer:
     def resize(self):
         """Handle terminal resizing"""
         # Check if screen was re-sized (True or False)
-        resize = self.max_x == 0 or \
-            curses.is_term_resized(self.max_y, self.max_x)
+        resize = self.max_x == 0 or curses.is_term_resized(self.max_y, self.max_x)
         if resize is True:
             self.recalculate_layout()
             curses.resizeterm(self.max_y, self.max_x)
@@ -793,8 +795,9 @@ class Viewer:
         going forward.
         """
         width = cols = 0
-        while (x + cols) < self.num_data_columns \
-                and width + self.column_width[x + cols] <= self.max_x:
+        while (x + cols) < self.num_data_columns and width + self.column_width[
+            x + cols
+        ] <= self.max_x:
             width += self.column_width[x + cols] + self.column_gap
             cols += 1
         return max(1, cols)
@@ -804,8 +807,7 @@ class Viewer:
         going reverse.
         """
         width = cols = 0
-        while x - cols >= 0 \
-                and width + self.column_width[x - cols] <= self.max_x:
+        while x - cols >= 0 and width + self.column_width[x - cols] <= self.max_x:
             width += self.column_width[x - cols] + self.column_gap
             cols += 1
         return max(1, cols)
@@ -829,52 +831,54 @@ class Viewer:
         trunc_char appended if it's longer than the allowed width.
         """
         yx_str = "({},{})"
-        #label_str = "{},{}"
+        # label_str = "{},{}"
         max_y = str(len(self.data))
         max_x = str(len(self.data[0]))
         max_yx = yx_str.format(max_y, max_x)
-        
+
         if self.header_offset != self.header_offset_orig:
-            # Hide column labels if header row disabled    
-            max_width = min(int(self.max_x * .5), len(max_yx))
+            # Hide column labels if header row disabled
+            max_width = min(int(self.max_x * 0.5), len(max_yx))
         else:
-            #label = label_str.format('-', self.header[xp])
-            max_width = min(int(self.max_x * .5), len(max_yx))
+            # label = label_str.format('-', self.header[xp])
+            max_width = min(int(self.max_x * 0.5), len(max_yx))
         yx = yx_str.format(yp + 1, xp + 1)
-        #pad = " " * (max_width - len(yx) )
-        #all = "{}{}".format(yx, pad)
+        # pad = " " * (max_width - len(yx) )
+        # all = "{}{}".format(yx, pad)
         all = "{}".format(yx)
         if len(all) > max_width:
-            all = all[:max_width - 1] + self.trunc_char
-        
+            all = all[: max_width - 1] + self.trunc_char
+
         return all
-
-    
-        
-
 
     def display(self):
         """Refresh the current display"""
-        yp = self.y + self.win_y 
+        yp = self.y + self.win_y
         xp = self.x + self.win_x
-        
 
         # Print the current cursor cell in the top left corner
         self.scr.move(0, 0)
         self.scr.clrtoeol()
-        #info = " {}".format(self.location_string(yp, xp))
-        
-        
+        # info = " {}".format(self.location_string(yp, xp))
+
         strhelp = "Press F1 for Help"
-    
-        cl=u"(\u2184) ESS - 2021".encode("utf-8")
-        self.addstr(self.scr, 1, int(self.max_x/2),self.Title,curses.A_UNDERLINE+curses.A_BOLD)
-        self.addstr(self.scr, 2, int(self.max_x/2)+1,cl,curses.A_BOLD)
-        self.addstr(self.scr, 1, self.max_x - len(strhelp) - 1 ,strhelp,curses.A_REVERSE)
+
+        cl = u"(\u2184) ESS - 2021".encode("utf-8")
+        self.addstr(
+            self.scr,
+            1,
+            int(self.max_x / 2),
+            self.Title,
+            curses.A_UNDERLINE + curses.A_BOLD,
+        )
+        self.addstr(self.scr, 2, int(self.max_x / 2) + 1, cl, curses.A_BOLD)
+        self.addstr(
+            self.scr, 1, self.max_x - len(strhelp) - 1, strhelp, curses.A_REVERSE
+        )
         # Adds the current cell content after the 'current cell' display
-        #wc = self.max_x - len(info) - 2
-        #s = self.cellstr(yp, xp, wc)
-        #addstr(self.scr, "  " + s, curses.A_NORMAL)
+        # wc = self.max_x - len(info) - 2
+        # s = self.cellstr(yp, xp, wc)
+        # addstr(self.scr, "  " + s, curses.A_NORMAL)
 
         # Print a divider line
         self.scr.hline(5, 0, curses.ACS_HLINE, self.max_x)
@@ -886,15 +890,14 @@ class Viewer:
             for x in range(0, self.vis_columns):
                 xc, wc = self.column_xw(x)
                 s = self.hdrstr(x + self.win_x, wc)
-                if x == self.x :
-                    hattr = curses.A_BOLD+curses.A_UNDERLINE+curses.A_STANDOUT
+                if x == self.x:
+                    hattr = curses.A_BOLD + curses.A_UNDERLINE + curses.A_STANDOUT
                 else:
-                    hattr = curses.A_BOLD+curses.A_UNDERLINE
+                    hattr = curses.A_BOLD + curses.A_UNDERLINE
                 self.addstr(self.scr, self.header_offset - 1, xc, s, hattr)
 
         # Print the table data
-        for y in range(0, self.max_y - self.header_offset -
-                       self._input_win_open ):
+        for y in range(0, self.max_y - self.header_offset - self._input_win_open):
             yc = y + self.header_offset
             self.scr.move(yc, 0)
             self.scr.clrtoeol()
@@ -914,26 +917,31 @@ class Viewer:
                     self.insstr(self.scr, yc, xc, s, attr)
                 else:
                     self.addstr(self.scr, yc, xc, s, attr)
-                    
 
         totrow = "Tot Rows/Cols: " + str((len(self.data), self.num_data_columns))
         currpos = "Curr Row/Col: (%s,%s)    " % (yp + 1, xp + 1)
-        self.addstr(self.scr,2,0,"Legend:",curses.A_UNDERLINE)
-        self.addstr(self.scr,3,0,"******: Skip Naming API Validation Check",curses.A_NORMAL)
-        self.addstr(self.scr,4,0,"------: Not Registered/Wrong Format",curses.A_NORMAL)
-        self.addstr(self.scr,4,self.max_x - len(totrow) - 30  , currpos ,curses.A_NORMAL) 
-        self.addstr(self.scr,4,self.max_x - len(totrow) - 1, totrow,curses.A_NORMAL)
+        self.addstr(self.scr, 2, 0, "Legend:", curses.A_UNDERLINE)
+        self.addstr(
+            self.scr, 3, 0, "******: Skip Naming API Validation Check", curses.A_NORMAL
+        )
+        self.addstr(
+            self.scr, 4, 0, "------: Not Registered/Wrong Format", curses.A_NORMAL
+        )
+        self.addstr(
+            self.scr, 4, self.max_x - len(totrow) - 30, currpos, curses.A_NORMAL
+        )
+        self.addstr(self.scr, 4, self.max_x - len(totrow) - 1, totrow, curses.A_NORMAL)
         self.scr.refresh()
 
     def save_csvfile(self):
-        save2 = curses.newwin(3, self.max_x -100, self.max_y - 3, 0)
+        save2 = curses.newwin(3, self.max_x - 100, self.max_y - 3, 0)
         save3 = save2.derwin(1, self.max_x - 120, 1, 16)
         save2.box()
         save2.move(1, 1)
         self.addstr(save2, "Save csv file: ")
         save2.refresh()
         curses.curs_set(1)
-        
+
         self.textpad = Textbox(save3, insert_mode=True)
         self.save_str = self.textpad.edit(self._input_validator)
         self.save_str = self.save_str.strip()
@@ -941,54 +949,50 @@ class Viewer:
             curses.curs_set(0)
         except _curses.error:
             pass
-    
-        
-        
+
         if self.save_str:
             it = []
             j = []
             if self.header_offset == self.header_offset_orig:
                 for x in range(0, self.num_data_columns):
-                    
+
                     s = self.header[x + self.win_x]
                     j.append(s.strip())
             j.append(self.summarytitle)
             j.append(self.ioctitle)
             it.append(j)
-        
+
             for y in range(0, len(self.data)):
-                #yc = y + self.header_offset
+                # yc = y + self.header_offset
                 j = []
                 for x in range(0, self.num_data_columns):
-                    
+
                     s = self.data[y + self.win_y][x + self.win_x]
                     j.append(s.strip())
                 d = self.data[y + self.win_y][6]
                 j.append(self.datainfo[d])
-                if ( y == 0):
+                if y == 0:
                     j.append(self.info)
                 it.append(j)
-            
 
-            with open(self.save_str, 'w', newline='') as f:
+            with open(self.save_str, "w", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerows(it)
 
-
     def strpad(self, s, width):
-        
+
         if width < 1:
             return str()
-        if '\n' in s:
-            s = s.replace('\n', '\\n')
+        if "\n" in s:
+            s = s.replace("\n", "\\n")
 
         # take into account double-width characters
         buf = str()
         buf_width = 0
         for c in s:
             if sys.version_info.major == 2:
-                c = c.decode('utf-8')
-            w = 2 if unicodedata.east_asian_width(c) == 'W' else 1
+                c = c.decode("utf-8")
+            w = 2 if unicodedata.east_asian_width(c) == "W" else 1
             if buf_width + w > width:
                 break
             buf_width += w
@@ -999,15 +1003,15 @@ class Viewer:
             while buf_width + len(self.trunc_char) > width:
                 c = buf[-1]
                 if sys.version_info.major == 2:
-                    c = c.decode('utf-8')
-                w = 2 if unicodedata.east_asian_width(c) == 'W' else 1
+                    c = c.decode("utf-8")
+                w = 2 if unicodedata.east_asian_width(c) == "W" else 1
                 buf = buf[0:-1]
                 buf_width -= w
-            buf += ' ' * (width - buf_width - len(self.trunc_char))
+            buf += " " * (width - buf_width - len(self.trunc_char))
             buf += self.trunc_char
         elif buf_width < width:
             # padding required
-            buf += ' ' * (width - buf_width)
+            buf += " " * (width - buf_width)
 
         return buf
 
@@ -1032,17 +1036,16 @@ class Viewer:
         Args: width - 'max', 'mode', or an integer value
         Returns: [len of col 1, len of col 2, ....]
         """
-        if width == 'max':
+        if width == "max":
             self.column_width = self._get_column_widths_max(self.data)
-        elif width == 'mode':
+        elif width == "mode":
             self.column_width = self._get_column_widths_mode(self.data)
         else:
             try:
                 width = int(width)
             except (TypeError, ValueError):
                 width = 25
-            self.column_width = [width for i in
-                                 range(0, self.num_data_columns)]
+            self.column_width = [width for i in range(0, self.num_data_columns)]
 
     @staticmethod
     def __cell_len_dw(s):
@@ -1052,8 +1055,8 @@ class Viewer:
         len = 0
         for c in s:
             if sys.version_info.major == 2:
-                c = c.decode('utf-8')
-            w = 2 if unicodedata.east_asian_width(c) == 'W' else 1
+                c = c.decode("utf-8")
+            w = 2 if unicodedata.east_asian_width(c) == "W" else 1
             len += w
         return len
 
@@ -1094,8 +1097,7 @@ class Viewer:
         Returns: list of ints [len_1, len_2...len_x]
         """
         d = zip(*d)
-        return [max(1, min(250, max(set(self._cell_len(j) for j in i))))
-                for i in d]
+        return [max(1, min(250, max(set(self._cell_len(j) for j in i)))) for i in d]
 
     def _skip_to_value_change(self, x_inc, y_inc):
         m = self.consume_modifier()
@@ -1105,9 +1107,13 @@ class Viewer:
             v = self.data[y][x]
             y += y_inc
             x += x_inc
-            while y >= 0 and y < len(self.data) \
-                    and x >= 0 and x < self.num_data_columns \
-                    and self.data[y][x] == v:
+            while (
+                y >= 0
+                and y < len(self.data)
+                and x >= 0
+                and x < self.num_data_columns
+                and self.data[y][x] == v
+            ):
                 y += y_inc
                 x += x_inc
             self.goto_yx(y + 1, x + 1)
@@ -1124,46 +1130,48 @@ class Viewer:
     def skip_to_col_change_reverse(self):
         self._skip_to_value_change(-1, 0)
 
+
 #################################################
 class TextBox:
     """Display a scrollable text box in the bottom half of the screen.
     """
-    def __init__(self, scr, data='', title=""):
+
+    def __init__(self, scr, data="", title=""):
         self._running = False
         self.scr = scr
         self.data = data
         self.title = title
-        self.tdata = []    # transformed data
+        self.tdata = []  # transformed data
         self.hid_rows = 0  # number of hidden rows from the beginning
         self.setup_handlers()
 
-    def addstr(self,*args):
+    def addstr(self, *args):
         scr, args = args[0], args[1:]
         return scr.addstr(*args)
-
-
 
     def __call__(self):
         self.run()
 
     def setup_handlers(self):
-        self.handlers = {'\n': self.close,
-                         curses.KEY_ENTER: self.close,
-                         'q': self.close,
-                         curses.KEY_RESIZE: self.close,
-                         curses.KEY_DOWN: self.scroll_down,
-                         'j': self.scroll_down,
-                         curses.KEY_UP: self.scroll_up,
-                         'k': self.scroll_up,
-                         }
+        self.handlers = {
+            "\n": self.close,
+            curses.KEY_ENTER: self.close,
+            "q": self.close,
+            curses.KEY_RESIZE: self.close,
+            curses.KEY_DOWN: self.scroll_down,
+            "j": self.scroll_down,
+            curses.KEY_UP: self.scroll_up,
+            "k": self.scroll_up,
+        }
 
     def _calculate_layout(self):
         """Setup popup window and format data. """
         self.scr.touchwin()
         self.term_rows, self.term_cols = self.scr.getmaxyx()
-        self.box_height = self.term_rows - int(self.term_rows / 2) 
-        self.win = curses.newwin(int(self.term_rows / 2),
-                                 self.term_cols, self.box_height, 0)
+        self.box_height = self.term_rows - int(self.term_rows / 2)
+        self.win = curses.newwin(
+            int(self.term_rows / 2), self.term_cols, self.box_height, 0
+        )
         try:
             curses.curs_set(False)
         except _curses.error:
@@ -1206,41 +1214,30 @@ class TextBox:
 
     def display(self):
         self.win.erase()
-        self.addstr(self.win, 1, 1, self.title[:self.term_cols - 3],
-               curses.A_STANDOUT)
-        visible_rows = self.tdata[self.hid_rows:self.hid_rows +
-                                  self.nlines]
-        
-        self.addstr(self.win, 2, 1, '\n '.join(visible_rows))
-        #if self.hid_rows:
+        self.addstr(self.win, 1, 1, self.title[: self.term_cols - 3], curses.A_STANDOUT)
+        visible_rows = self.tdata[self.hid_rows : self.hid_rows + self.nlines]
+
+        self.addstr(self.win, 2, 1, "\n ".join(visible_rows))
+        # if self.hid_rows:
         #    self.addstr(self.win, 1, self.term_cols-10, 'S',curses.A_REVERSE)
-            
-
-
 
         if len(self.tdata) > (self.box_height - 1):
-            self.addstr(self.win, self.nlines , self.term_cols-11, '--SCROLL--',curses.A_REVERSE)
-            #if  self.nlines == len(visible_rows):
+            self.addstr(
+                self.win,
+                self.nlines,
+                self.term_cols - 11,
+                "--SCROLL--",
+                curses.A_REVERSE,
+            )
+            # if  self.nlines == len(visible_rows):
             #    self.addstr(self.win, self.nlines , self.term_cols-10, 'SCROLL D',curses.A_REVERSE)
         #        self.addstr(self.win, self.nlines , self.term_cols-2, 'v',curses.A_REVERSE)
 
         self.win.box()
         self.win.refresh()
 
-    
-
 
 ####################################
-
-
-
-
-
-
-    
-
-
-
 
 
 def main(stdscr, *args, **kwargs):
@@ -1258,10 +1255,22 @@ def main(stdscr, *args, **kwargs):
     Viewer(stdscr, *args, **kwargs).run()
 
 
-def view(data, start_pos=(0, 0), column_width=20, column_gap=3,
-         trunc_char='…', column_widths=None, search_str=None,
-         double_width=False, info=None,Title='',datainfo=None,sumtitle=None,ioctitle=None,readme=''
-         ):
+def view(
+    data,
+    start_pos=(0, 0),
+    column_width=20,
+    column_gap=3,
+    trunc_char="…",
+    column_widths=None,
+    search_str=None,
+    double_width=False,
+    info=None,
+    Title="",
+    datainfo=None,
+    sumtitle=None,
+    ioctitle=None,
+    readme="",
+):
     """The curses.wrapper passes stdscr as the first argument to main +
     passes to main any other arguments passed to wrapper. Initializes
     and then puts screen back in a normal state after closing or
@@ -1293,40 +1302,35 @@ def view(data, start_pos=(0, 0), column_width=20, column_gap=3,
     if info is None:
         info = ""
     try:
-        
+
         while True:
             try:
-                
-                if len(data) == 1 and b'\r' in data[0]:
-                    data = data[0].split(b'\r')
 
-   
+                if len(data) == 1 and b"\r" in data[0]:
+                    data = data[0].split(b"\r")
+
                 max_len = set((len(i) for i in data))
                 if len(max_len) != 1:
                     max_len = max(max_len)
                     data = [i + [""] * (max_len - len(i)) for i in data]
 
-                
-                
-
-                curses.wrapper(main, data,
-                               start_pos=start_pos,
-                               column_width=column_width,
-                               column_gap=column_gap,
-                               trunc_char=trunc_char,
-                               column_widths=column_widths,
-                               search_str=search_str,
-                               double_width=double_width,
-                               info=info,
-                               datainfo=datainfo,
-                               Title=Title,
-                               sumtitle=sumtitle,
-                               ioctitle=ioctitle,
-                               readme=readme)
-                
-                               
-
-
+                curses.wrapper(
+                    main,
+                    data,
+                    start_pos=start_pos,
+                    column_width=column_width,
+                    column_gap=column_gap,
+                    trunc_char=trunc_char,
+                    column_widths=column_widths,
+                    search_str=search_str,
+                    double_width=double_width,
+                    info=info,
+                    datainfo=datainfo,
+                    Title=Title,
+                    sumtitle=sumtitle,
+                    ioctitle=ioctitle,
+                    readme=readme,
+                )
 
             except (QuitException, KeyboardInterrupt):
                 return 0
@@ -1340,6 +1344,3 @@ def view(data, start_pos=(0, 0), column_width=20, column_gap=3,
     finally:
         if lc_all is not None:
             locale.setlocale(locale.LC_ALL, lc_all)
-
-
-
