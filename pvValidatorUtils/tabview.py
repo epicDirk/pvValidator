@@ -8,11 +8,9 @@ import _curses
 import csv
 import curses
 import curses.ascii
-import io
 import locale
 import os
 import re
-import shlex
 import string
 import sys
 import unicodedata
@@ -311,10 +309,9 @@ class Viewer:
 
     def show_row(self):
         yp = self.y + self.win_y
-        xp = self.x + self.win_x
         d = self.data[yp][6]
 
-        if self.datainfo != None:
+        if self.datainfo is not None:
             s = "\n" + self.datainfo[d]
         else:
             return
@@ -322,8 +319,7 @@ class Viewer:
         self.resize()
 
     def show_info(self):
-        """Display program information in a pop-up window
-        """
+        """Display program information in a pop-up window"""
         s = "\n" + self.info
 
         TextBox(self.scr, data=s, title=self.ioctitle)()
@@ -349,7 +345,7 @@ class Viewer:
                 if c in string.printable:
                     res = self.textpad.gather().strip().lower()
                     self.search_str = res + chr(ch)
-                    self.search_str = self.search_str.lower().strip()  ##
+                    self.search_str = self.search_str.lower().strip()
                     self.search_results(look_in_cur=True)
                     self.display()
             return ch
@@ -361,7 +357,7 @@ class Viewer:
             return 8
         else:
             if 0 < ch < 256:
-                c = chr(ch)
+                pass
 
             return ch
 
@@ -580,7 +576,7 @@ class Viewer:
         self.data = self.sorted_nicely(self.data, itemgetter(xp), rev=True)
 
     def sorted_nicely(self, ls, key, rev=False):
-        """ Sort the given iterable in the way that humans expect.
+        """Sort the given iterable in the way that humans expect.
         From StackOverflow: http://goo.gl/nGBUrQ
         """
 
@@ -705,8 +701,6 @@ class Viewer:
             "+": self.column_gap_up,
             "<": self.column_width_all_down,
             ">": self.column_width_all_up,
-            #',': self.column_width_down,
-            #'.': self.column_width_up,
             "a": self.sort_by_column_natural,
             "A": self.sort_by_column_natural_reverse,
             "#": self.sort_by_column_numeric,
@@ -749,8 +743,7 @@ class Viewer:
             self.handle_keys()
 
     def handle_keys(self):
-        """Determine what method to call for each keypress.
-        """
+        """Determine what method to call for each keypress."""
         c = self.scr.getch()  # Get a keystroke
         if c == curses.KEY_RESIZE:
             self.resize()
@@ -962,7 +955,6 @@ class Viewer:
             it.append(j)
 
             for y in range(0, len(self.data)):
-                yc = y + self.header_offset
                 j = []
                 for x in range(0, self.num_data_columns):
 
@@ -1132,8 +1124,7 @@ class Viewer:
 
 #################################################
 class TextBox:
-    """Display a scrollable text box in the bottom half of the screen.
-    """
+    """Display a scrollable text box in the bottom half of the screen."""
 
     def __init__(self, scr, data="", title=""):
         self._running = False
@@ -1277,7 +1268,7 @@ def view(
     Args:
         data: data (list of lists or tuple of tuples).
               Should be normalized to equal row lengths
-        
+
         start_pos: initial file position. Either a single integer for just y
             (row) position, or tuple/list (y,x)
         column_width: 'max' (max width for the column),
@@ -1290,7 +1281,7 @@ def view(
         double_width: boolean indicating whether double-width characters
                       should be handled (defaults to False for large files)
         info: Data information to be displayed on ^g. For example a variable
-              name or description of the current data. 
+              name or description of the current data.
               Title: The name of the application
         datainfo:
         sumtitle:
