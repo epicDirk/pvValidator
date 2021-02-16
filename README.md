@@ -2,8 +2,8 @@
 
 Tool to validate EPICS PVs
 
-**Requirements**: 
-- python 2 or 3 development tool ( `python(3)-dev(el)` ) 
+**Requirements**:
+- python 2 or 3 development tool ( `python(3)-dev(el)` )
 - c++
 - swig ( http://www.swig.org ), you can install it via `apt` (debian/ubuntu) or `dnf/yum` (fedora/centos)
 - EPICS 7
@@ -11,7 +11,7 @@ Tool to validate EPICS PVs
 **Compilation**:
 - Export `PYBINDPATH` env variable to the python binding include path (e.g. `export PYBINDPATH=/usr/include/pythonXXX`)
 - Source your EPICS environment then do
-`make` and 
+`make` and
 `make install`
 
 It will do a local installation of the python modules.

@@ -1,10 +1,11 @@
 #!/usr/bin/python
 
 
-from pvValidatorUtils import epicsUtils, pvUtils, version
-import sys
-import os
 import argparse
+import os
+import sys
+
+from pvValidatorUtils import epicsUtils, pvUtils, version
 
 
 def main():
