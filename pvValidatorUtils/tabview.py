@@ -2,7 +2,7 @@
 """ tabview.py -- View a tab-delimited file in a spreadsheet-like display.
   Scott Hansen <firecat four one five three at gmail dot com>
   Based on code contributed by A.M. Kuchling <amk at amk dot ca>
-  Modified by Alfio Rizzo for pvValidator
+  Modified by Alfio Rizzo for pvValidator.py
 """
 import _curses
 import csv
