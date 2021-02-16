@@ -113,7 +113,7 @@ class pvUtils:
         
         if (self.address):
             Info = "The PV list is taken from the server %s to perform online validation\n" % self.address
-        if (self.pvfile != None):
+        if (self.pvfile is not None):
             Info = "The PV list is taken from the file %s to perform offline validation\n" %self.pvfile
 
         if (self.checkonlyfmt):
@@ -297,7 +297,7 @@ class pvUtils:
             try:
                 sys,subsys = s.split("-")
                 #syscheck,subsyscheck=0,0 #TEMP
-            except:
+            except Exception:
                 sys=s
                 subsys = ""
                 #syscheck,subsyscheck=0,2 #TEMP
@@ -349,7 +349,7 @@ class pvUtils:
                     if r['status'] == "ACTIVE":
                         scheck +="Info: The Name \"%s\" is registered in the Naming Service\n" % sname
                         nameok = True
-                except:
+                except Exception:
                     scheck+="Error: The Name \"%s\" is not registered in the Naming Service\n" % sname
                     nameok = False
             
@@ -397,7 +397,7 @@ class pvUtils:
             return 2,2
         req = self.urlparts+dis
         resp = requests.get(req,headers=self.headers)
-        r = resp.json()
+        #r = resp.json()
         DisExist = 0
         struct = "Device Structure"
         for item in resp.json():
@@ -406,7 +406,7 @@ class pvUtils:
                 break
         req = self.urlparts+dev
         resp = requests.get(req,headers=self.headers)
-        r = resp.json()
+        #r = resp.json()
         DevExist = 0
         for item in resp.json():
             if item['status']  == "Approved" and item['type']==struct and item['level']=="3":
@@ -422,12 +422,12 @@ class pvUtils:
     def _GetPVFormat(self,pv):
         try:
             s,d,prop = pv.split(':')
-        except:
+        except Exception:
             return []
 
         try:
             sys,sub=s.split('-')
-        except:
+        except Exception:
             sys = s
             sub = ""
         else:
@@ -437,7 +437,7 @@ class pvUtils:
         if d != "":
             try:
                 dis,dev,idx=d.split('-')
-            except:
+            except Exception:
                 return []
         else:
             dis=""

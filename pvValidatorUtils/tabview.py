@@ -316,7 +316,7 @@ class Viewer:
     
     def show_row(self):
         yp = self.y + self.win_y
-        xp = self.x + self.win_x
+        #xp = self.x + self.win_x
         d = self.data[yp][6]
 
         if (self.datainfo is not None):
@@ -355,7 +355,7 @@ class Viewer:
                 if c in string.printable:
                     res = self.textpad.gather().strip().lower()
                     self.search_str = res + chr(ch)
-                    self.search_str = self.search_str.lower().strip() ##
+                    self.search_str = self.search_str.lower().strip() 
                     self.search_results(look_in_cur=True)
                     self.display()
             return ch
@@ -368,8 +368,9 @@ class Viewer:
             return 8
         else:
             if 0 < ch < 256:
-                c = chr(ch)
-                
+                #c = chr(ch)
+                pass
+
             return ch
 
 
