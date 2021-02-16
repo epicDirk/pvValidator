@@ -9,7 +9,6 @@ import csv
 import curses
 import curses.ascii
 import locale
-# import io
 import os
 import re
 import string
