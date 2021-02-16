@@ -370,7 +370,7 @@ class pvUtils:
     def _CheckSysStructName(self,sys,subsys):
         req = self.urlparts+sys
         resp = requests.get(req,headers=self.headers)
-        r = resp.json()
+        #r = resp.json()
         SysExist = 0
         struct = "System Structure"
         for item in resp.json():
@@ -381,7 +381,7 @@ class pvUtils:
         if subsys !="":
             req = self.urlparts+subsys
             resp = requests.get(req,headers=self.headers)
-            r = resp.json()
+            #r = resp.json()
             SubsysExist = 0
             for item in resp.json():
                 if item['status'] == "Approved" and item['type']==struct and item['level']=="3":
