@@ -324,8 +324,7 @@ class Viewer:
         self.resize()
 
     def show_info(self):
-        """Display program information in a pop-up window
-        """
+        """Display program information in a pop-up window"""
         s = "\n" + self.info
 
         TextBox(self.scr, data=s, title=self.ioctitle)()
@@ -583,7 +582,7 @@ class Viewer:
         self.data = self.sorted_nicely(self.data, itemgetter(xp), rev=True)
 
     def sorted_nicely(self, ls, key, rev=False):
-        """ Sort the given iterable in the way that humans expect.
+        """Sort the given iterable in the way that humans expect.
         From StackOverflow: http://goo.gl/nGBUrQ
         """
 
@@ -750,8 +749,7 @@ class Viewer:
             self.handle_keys()
 
     def handle_keys(self):
-        """Determine what method to call for each keypress.
-        """
+        """Determine what method to call for each keypress."""
         c = self.scr.getch()  # Get a keystroke
         if c == curses.KEY_RESIZE:
             self.resize()
@@ -1133,8 +1131,7 @@ class Viewer:
 
 #################################################
 class TextBox:
-    """Display a scrollable text box in the bottom half of the screen.
-    """
+    """Display a scrollable text box in the bottom half of the screen."""
 
     def __init__(self, scr, data="", title=""):
         self._running = False
@@ -1278,7 +1275,7 @@ def view(
     Args:
         data: data (list of lists or tuple of tuples).
               Should be normalized to equal row lengths
-        
+
         start_pos: initial file position. Either a single integer for just y
             (row) position, or tuple/list (y,x)
         column_width: 'max' (max width for the column),
@@ -1291,7 +1288,7 @@ def view(
         double_width: boolean indicating whether double-width characters
                       should be handled (defaults to False for large files)
         info: Data information to be displayed on ^g. For example a variable
-              name or description of the current data. 
+              name or description of the current data.
               Title: The name of the application
         datainfo:
         sumtitle:

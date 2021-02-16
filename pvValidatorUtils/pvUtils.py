@@ -293,9 +293,10 @@ class pvUtils:
                         )
                         PVWarnList.append(pv)
                 if len(prop) < 4:
-                    self.datainfo[pv] += (
-                        "Warning: The PV Property is below 4 characters (%i)\n"
-                        % len(prop)
+                    self.datainfo[
+                        pv
+                    ] += "Warning: The PV Property is below 4 characters (%i)\n" % len(
+                        prop
                     )
                     PVWarnList.append(pv)
 
