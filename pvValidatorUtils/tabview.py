@@ -4,7 +4,6 @@
   Based on code contributed by A.M. Kuchling <amk at amk dot ca>
   Modified by Alfio Rizzo for pvValidator.py
 """
-import _curses
 import csv
 import curses
 import curses.ascii
@@ -18,6 +17,8 @@ from collections import Counter
 from curses.textpad import Textbox
 from operator import itemgetter
 from textwrap import wrap
+
+import _curses
 
 
 class ReloadException(Exception):
