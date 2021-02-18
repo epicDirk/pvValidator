@@ -163,7 +163,7 @@ class pvUtils:
         Readme += "Author email: %s\n" % self.email
         Readme += "Platform: %s\n" % self.platform
         Readme += "%s\n" % self.epicsinfo
-        Readme += 'pvValidator is an EPICS PV validation tool based on the "ESS RULES FOR EPICS PV PROPERTY" document (ESS-XXXXXXX)\n'
+        Readme += 'pvValidator is an EPICS PV validation tool based on the "ESS RULES FOR EPICS PV PROPERTY" document (ESS-3218463)\n'
         Readme += (
             "pvValidator is realeased under the %s license (ESS - 2021)\n"
             % self.license
