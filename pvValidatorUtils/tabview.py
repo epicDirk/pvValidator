@@ -358,7 +358,7 @@ class Viewer:
             return 8
         else:
             if 0 < ch < 256:
-                pass
+                c = chr(ch) # noqa
 
             return ch
 

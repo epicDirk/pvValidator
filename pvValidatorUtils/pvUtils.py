@@ -188,7 +188,7 @@ class pvUtils:
                 if j != 0:
                     self.data[j].append(i[d[6]])
 
-            self.data[1].append(self.Info)
+            self.data[1].append(Info)
 
             with open(self.csvfile, "w", newline="") as f:
                 writer = csv.writer(f)
