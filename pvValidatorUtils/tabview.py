@@ -244,7 +244,6 @@ class Viewer:
         self.goto_y(1)
 
     def goto_y(self, y):
-        self.scr.refresh()
         y = max(min(len(self.data), y), 1)
         if (
             self.win_y
@@ -267,7 +266,6 @@ class Viewer:
         self.goto_y(m)
 
     def goto_x(self, x):
-        self.scr.refresh()
         x = max(min(self.num_data_columns, x), 1)
         if self.win_x < x <= self.win_x + self.num_columns:
             # same screen, change x value appropriately.
@@ -530,7 +528,6 @@ class Viewer:
             for i in range(0, self.num_data_columns)
         ]
         self.recalculate_layout()
-        self.scr.redrawwin
 
     def column_width_all_up(self):
         self.column_width = [
@@ -538,19 +535,20 @@ class Viewer:
             for i in range(0, self.num_data_columns)
         ]
         self.recalculate_layout()
-        self.scr.redrawwin
 
     def column_width_down(self):
         xp = self.x + self.win_x
-        self.column_width[xp] -= max(1, int(self.column_width[xp] * 0.2))
+        self.column_width[xp] = max(
+            1, self.column_width[xp] - max(1, int(self.column_width[xp] * 0.2))
+        )
         self.recalculate_layout()
-        self.scr.redrawwin
 
     def column_width_up(self):
         xp = self.x + self.win_x
-        self.column_width[xp] += max(1, int(self.column_width[xp] * 0.2))
+        self.column_width[xp] = max(
+            1, self.column_width[xp] + max(1, int(self.column_width[xp] * 0.2))
+        )
         self.recalculate_layout()
-        self.scr.redrawwin
 
     def sort_by_column_numeric(self):
         xp = self.x + self.win_x
@@ -659,9 +657,9 @@ class Viewer:
             "/                        Search (not case sensitive, result highlighted in red)\n"
             "n                        Next search result\n"
             "p                        Previous search result\n"
-            "t                        Toggle fixed header row\n"
+            # "t                        Toggle fixed header row\n"
             "< >                      Decrease/Increase column width (all columns)\n"
-            # ", .                      Decrease/Increase column width (current column)\n"
+            ", .                      Decrease/Increase column width (current column)\n"
             "- +                      Decrease/Increase column gap\n"
             "s                        Sort the table by the current column (ascending)\n"
             "S                        Sort the table by the current column (descending)\n"
@@ -704,11 +702,13 @@ class Viewer:
             "/": self.search,
             "n": self.search_results,
             "p": self.search_results_prev,
-            "t": self.toggle_header,
+            # "t": self.toggle_header,
             "-": self.column_gap_down,
             "+": self.column_gap_up,
             "<": self.column_width_all_down,
             ">": self.column_width_all_up,
+            ",": self.column_width_down,
+            ".": self.column_width_up,
             "a": self.sort_by_column_natural,
             "A": self.sort_by_column_natural_reverse,
             "#": self.sort_by_column_numeric,
@@ -824,7 +824,6 @@ class Viewer:
             self.goto_x(self.win_x + self.x + 1)
         if self.y >= self.max_y - self.header_offset:
             self.goto_y(self.win_y + self.y + 1)
-        self.scr.refresh()
 
     def location_string(self, yp, xp):
         """Create (y,x) col_label string. Max 50% of screen width. (y,x) is
@@ -864,7 +863,7 @@ class Viewer:
 
         strhelp = "Press F1 for Help"
 
-        cl = u"(\u2184) ESS - 2021".encode("utf-8")
+        cl = u"(\u2184) ESS - 2021 ".encode("utf-8")
         self.addstr(
             self.scr,
             1,
@@ -957,7 +956,7 @@ class Viewer:
             if self.header_offset == self.header_offset_orig:
                 for x in range(0, self.num_data_columns):
 
-                    s = self.header[x + self.win_x]
+                    s = self.header[x]
                     j.append(s.strip())
             j.append(self.summarytitle)
             j.append(self.ioctitle)
@@ -967,9 +966,9 @@ class Viewer:
                 j = []
                 for x in range(0, self.num_data_columns):
 
-                    s = self.data[y + self.win_y][x + self.win_x]
+                    s = self.data[y][x]
                     j.append(s.strip())
-                d = self.data[y + self.win_y][6]
+                d = self.data[y][6]
                 j.append(self.datainfo[d])
                 if y == 0:
                     j.append(self.info)
