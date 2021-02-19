@@ -244,6 +244,7 @@ class Viewer:
         self.goto_y(1)
 
     def goto_y(self, y):
+        self.scr.refresh()
         y = max(min(len(self.data), y), 1)
         if (
             self.win_y
@@ -266,6 +267,7 @@ class Viewer:
         self.goto_y(m)
 
     def goto_x(self, x):
+        self.scr.refresh()
         x = max(min(self.num_data_columns, x), 1)
         if self.win_x < x <= self.win_x + self.num_columns:
             # same screen, change x value appropriately.
@@ -528,6 +530,7 @@ class Viewer:
             for i in range(0, self.num_data_columns)
         ]
         self.recalculate_layout()
+        self.scr.redrawwin
 
     def column_width_all_up(self):
         self.column_width = [
@@ -535,16 +538,19 @@ class Viewer:
             for i in range(0, self.num_data_columns)
         ]
         self.recalculate_layout()
+        self.scr.redrawwin
 
     def column_width_down(self):
         xp = self.x + self.win_x
         self.column_width[xp] -= max(1, int(self.column_width[xp] * 0.2))
         self.recalculate_layout()
+        self.scr.redrawwin
 
     def column_width_up(self):
         xp = self.x + self.win_x
         self.column_width[xp] += max(1, int(self.column_width[xp] * 0.2))
         self.recalculate_layout()
+        self.scr.redrawwin
 
     def sort_by_column_numeric(self):
         xp = self.x + self.win_x
@@ -634,6 +640,7 @@ class Viewer:
             "F1 or ?                  Show this list of keybindings\n"
             "Cursor keys or h,j,k,l   Move the highlighted row, scrolling if required.\n"
             "Q or q                   Quit\n"
+            "Ctrl-l                   Refresh screen\n"  
             "i                        Show README in pop-up\n"
             "Enter                    View full PV Summary in pop-up window.\n"
             "v                        Show Validation Summary in pop-up window\n"
@@ -817,6 +824,7 @@ class Viewer:
             self.goto_x(self.win_x + self.x + 1)
         if self.y >= self.max_y - self.header_offset:
             self.goto_y(self.win_y + self.y + 1)
+        self.scr.refresh()
 
     def location_string(self, yp, xp):
         """Create (y,x) col_label string. Max 50% of screen width. (y,x) is
