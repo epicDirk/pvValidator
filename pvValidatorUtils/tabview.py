@@ -640,7 +640,7 @@ class Viewer:
             "F1 or ?                  Show this list of keybindings\n"
             "Cursor keys or h,j,k,l   Move the highlighted row, scrolling if required.\n"
             "Q or q                   Quit\n"
-            "Ctrl-l                   Refresh screen\n"  
+            "Ctrl-l                   Refresh screen\n"
             "i                        Show README in pop-up\n"
             "Enter                    View full PV Summary in pop-up window.\n"
             "v                        Show Validation Summary in pop-up window\n"
