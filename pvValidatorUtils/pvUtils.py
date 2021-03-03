@@ -10,7 +10,7 @@ from . import epicsUtils, tabview
 
 
 class pvUtils:
-    def __init__(self, pvepics, checkonlyfmt, pvfile, csvfile):
+    def __init__(self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile):
         self.version = get_distribution("pvValidatorUtils").version
         pkginfo = get_distribution("pvValidatorUtils").get_metadata("PKG-INFO")
         meta = message_from_string(pkginfo)
@@ -23,6 +23,18 @@ class pvUtils:
         self.checkonlyfmt = checkonlyfmt
         self.pvfile = pvfile
         self.csvfile = csvfile
+        url = None
+        self.NS = None
+        if namingservice == "dev":
+            url = "https://icsvd-app01.esss.lu.se:8443/names-test/"
+            self.NS = "Development"
+        elif namingservice == "stag":
+            url = "https://icsvs-app01.esss.lu.se/naming/"
+            self.NS = "Staging"
+        else:
+            url = "https://naming.esss.lu.se/"
+            self.NS = "Production"
+
         if pvfile is not None:
             with open(pvfile, "r") as pvf:
                 Lines = pvf.readlines()
@@ -47,8 +59,8 @@ class pvUtils:
         self.Title = "pvValidator %s" % self.version
         self.Widths = [6, 9, 10, 6, 6, 25, 60, 30]
         self.headers = {"accept": "application/json"}
-        self.urlparts = "https://naming.esss.lu.se/rest/parts/mnemonic/"
-        self.urlname = "https://naming.esss.lu.se/rest/deviceNames/"
+        self.urlparts = url + "rest/parts/mnemonic/"
+        self.urlname = url + "rest/deviceNames/"
         self.exist = 1
         self.notexist = 0
         self.empty = 2
@@ -65,7 +77,7 @@ class pvUtils:
 
         if not checkonlyfmt:
             try:
-                requests.head("https://naming.esss.lu.se", timeout=1)
+                requests.head(url, timeout=1)
             except requests.exceptions.ConnectionError as e:
                 print(e)
                 print("Fail to connect to Naming Service, exit!")
@@ -152,6 +164,9 @@ class pvUtils:
                 % (self.PVTot, self.PVNotValid, self.PVRuleFail, self.PVInternal)
             )
         else:
+            Info += (
+                "The Validation is done through " + self.NS + " Naming Service API\n"
+            )
             Info += (
                 "The Total PVs are = %i\nThe PVs Not Valid are = %i\nThe PVs Internal are = %i\n"
                 % (self.PVTot, self.PVNotValid, self.PVInternal)

@@ -47,12 +47,21 @@ def main():
         default=None,
         help="write Validation Table direclty on csv file (do not start interactive session)",
     )
-    parser.add_argument(
+    namegroup = parser.add_mutually_exclusive_group(required=False)
+    namegroup.add_argument(
+        "-n",
+        "--nameservice",
+        dest="nameservice",
+        default="prod",
+        choices=["prod", "dev", "stag"],
+        help="Select Naming Service endpoint: prod(uction), dev(elopment), stag(ing) [Default=prod]",
+    )
+    namegroup.add_argument(
         "--noapi",
         dest="noapi",
         action="store_true",
         default=False,
-        help="check only PV format and rules, skip connection to Naming Service",
+        help="check only PV format and rules, skip connection to Naming Service endpoint",
     )
 
     args = parser.parse_args()
@@ -70,7 +79,7 @@ def main():
         else:
             parser.error(args.pvfile + " is not a valid file")
 
-    pv = pvUtils(pvepics, args.noapi, args.pvfile, args.csvfile)
+    pv = pvUtils(pvepics, args.nameservice, args.noapi, args.pvfile, args.csvfile)
     pv.run()
 
 
