@@ -45,7 +45,7 @@ def main():
         "--outcsvfile",
         dest="csvfile",
         default=None,
-        help="write Validation Table direclty on csv file (do not start interactive session)",
+        help="write Validation Table directly on csv file (do not start interactive session)",
     )
     namegroup = parser.add_mutually_exclusive_group(required=False)
     namegroup.add_argument(
