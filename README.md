@@ -36,7 +36,7 @@ optional arguments:
   -i PVFILE, --inpvfile PVFILE                       input PV list file
                                                      (offline validation)
   -o CSVFILE, --outcsvfile CSVFILE                   write Validation Table
-                                                     direclty on csv file (do
+                                                     directly on csv file (do
                                                      not start interactive
                                                      session)
   -n {prod,dev,stag}, --nameservice {prod,dev,stag}  Select Naming Service
