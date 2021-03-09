@@ -1,2 +1,5 @@
 # [1.1.0] 2021-03-03
 - Added Naming Server Option Endpoint (Production,Development,Staging)
+# Tue 09 Mar 2021 02:17:10 PM
+- Removed .gitlab-ci.yml
+- Added zip_safe option in setup.py (maybe needed by Python>= 3.8)
