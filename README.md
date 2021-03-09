@@ -4,6 +4,7 @@ Tool to validate EPICS PVs based on CHESS document ESS-3218463.
 
 **Requirements**:
 - python 2 or 3 development tool ( `python(3)-dev(el)` )
+- setuptools
 - c++
 - swig ( http://www.swig.org ), you can install it via `apt` (debian/ubuntu) or `dnf/yum` (fedora/centos)
 - EPICS 7
