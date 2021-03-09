@@ -9,6 +9,7 @@ setup(
     author="Alfio Rizzo",
     author_email="alfio.rizzo@ess.eu",
     license="GPL",
+    zip_safe=False,
     platforms=["Linux", "WSL"],
     scripts=["bin/pvValidator.py"],
     install_requires=["requests"],
