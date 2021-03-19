@@ -3,3 +3,6 @@
 # Tue 09 Mar 2021 02:17:10 PM
 - Removed .gitlab-ci.yml
 - Added zip_safe option in setup.py (maybe needed by Python>= 3.8)
+# Fri 19 Mar 2021 08:20:47 AM CET [1.1.1]
+- Fixed regex bug
+- Verification summary 

@@ -1,6 +1,7 @@
 import csv
 import itertools
 import sys
+import re
 from email import message_from_string
 
 import requests
@@ -72,6 +73,8 @@ class pvUtils:
         self.PVNotValid = 0
         self.PVRuleFail = 0
         self.PVInternal = 0
+        self.PVWrongFormat = 0
+        self.PVNotRegistered = 0
         self.PVTot = len(self.pvepics.pvstringlist)
         self.charnotallow = set("!@$%^&*()+={}[]|\\:;'\"<>,.?/~`")
 
@@ -102,13 +105,16 @@ class pvUtils:
                 _data += ["------" for _ in range(6)]
             elif self.VFormD[pv] and (self.checkonlyfmt):
                 _data += ["******" for _ in range(6)]
-                self.datainfo[pv] += "Info: Skip Validation Check with Naming API"
+                apiskip = "Info: Skip Validation Check with Naming API"
+                if apiskip not in self.datainfo[pv]:
+                    self.datainfo[pv] += apiskip
             else:
                 _data += self._GetPVFormat(pv)
 
             if not self.VFormD[pv]:
                 comm = "NOT VALID (Wrong Format)"
                 self.PVNotValid += 1
+                self.PVWrongFormat += 1
             elif self.VFormD[pv] and (not self.VRuleD[pv]) and self.checkonlyfmt:
                 comm = "OK Format, Rule Fail"
                 self.PVRuleFail += 1
@@ -127,6 +133,7 @@ class pvUtils:
             ):
                 comm = "NOT VALID (Name Fail)"
                 self.PVNotValid += 1
+                self.PVNotRegistered += 1
             elif (
                 self.VFormD[pv]
                 and (not self.VRuleD[pv])
@@ -134,6 +141,7 @@ class pvUtils:
             ):
                 comm = "NOT VALID (Rule Fail)"
                 self.PVNotValid += 1
+                self.PVRuleFail += 1
             elif (
                 self.VFormD[pv]
                 and (not self.VRuleD[pv])
@@ -141,6 +149,8 @@ class pvUtils:
             ):
                 comm = "NOT VALID (Name and Rule Fail)"
                 self.PVNotValid += 1
+                self.PVRuleFail += 1
+                self.PVNotRegistered += 1
 
             _data.append(pv)
             _data.append(comm)
@@ -160,16 +170,25 @@ class pvUtils:
         if self.checkonlyfmt:
             Info += "The Validation through Naming Service was skipped\n"
             Info += (
-                "The Total PVs are = %i\nThe PVs Not Valid are = %i (wrong format)\nThe PVs Rule Fail are = %i\nThe PVs Internal are = %i\n"
-                % (self.PVTot, self.PVNotValid, self.PVRuleFail, self.PVInternal)
+                "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs Internal are = %i\n"
+                % (self.PVTot, self.PVWrongFormat, self.PVRuleFail, self.PVInternal)
             )
         else:
             Info += (
                 "The Validation is done through " + self.NS + " Naming Service API\n"
             )
             Info += (
-                "The Total PVs are = %i\nThe PVs Not Valid are = %i\nThe PVs Internal are = %i\n"
-                % (self.PVTot, self.PVNotValid, self.PVInternal)
+                "The Total PVs are = %i\nThe Total Not Valid PVs are = %i\nThe PVs with Wrong Format are = %i"
+                "\nThe PVs with Rule Failure are = %i"
+                "\nThe Not Registered Names are = %i\nThe PVs Internal are = %i\n"
+                % (
+                    self.PVTot,
+                    self.PVNotValid,
+                    self.PVWrongFormat,
+                    self.PVRuleFail,
+                    self.PVNotRegistered,
+                    self.PVInternal,
+                )
             )
 
         i = self._GetDataInfo()
@@ -235,56 +254,71 @@ class pvUtils:
         PVErrList = []
         PVWarnList = []
         errs = "Error: The PV Property is not unique"
+        dupl = False
+        regex = "[A_Za-z_-]0+(?!$)"
         for dev, plist in self.PVDict.items():
             for p1, p2 in itertools.combinations(plist, 2):
                 pv1 = dev + ":" + p1
                 pv2 = dev + ":" + p2
-                if p1.lower() == p2.lower():
+                if p1 == p2:
+                    self.datainfo[pv1] += "%s (duplication issue)\n" % (errs)
+                    PVErrList.append(pv1)
+                    dupl = True
+                if (p1.lower() == p2.lower()) and not dupl:
                     self.datainfo[pv1] += "%s (case issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (case issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O"):
+                if (
+                    p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (0 O issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (0 O issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV"):
+                if (
+                    p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (VV W issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (VV W issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1"):
+                if (
+                    p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (1 I issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (1 I issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1"):
+                if (
+                    p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (1 l issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (1 l issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I"):
+                if (
+                    p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (l I issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (l I issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if (p1.find("0") == p2.find("0")) and (p1.find("0") != -1):
-                    if (p1.endswith("0") and p2.endswith("0")) or (
-                        not p1.endswith("0") and not p2.endswith("0")
-                    ):
-                        if p1.replace("0", "") == p2.replace("0", ""):
-                            self.datainfo[
-                                pv1
-                            ] += "%s (leading zero issue, check %s)\n" % (errs, pv2)
-                            self.datainfo[
-                                pv2
-                            ] += "%s (leading zero issue, check %s)\n" % (errs, pv1)
-                            PVErrList.append(pv1)
-                            PVErrList.append(pv2)
+                if (re.search(regex, p1) and re.search(regex, p2)) and not dupl:
+                    if re.sub(regex, "", p1) == re.sub(regex, "", p2):
+                        self.datainfo[pv1] += "%s (leading zero issue, check %s)\n" % (
+                            errs,
+                            pv2,
+                        )
+                        self.datainfo[pv2] += "%s (leading zero issue, check %s)\n" % (
+                            errs,
+                            pv1,
+                        )
+                        PVErrList.append(pv1)
+                        PVErrList.append(pv2)
 
             for prop in plist:
 
@@ -353,13 +387,9 @@ class pvUtils:
                 pv = dev + ":" + prop
 
                 if pv in PVErrList:
-                    # self.datainfo[pv] += "Info: The PV does not follow some ESS PV Property Rules\n"
                     self.VRuleD[pv] = False
                 else:
                     self.VRuleD[pv] = True
-
-                # if (pv in PVWarnList and pv not in PVErrList):
-                #    self.datainfo[pv] += "Info: The PV follows ESS PV Property Rules with some Warnings\n"
 
                 if not (pv in PVWarnList or pv in PVErrList):
                     self.datainfo[pv] += "Info: The PV follows ESS PV Property Rules\n"
@@ -373,18 +403,15 @@ class pvUtils:
 
             try:
                 sys, subsys = s.split("-")
-                # syscheck,subsyscheck=0,0 #TEMP
             except Exception:
                 sys = s
                 subsys = ""
-                # syscheck,subsyscheck=0,2 #TEMP
 
             syscheck, subsyscheck = self._CheckSysStructName(sys, subsys)
 
             if not (essname.endswith(":")):
                 dis, dev, idx = (essname.split(":")[1]).split("-")
                 discheck, devcheck = self._CheckDevStructName(dis, dev)
-                # discheck,devcheck=0,0 #TEMP
             else:
                 discheck, devcheck = self.empty, self.empty
 
@@ -452,7 +479,6 @@ class pvUtils:
     def _CheckSysStructName(self, sys, subsys):
         req = self.urlparts + sys
         resp = requests.get(req, headers=self.headers)
-        # r = resp.json()
         SysExist = 0
         struct = "System Structure"
         for item in resp.json():
@@ -467,7 +493,6 @@ class pvUtils:
         if subsys != "":
             req = self.urlparts + subsys
             resp = requests.get(req, headers=self.headers)
-            # r = resp.json()
             SubsysExist = 0
             for item in resp.json():
                 if (
@@ -487,7 +512,6 @@ class pvUtils:
             return 2, 2
         req = self.urlparts + dis
         resp = requests.get(req, headers=self.headers)
-        # r = resp.json()
         DisExist = 0
         struct = "Device Structure"
         for item in resp.json():
@@ -500,7 +524,6 @@ class pvUtils:
                 break
         req = self.urlparts + dev
         resp = requests.get(req, headers=self.headers)
-        # r = resp.json()
         DevExist = 0
         for item in resp.json():
             if (
