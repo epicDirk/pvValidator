@@ -1,7 +1,7 @@
 import csv
 import itertools
-import sys
 import re
+import sys
 from email import message_from_string
 
 import requests
