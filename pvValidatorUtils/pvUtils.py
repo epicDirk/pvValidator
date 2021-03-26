@@ -1,7 +1,7 @@
 import csv
 import itertools
-import re
 import sys
+import re
 from email import message_from_string
 
 import requests
@@ -40,7 +40,8 @@ class pvUtils:
             with open(pvfile, "r") as pvf:
                 Lines = pvf.readlines()
             for lin in Lines:
-                self.pvepics.pvstringlist.push_back(lin.strip())
+                if not lin.startswith("%"):
+                    self.pvepics.pvstringlist.push_back(lin.strip())
 
         self.pvlist = self.pvepics.pvstringlist
         self.address = self.pvepics.getAddress
@@ -254,12 +255,12 @@ class pvUtils:
         PVErrList = []
         PVWarnList = []
         errs = "Error: The PV Property is not unique"
-        dupl = False
         regex = "[A_Za-z_-]0+(?!$)"
         for dev, plist in self.PVDict.items():
             for p1, p2 in itertools.combinations(plist, 2):
                 pv1 = dev + ":" + p1
                 pv2 = dev + ":" + p2
+                dupl = False
                 if p1 == p2:
                     self.datainfo[pv1] += "%s (duplication issue)\n" % (errs)
                     PVErrList.append(pv1)
@@ -269,45 +270,35 @@ class pvUtils:
                     self.datainfo[pv2] += "%s (case issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if (
-                    p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O")
-                ) and not dupl:
+                if p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O"):
                     self.datainfo[pv1] += "%s (0 O issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (0 O issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if (
-                    p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV")
-                ) and not dupl:
+                if p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV"):
                     self.datainfo[pv1] += "%s (VV W issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (VV W issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if (
-                    p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1")
-                ) and not dupl:
+                if p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1"):
                     self.datainfo[pv1] += "%s (1 I issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (1 I issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if (
-                    p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1")
-                ) and not dupl:
+                if p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1"):
                     self.datainfo[pv1] += "%s (1 l issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (1 l issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if (
-                    p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I")
-                ) and not dupl:
+                if p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I"):
                     self.datainfo[pv1] += "%s (l I issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (l I issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if (re.search(regex, p1) and re.search(regex, p2)) and not dupl:
+                if re.search(regex, p1) and re.search(regex, p2):
                     if re.sub(regex, "", p1) == re.sub(regex, "", p2):
                         self.datainfo[pv1] += "%s (leading zero issue, check %s)\n" % (
                             errs,
