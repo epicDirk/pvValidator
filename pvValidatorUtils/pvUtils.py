@@ -270,35 +270,45 @@ class pvUtils:
                     self.datainfo[pv2] += "%s (case issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O"):
+                if (
+                    p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (0 O issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (0 O issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV"):
+                if (
+                    p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (VV W issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (VV W issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
-                if p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1"):
+                if (
+                    p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (1 I issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (1 I issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1"):
+                if (
+                    p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (1 l issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (1 l issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I"):
+                if (
+                    p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I")
+                ) and not dupl:
                     self.datainfo[pv1] += "%s (l I issue, check %s)\n" % (errs, pv2)
                     self.datainfo[pv2] += "%s (l I issue, check %s)\n" % (errs, pv1)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
-                if re.search(regex, p1) and re.search(regex, p2):
+                if (re.search(regex, p1) and re.search(regex, p2)) and not dupl:
                     if re.sub(regex, "", p1) == re.sub(regex, "", p2):
                         self.datainfo[pv1] += "%s (leading zero issue, check %s)\n" % (
                             errs,
