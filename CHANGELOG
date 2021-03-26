@@ -6,3 +6,5 @@
 # Fri 19 Mar 2021 08:20:47 AM CET [1.1.1]
 - Fixed regex bug
 - Verification summary
+# Fri 26 Mar 2021 06:00:24 PM CET [1.2.0]
+- Added comment option on input pvfile
