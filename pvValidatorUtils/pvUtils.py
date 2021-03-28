@@ -471,7 +471,8 @@ class pvUtils:
 
             for prop in self.PVDict[essname]:
                 pv = essname + ":" + prop
-                self.datainfo[pv] += scheck
+                if scheck not in self.datainfo[pv]:
+                    self.datainfo[pv] += scheck
                 if (not checkname) or (not nameok):
                     self.VNameD[pv] = False
                 else:
