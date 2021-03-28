@@ -171,7 +171,7 @@ The following videos shows when **return** button is pressed over the highlited 
 
 ![video3](val1.mp4)
 
-The second video is done without the conenctio to the Naming APi (i.e. the `--noapi` option was used)
+The second video is done without the conenction to the Naming API (i.e. the `--noapi` option was used)
 
 ![video4](val2.mp4)
 ### Search, Save , Sort and some display option
