@@ -179,4 +179,3 @@ The second video is done without the conenctio to the Naming APi (i.e. the `--no
 The following video shows some of the avaliable option like save the csv file, search in the table or change some display visualization.
 
 ![video5](misc.mp4)
-
