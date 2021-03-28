@@ -1,6 +1,6 @@
 # pvValidator.py
 
-Tool to validate EPICS PVs based on CHESS document ESS-3218463.
+Tool to validate EPICS PVs based on CHESS document [ESS-3218463](https://chess.esss.lu.se/enovia/link/ESS-3218463/21308.51166.39936.65207/valid).
 
 **Requirements**:
 - python 2 or 3 development tool ( `python(3)-dev(el)` )
