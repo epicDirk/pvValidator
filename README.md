@@ -49,4 +49,4 @@ optional arguments:
                                                      Naming Service endpoint
 ```
 
-For more detail please see the [documentation](doc/pvvalidator.md)
+For more details please see the [documentation](doc/pvvalidator.md)
