@@ -5,7 +5,7 @@
 ## Introduction
 **pvValidator** is a tool to help Integrators to validate the **Records Names** (aka **PVs**) defined in the **EPICS db** loaded by the **IOC**.
 
-The validation rules implemented in the tool, are the ones described in the document [ESS Rules for EPICS PV Property](https://chess.esss.lu.se/enovia/link/ESS-3218463/21308.51166.39936.65207/valid), so we suggest to read before that document before to use the tool.
+The validation rules implemented in the tool, are the ones described in the document [ESS Rules for EPICS PV Property](https://chess.esss.lu.se/enovia/link/ESS-3218463/21308.51166.39936.65207/valid), so we suggest to read that document before to use the tool.
 
 As stated in the above documentation, in order to be **valid**, a PV must:
 - follows the PV format and rules
