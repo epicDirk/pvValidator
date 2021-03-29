@@ -24,6 +24,7 @@ endif
 LPATH= $(EPICS)/lib/$(ARCH)
 ELIBS = -L$(LPATH) -lpvAccessCA -lpvAccess -lpvData -lca -lCom
 
+CPPFLAGS := $(CFLAGS)
 
 
 all: swig $(MOD)/_$(CMOD).so
@@ -37,12 +38,12 @@ swig: $(SRC)/$(CMOD).i
 
 $(SRC)/%.o: $(SRC)/%.cxx $(SRC)/$(CMOD).h
 	@echo "compiling $@..."
-	g++ -O2 -fPIC $(INC) -c $< -o $@
+	g++ -O2 $(CPPFLAGS) -fPIC $(INC) -c $< -o $@
 
 
 $(SRC)/$(CMOD)_wrap.o: $(SRC)/$(CMOD)_wrap.cxx
 	@echo "compiling $@..."
-	g++ -O2 -fPIC $(INC) -c $< -o $@
+	g++ -O2 $(CPPFLAGS) -fPIC $(INC) -c $< -o $@
 
 
 $(MOD)/_$(CMOD).so: $(SRC)/$(CMOD).o $(SRC)/$(CMOD)_wrap.o
