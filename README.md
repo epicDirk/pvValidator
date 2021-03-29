@@ -11,7 +11,7 @@ Tool to validate EPICS PVs based on CHESS document [ESS-3218463](https://chess.e
 
 **Compilation**:
 - Export `PYBINDPATH` env variable to the python binding include path (e.g. `export PYBINDPATH=/usr/include/pythonXXX`)
-- Export `CFLAGS=-std=c++11` env variable if you need to compile against EPICS >= 7.0.5 mounted in ESS NFS disk 
+- Export `CFLAGS=-std=c++11` env variable if you need to compile against EPICS >= 7.0.5 mounted in ESS NFS disk
 - Source your EPICS environment then do
 `make` and
 `make install`
