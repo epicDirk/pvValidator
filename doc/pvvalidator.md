@@ -167,7 +167,7 @@ In the following table are shown the different type of messages when you press "
 |----------|---------|--------|
 | Info | Information about the "status" of a pv| Info: The PV follows ESS Name Format<br>Info: The PV follows ESS PV Property Rules|
 | Warning | The PV Property does not follow some reccomendation | Warning: The PV Property does nost start in upper case<br>Warning: The PV Property is below 4 characters (3) |
-| Error | The PV does not follow Naming Convention or PV property Rules | Error: The PV does not follow any ESS Name Format<br>Error: The PV Property is not unique (case issue, check CWM-CWS05::MYPV1)| 
+| Error | The PV does not follow Naming Convention or PV property Rules | Error: The PV does not follow any ESS Name Format<br>Error: The PV Property is not unique (case issue, check CWM-CWS05::MYPV1)|
 
 ### Keybindings
 
