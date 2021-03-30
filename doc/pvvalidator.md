@@ -159,6 +159,16 @@ In the following table we summarize the validation comments as we are shown in t
 
 As it was explained at the begining, if the Naming API connection is skipped, the complete validation cannot be perfomed.
 
+**PV Summary Message**
+
+In the following table are shown the different type of messages when you press "enter" on the correspondent highlited row to get the PV validation summary.
+
+| Message  | Meaning | Example|
+|----------|---------|--------|
+| Info | Information about the "status" of a pv| Info: The PV follows ESS Name Format<br>Info: The PV follows ESS PV Property Rules|
+| Warning | The PV Property does not follow some reccomendation | Warning: The PV Property does nost start in upper case<br>Warning: The PV Property is below 4 characters (3) |
+| Error | The PV does not follow Naming Convention or PV property Rules | Error: The PV does not follow any ESS Name Format<br>Error: The PV Property is not unique (case issue, check CWM-CWS05::MYPV1)| 
+
 ### Keybindings
 
 In the following video we shown the available keybindings, once pressed **F1**
