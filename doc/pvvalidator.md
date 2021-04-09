@@ -19,7 +19,7 @@ As default, the tool will connect to the production Naming Service API in order 
 ## Running Options
 Once compiled, the tool can be run from its CLI, called **pvValidator.py**.
 
-The required options are `-d`, `-s` or `-i` which are mutually exclusive.
+The required options are `-d`, `-s`,`-i` or `-e` which are mutually exclusive.
 
 In the following paragraphs the description of each option.
 
@@ -78,8 +78,38 @@ The following syntax is allowed if you are running the tool in the same host whe
 
 **Offline**
 
-When is not (yet) available a running IOC, the list of PVs can be given through a text file. Each line of the text file should have only one PV; comments can inserted putting the `%` character at the beginning of the line.
+When is not (yet) available a running IOC, the list of PVs can be given through a text file.
+
+The text file can be an EPICS DB (.db), along with an additional optional file which should contain macro definition if needed, or a plain text file with just the list of PVs.
+
+The macro definition file should contain in the first column the macro and in the second its definition. E.g.
+
+```
+$(P) MySystem
+$(R) MySubsystem
+$(DEV) MyDevice
+......
+```
+
+In text file with the list of PVs, each line should contain only one. E.g.
+
+```
+Sys-Subsys:Dis-Dev-Idx:Property
+Sys-Subsys::Property
+......
+```
+
+In both macro definition and pv list file, comments can inserted putting the `%` character at the beginning of the line.
+
 The command to do the **offline** validation in this case is the following
+
+`> pvValidator.py -e <EPICSDB> [MACRODEF]`
+
+E.g.
+
+`pvValidator.py -e MyepicsDb.db Mymacrodef.txt`
+
+Or
 
 `> pvValidator.py -i <INPUTPVFILE>`
 

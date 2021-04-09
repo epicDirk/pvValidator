@@ -34,8 +34,8 @@ optional arguments:
                         IOC server IP or GUID to get PV list (online validation)
   -i PVFILE, --inpvfile PVFILE
                         input PV list file (offline validation)
-  -e EPICSDB [MACROSUB ...], --epicsdb EPICSDB [MACROSUB ...]
-                        input EPICS DB file (.db) [macro substitution file] (offline validation)
+  -e EPICSDB [MACRODEF ...], --epicsdb EPICSDB [MACRODEF ...]
+                        input EPICS DB file (.db) [macro definition file] (offline validation)
   -o CSVFILE, --outcsvfile CSVFILE
                         write Validation Table directly on csv file (do not start interactive session)
   -n {prod,dev,stag}, --nameservice {prod,dev,stag}
