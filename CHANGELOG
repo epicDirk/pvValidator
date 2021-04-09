@@ -10,3 +10,5 @@
 - Added comment option on input pvfile
 - Added documentation
 - Added -std=c++11 in Makefile
+# Fri 09 Apr 2021 09:16:04 AM CEST [1.3.0]
+- Added option to read EPICS DB
