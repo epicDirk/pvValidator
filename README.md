@@ -21,7 +21,7 @@ It will do a local installation of the python modules.
 Then you can run the CLI **pvValidator.py**
 ```
 pvValidator.py -h
-usage: pvValidator.py [-h] [-V] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACROSUB ...])
+usage: pvValidator.py [-h] [-V] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACRODEF ...])
                         [-o CSVFILE] [-n {prod,dev,stag} | --noapi]
 
 EPICS PV Validation Tool
