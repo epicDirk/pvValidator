@@ -12,7 +12,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="EPICS PV Validation Tool",
-        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=60),
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, width=200),
     )
 
     parser.add_argument(
@@ -39,6 +39,15 @@ def main():
         dest="pvfile",
         default=None,
         help="input PV list file (offline validation)",
+    )
+    group.add_argument(
+        "-e",
+        "--epicsdb",
+        dest="epicsdb",
+        default=None,
+        help="input EPICS DB file (.db) [macro substitution file] (offline validation)",
+        metavar=("EPICSDB", "MACROSUB"),
+        nargs="+",
     )
     parser.add_argument(
         "-o",
@@ -79,7 +88,17 @@ def main():
         else:
             parser.error(args.pvfile + " is not a valid file")
 
-    pv = pvUtils(pvepics, args.nameservice, args.noapi, args.pvfile, args.csvfile)
+    if args.epicsdb:
+        if os.path.isfile(args.epicsdb[0]):
+            pvepics = epicsUtils(False)
+            if len(args.epicsdb) > 1 and not os.path.isfile(args.epicsdb[1]):
+                parser.error(args.epicsdb[1] + " is not a valid file")
+        else:
+            parser.error(args.epicsdb[0] + " is not a valid file")
+
+    pv = pvUtils(
+        pvepics, args.nameservice, args.noapi, args.pvfile, args.csvfile, args.epicsdb
+    )
     pv.run()
 
 

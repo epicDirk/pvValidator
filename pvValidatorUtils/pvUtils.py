@@ -11,7 +11,7 @@ from . import epicsUtils, tabview
 
 
 class pvUtils:
-    def __init__(self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile):
+    def __init__(self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb):
         self.version = get_distribution("pvValidatorUtils").version
         pkginfo = get_distribution("pvValidatorUtils").get_metadata("PKG-INFO")
         meta = message_from_string(pkginfo)
@@ -24,6 +24,7 @@ class pvUtils:
         self.checkonlyfmt = checkonlyfmt
         self.pvfile = pvfile
         self.csvfile = csvfile
+        self.epicsdb = epicsdb
         url = None
         self.NS = None
         if namingservice == "dev":
@@ -42,6 +43,40 @@ class pvUtils:
             for lin in Lines:
                 if not lin.startswith("%"):
                     self.pvepics.pvstringlist.push_back(lin.strip())
+
+        if epicsdb is not None:
+            w = "record"
+            listdb = []
+            with open(epicsdb[0], "r") as fdb:
+                for r in fdb:
+                    if w in r:
+                        listdb.append(
+                            ((r.split(",")[1]).rsplit(")", 1)[0].strip()).strip('"')
+                        )
+            if len(epicsdb) > 1:
+                with open(epicsdb[1]) as sub:
+                    for s in sub:
+                        if not s.startswith("%"):
+                            try:
+                                m, n = s.split()
+                                listdb = [ll.replace(m, n) for ll in listdb]
+                            except Exception:
+                                pass
+            if any("$" in string for string in listdb):
+                if len(epicsdb) > 1:
+                    print(
+                        "It seems that you miss some macro substitution in the file %s for your EPICS DB %s, please check! Exit!"
+                        % (epicsdb[1], epicsdb[0])
+                    )
+                else:
+                    print(
+                        "It seems that you miss some macro substitution file for your EPICS DB %s, please check! Exit!"
+                        % epicsdb[0]
+                    )
+                sys.exit(1)
+
+            for ldb in listdb:
+                self.pvepics.pvstringlist.push_back(ldb)
 
         self.pvlist = self.pvepics.pvstringlist
         self.address = self.pvepics.getAddress
@@ -166,6 +201,12 @@ class pvUtils:
             Info = (
                 "The PV list is taken from the file %s to perform offline validation\n"
                 % self.pvfile
+            )
+
+        if self.epicsdb is not None:
+            Info = (
+                "The PV list is taken from the EPICS DB %s to perform offline validation\n"
+                % self.epicsdb[0]
             )
 
         if self.checkonlyfmt:
