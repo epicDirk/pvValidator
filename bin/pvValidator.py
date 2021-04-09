@@ -45,8 +45,8 @@ def main():
         "--epicsdb",
         dest="epicsdb",
         default=None,
-        help="input EPICS DB file (.db) [macro substitution file] (offline validation)",
-        metavar=("EPICSDB", "MACROSUB"),
+        help="input EPICS DB file (.db) [macro definition file] (offline validation)",
+        metavar=("EPICSDB", "MACRODEF"),
         nargs="+",
     )
     parser.add_argument(
