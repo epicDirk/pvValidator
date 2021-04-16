@@ -183,9 +183,11 @@ In the following table we summarize the validation comments as we are shown in t
 |NOT VALID (Name Fail)|The instance of the PV is not registered in the Naming Service<br> or some component of the instance (e.g. System, Subsystem, Discipline or Device)<br> is not approved in the Naming Service| only if connected to Naming API|
 |NOT VALID (Name and Rule Fail) | The Name Fail occurs and the PV does not follow some of Property Rules | only if connectted to Naming API|
 |NOT VALID (Rule Fail) | The Name Rule is ok but the PV does not follow some of the Property Rules.| only if connected to Naming API|
-|VALID| The PV follows both Name and PV Property Rules| only if connected to Naming API|
+|VALID| The PV follows Name and PV Property Rules and Reccomendation| only if connected to Naming API|
+|VALID (Warn Rule) | The PV follows Name and Property Rules but some Reccomendation are missing | only if connected to Naming API|
 |OK Format, Rule Fail| The PV follows some format but does not follow some of the Property Rules| if not connected to Naming API<br>no complete Validation check|
-|OK Format, OK Rule| The PV followd both format and Property Rules|if not connected to Naming API<br>no complete Validation check|
+|OK Format, Rule Warn| The PV follows some format and Property Rules but it does not follow some of the Reccomendations| if not connected to Naming API<br>no complete Validation check|
+|OK Format, OK Rule| The PV follows format and Property Rules and Reccomendations |if not connected to Naming API<br>no complete Validation check|
 
 As it was explained at the begining, if the Naming API connection is skipped, the complete validation cannot be perfomed.
 
