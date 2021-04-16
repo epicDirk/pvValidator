@@ -216,7 +216,7 @@ The following videos shows when **return** button is pressed over the highlited 
 The second video is done without the conenction to the Naming API (i.e. the `--noapi` option was used)
 
 ![video4](val2.mp4)
-### Search, Save , Sort and some display option
+### Save , Search, Sort and some display option
 
 The following video shows some of the avaliable option like save the csv file, search in the table or change some display visualization.
 
