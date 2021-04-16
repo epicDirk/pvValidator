@@ -105,10 +105,12 @@ class pvUtils:
         self.PVDict = {}
         self.VFormD = {}
         self.VRuleD = {}
+        self.VWarnD = {}
         self.VNameD = {}
         self.PVNotValid = 0
         self.PVRuleFail = 0
         self.PVInternal = 0
+        self.PVRuleWarn = 0
         self.PVWrongFormat = 0
         self.PVNotRegistered = 0
         self.PVTot = len(self.pvepics.pvstringlist)
@@ -151,11 +153,26 @@ class pvUtils:
                 comm = "NOT VALID (Wrong Format)"
                 self.PVNotValid += 1
                 self.PVWrongFormat += 1
-            elif self.VFormD[pv] and (not self.VRuleD[pv]) and self.checkonlyfmt:
+            elif (
+                self.VFormD[pv]
+                and (not self.VRuleD[pv])
+                and (not self.VWarnD[pv])
+                and self.checkonlyfmt
+            ):
                 comm = "OK Format, Rule Fail"
                 self.PVRuleFail += 1
             elif self.VFormD[pv] and self.VRuleD[pv] and self.checkonlyfmt:
                 comm = "OK Format, OK Rule"
+            elif self.VFormD[pv] and self.VWarnD[pv] and self.checkonlyfmt:
+                comm = "OK Format, Warn Rule"
+                self.PVRuleWarn += 1
+            elif (
+                self.VFormD[pv]
+                and self.VWarnD[pv]
+                and ((not self.checkonlyfmt) and self.VNameD[pv])
+            ):
+                comm = "VALID (Warn Rule)"
+                self.PVRuleWarn += 1
             elif (
                 self.VFormD[pv]
                 and self.VRuleD[pv]
@@ -211,9 +228,12 @@ class pvUtils:
 
         if self.checkonlyfmt:
             Info += "The Validation through Naming Service was skipped\n"
-            Info += (
-                "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs Internal are = %i\n"
-                % (self.PVTot, self.PVWrongFormat, self.PVRuleFail, self.PVInternal)
+            Info += "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i\nThe PVs Internal are = %i\n" % (
+                self.PVTot,
+                self.PVWrongFormat,
+                self.PVRuleFail,
+                self.PVRuleWarn,
+                self.PVInternal,
             )
         else:
             Info += (
@@ -221,13 +241,14 @@ class pvUtils:
             )
             Info += (
                 "The Total PVs are = %i\nThe Total Not Valid PVs are = %i\nThe PVs with Wrong Format are = %i"
-                "\nThe PVs with Rule Failure are = %i"
+                "\nThe PVs with Rule Failure are = %i\nThe PV with Rule Warning = %i"
                 "\nThe Not Registered Names are = %i\nThe PVs Internal are = %i\n"
                 % (
                     self.PVTot,
                     self.PVNotValid,
                     self.PVWrongFormat,
                     self.PVRuleFail,
+                    self.PVRuleWarn,
                     self.PVNotRegistered,
                     self.PVInternal,
                 )
@@ -384,7 +405,7 @@ class pvUtils:
                             % len(prop)
                         )
                         PVWarnList.append(pv)
-                if len(prop) < 4:
+                if len(prop) < 4 and prop != "Pwr":
                     self.datainfo[
                         pv
                     ] += "Warning: The PV Property is below 4 characters (%i)\n" % len(
@@ -430,7 +451,12 @@ class pvUtils:
 
                 if pv in PVErrList:
                     self.VRuleD[pv] = False
+                    self.VWarnD[pv] = False
+                elif pv in PVWarnList:
+                    self.VRuleD[pv] = False
+                    self.VWarnD[pv] = True
                 else:
+                    self.VWarnD[pv] = False
                     self.VRuleD[pv] = True
 
                 if not (pv in PVWarnList or pv in PVErrList):
