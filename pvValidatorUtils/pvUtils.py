@@ -181,12 +181,15 @@ class pvUtils:
                 comm = "VALID"
             elif (
                 self.VFormD[pv]
-                and self.VRuleD[pv]
+                and (self.VRuleD[pv] or self.VWarnD[pv])
                 and ((not self.checkonlyfmt) and (not self.VNameD[pv]))
             ):
                 comm = "NOT VALID (Name Fail)"
                 self.PVNotValid += 1
                 self.PVNotRegistered += 1
+                if self.VWarnD[pv]:
+                    self.PVRuleWarn += 1
+
             elif (
                 self.VFormD[pv]
                 and (not self.VRuleD[pv])
@@ -198,6 +201,7 @@ class pvUtils:
             elif (
                 self.VFormD[pv]
                 and (not self.VRuleD[pv])
+                and (not self.VWarnD[pv])
                 and ((not self.checkonlyfmt) and (not self.VNameD[pv]))
             ):
                 comm = "NOT VALID (Name and Rule Fail)"
