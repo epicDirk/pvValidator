@@ -1,8 +1,21 @@
+# Author: Alfio Rizzo
+
 EPICS=$(EPICS_BASE)
 ARCH=$(EPICS_HOST_ARCH)
 CMOD=epicsUtils
 MOD = pvValidatorUtils
 PYBIND = $(PYBINDPATH)
+
+
+ifndef PYBINDPATH
+$(error PYBINDPATH is not set)
+endif
+
+ifndef EPICS_BASE
+$(error Source your EPICS env)
+endif
+
+
 
 SRC = src
 LIB = lib
@@ -24,7 +37,6 @@ endif
 LPATH= $(EPICS)/lib/$(ARCH)
 ELIBS = -L$(LPATH) -lpvAccessCA -lpvAccess -lpvData -lca -lCom
 
-CPPFLAGS := $(CFLAGS)
 
 
 all: swig $(MOD)/_$(CMOD).so
@@ -38,12 +50,12 @@ swig: $(SRC)/$(CMOD).i
 
 $(SRC)/%.o: $(SRC)/%.cxx $(SRC)/$(CMOD).h
 	@echo "compiling $@..."
-	g++ -O2 $(CPPFLAGS) -fPIC $(INC) -c $< -o $@
+	g++ -O2 -fPIC $(INC) -c $< -o $@
 
 
 $(SRC)/$(CMOD)_wrap.o: $(SRC)/$(CMOD)_wrap.cxx
 	@echo "compiling $@..."
-	g++ -O2 $(CPPFLAGS) -fPIC $(INC) -c $< -o $@
+	g++ -O2 -fPIC $(INC) -c $< -o $@
 
 
 $(MOD)/_$(CMOD).so: $(SRC)/$(CMOD).o $(SRC)/$(CMOD)_wrap.o
