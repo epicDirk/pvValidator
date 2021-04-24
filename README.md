@@ -4,19 +4,43 @@ Tool to validate EPICS PVs based on CHESS document [ESS-3218463](https://chess.e
 
 **Requirements**:
 - python 2 or 3 development tool ( `python(3)-dev(el)` )
-- setuptools
+- python setuptools module
 - c++
 - swig ( http://www.swig.org ), you can install it via `apt` (debian/ubuntu) or `dnf/yum` (fedora/centos)
 - EPICS 7
 
-**Compilation**:
+You can install `cmake` (version >=3.0, in CentOS7 distro is called `cmake3`) if you want to compile exploiting the cmake functionality.
+
+**Compile with cmake**
+- Create a directory called e.g. `build`, preferably outside the local git cloned repo (e.g. `mkdir /tmp/build`)
+
+- Source your EPICS environment
+
+- Go into  the `build` directory and launch
+
+  `cmake (cmake3) <PATH_TO_YOUR_GIT_CLONE_DIR>`
+- If you want to compile against a different version of `python` that the one found in the build check in the first place add
+
+  `cmake (cmake3) <PATH_TO_YOUR_GIT_CLONE_DIR> -DMY_PYTHON_VERSION=X.Y` (e.g. `-DMY_PYTHON_VERSION=3.7`)
+- If you need to compile with the C++ 11 option (for instance against EPICS >= 7.0.5 mounted in ESS NFS disk)  add the following
+
+  `cmake (cmake3) <PATH_TO_YOUR_GIT_CLONE_DIR> [-DMY_PYTHON_VERSION=X.Y] -DCMAKE_CXX_STANDARD=11`
+
+- If the build check is ok, then you can do
+  `make` and `make install` or directly `make install` (It will do a local installation of the python modules).
+
+  Otherwise `cmake` will exit warning about the missing package(s) or env. In case fix the issues and restart from the beginning.
+
+
+
+**Compile with built-in Makefile**:
 - Export `PYBINDPATH` env variable to the python binding include path (e.g. `export PYBINDPATH=/usr/include/pythonXXX`)
-- Export `CFLAGS=-std=c++11` env variable if you need to compile against EPICS >= 7.0.5 mounted in ESS NFS disk
+- Export `CFLAGS=-std=c++11` env variable if you need to compile for instance against EPICS >= 7.0.5 mounted in ESS NFS disk
 - Source your EPICS environment then do
 `make` and
-`make install`
+`make install` (It will do a local installation of the python modules).
 
-It will do a local installation of the python modules.
+
 
 Then you can run the CLI **pvValidator.py**
 ```
