@@ -39,8 +39,8 @@ You can install `cmake` (version >=3.0, in CentOS7 distro is called `cmake3`) if
 - Source your EPICS environment then do
 `make` and
 `make install` (It will do a local installation of the python modules).
- 
-   If the `EPICS` enviroment is not sourced or `PYBINDPATH` not set, Makefile will stop compilation.
+
+  If the `EPICS` enviroment is not sourced or `PYBINDPATH` not set, Makefile will stop compilation.
 
 
 Then you can run the CLI **pvValidator.py**
