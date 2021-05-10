@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+
 """ tabview.py -- View a tab-delimited file in a spreadsheet-like display.
   Scott Hansen <firecat four one five three at gmail dot com>
   Based on code contributed by A.M. Kuchling <amk at amk dot ca>
   Modified by Alfio Rizzo (alfio.rizzo@ess.eu) for pvValidator.py
 """
+
 import csv
 import curses
 import curses.ascii
