@@ -2,7 +2,7 @@
 
 Tool to validate EPICS PVs based on CHESS document [ESS-3218463](https://chess.esss.lu.se/enovia/link/ESS-3218463/21308.51166.39936.65207/valid).
 
-**Install via pip package for CentOS7 Distribution**
+**Install via pip package on CentOS7 Distribution**
 
 Requiremenmts: `Python3` and `pip3`
  - `export PIP_INDEX_URL=https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple` in your `.bashrc`
