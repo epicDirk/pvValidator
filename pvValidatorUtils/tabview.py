@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
-
 """ tabview.py -- View a tab-delimited file in a spreadsheet-like display.
   Scott Hansen <firecat four one five three at gmail dot com>
   Based on code contributed by A.M. Kuchling <amk at amk dot ca>
   Modified by Alfio Rizzo (alfio.rizzo@ess.eu) for pvValidator.py
 """
-
 import csv
 import curses
 import curses.ascii
@@ -445,7 +443,7 @@ class Viewer:
         return data, yp, xp
 
     def _search_cur_line_r(self, data, yp, xp):
-        """ Current line first, from yp,xp to the right """
+        """Current line first, from yp,xp to the right"""
         res = False
         for x, item in enumerate(data[yp][xp:]):
             if self.search_str in item.lower():
@@ -455,7 +453,7 @@ class Viewer:
         return yp, xp, res
 
     def _search_cur_line_l(self, data, yp, xp):
-        """Last, search from beginning of current line to current position """
+        """Last, search from beginning of current line to current position"""
         res = x = False
         for x, item in enumerate(data[yp][:xp]):
             if self.search_str in item.lower():
@@ -464,7 +462,7 @@ class Viewer:
         return yp, x, res
 
     def _search_next_line_to_end(self, data, yp, xp):
-        """ Search from next line to the end """
+        """Search from next line to the end"""
         res = done = False
         for y, line in enumerate(data[yp + 1 :]):
             for x, item in enumerate(line):
@@ -1165,7 +1163,7 @@ class TextBox:
         }
 
     def _calculate_layout(self):
-        """Setup popup window and format data. """
+        """Setup popup window and format data."""
         self.scr.touchwin()
         self.term_rows, self.term_cols = self.scr.getmaxyx()
         self.box_height = self.term_rows - int(self.term_rows / 2)
