@@ -16,3 +16,5 @@
 - Show explicitly on Validation Comment Warn PV
 # Sat 24 Apr 2021 09:05:26 AM CEST [1.3.1]
 - Added CMakeLists.txt, updated README
+# Thu 10 June 2021 08:00:00 AM CEST [1.3.2]
+- Skip line with comments when parse .db file
