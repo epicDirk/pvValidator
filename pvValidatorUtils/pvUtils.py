@@ -49,7 +49,12 @@ class pvUtils:
             listdb = []
             with open(epicsdb[0], "r") as fdb:
                 for r in fdb:
-                    if w in r and not r.lstrip().startswith("#"):
+                    if (
+                        w in r
+                        and not r.lstrip().startswith("#")
+                        and not r.lstrip().startswith("f")
+                        and not r.lstrip().startswith("i")
+                    ):
                         listdb.append(
                             ((r.split(",")[1]).rsplit(")", 1)[0].strip()).strip('"')
                         )
