@@ -237,15 +237,12 @@ class pvUtils:
 
         if self.checkonlyfmt:
             Info += "The Validation through Naming Service was skipped\n"
-            Info += (
-                "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i\nThe PVs Internal are = %i\n"
-                % (
-                    self.PVTot,
-                    self.PVWrongFormat,
-                    self.PVRuleFail,
-                    self.PVRuleWarn,
-                    self.PVInternal,
-                )
+            Info += "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i\nThe PVs Internal are = %i\n" % (
+                self.PVTot,
+                self.PVWrongFormat,
+                self.PVRuleFail,
+                self.PVRuleWarn,
+                self.PVInternal,
             )
         else:
             Info += (
