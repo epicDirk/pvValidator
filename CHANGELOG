@@ -18,3 +18,6 @@
 - Added CMakeLists.txt, updated README
 # Thu 10 June 2021 08:00:00 AM CEST [1.3.2]
 - Skip line with comments when parse .db file
+# Thu 03 Feb 2022 05:18:21 PM CET [1.4.0]
+- Improved code speed (caching API check of name parts for System and Device Structure)
+- Fixed missing check on Device type in the Discipline
