@@ -114,6 +114,7 @@ class pvUtils:
         self.VNameD = {}
         self.SysStructCheckList = {}
         self.DevStructCheckList = {}
+        self.EssNameCheckList = {}
         self.PVNotValid = 0
         self.PVRuleFail = 0
         self.PVInternal = 0
@@ -255,8 +256,8 @@ class pvUtils:
             )
             Info += (
                 "The Total PVs are = %i\nThe Total Not Valid PVs are = %i\nThe PVs with Wrong Format are = %i"
-                "\nThe PVs with Rule Failure are = %i\nThe PV with Rule Warning = %i"
-                "\nThe Not Registered Names are = %i\nThe PVs Internal are = %i\n"
+                "\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i"
+                "\nThe PVs with NOT Registered Name are = %i\nThe PVs Internal are = %i\n"
                 % (
                     self.PVTot,
                     self.PVNotValid,
@@ -495,6 +496,7 @@ class pvUtils:
             scheck = ""
             checkname = True
             nameok = False
+            sname = ""
             if self.SysStructCheckList[sys] == self.notexist:
                 scheck += (
                     'Error: the System "%s" does not exist in the Naming Service\n'
@@ -529,33 +531,36 @@ class pvUtils:
                     )
                     checkname = False
 
+                sname = essname
+            else:
+                sname = s
+
             if checkname:
-                if essname.endswith(":"):
-                    sname = essname.split(":")[0]
-                else:
-                    sname = essname
-                req = self.urlname + sname
-                resp = requests.get(req, headers=self.headers)
-                try:
-                    r = resp.json()
-                    if r["status"] == "ACTIVE":
+                if sname not in self.EssNameCheckList.keys():
+                    req = self.urlname + sname
+                    resp = requests.get(req, headers=self.headers)
+                    try:
+                        r = resp.json()
+                        if r["status"] == "ACTIVE":
+                            scheck += (
+                                'Info: The Name "%s" is registered in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = True
+                    except Exception:
                         scheck += (
-                            'Info: The Name "%s" is registered in the Naming Service\n'
+                            'Error: The Name "%s" is not registered in the Naming Service\n'
                             % sname
                         )
-                        nameok = True
-                except Exception:
-                    scheck += (
-                        'Error: The Name "%s" is not registered in the Naming Service\n'
-                        % sname
-                    )
-                    nameok = False
+                        nameok = False
+
+            self.EssNameCheckList[sname] = nameok
 
             for prop in self.PVDict[essname]:
                 pv = essname + ":" + prop
                 if scheck not in self.datainfo[pv]:
                     self.datainfo[pv] += scheck
-                if (not checkname) or (not nameok):
+                if (not checkname) or (not self.EssNameCheckList[sname]):
                     self.VNameD[pv] = False
                 else:
                     self.VNameD[pv] = True
