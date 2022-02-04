@@ -863,7 +863,7 @@ class Viewer:
 
         strhelp = "Press F1 for Help"
 
-        cl = u"(\u2184) ESS - 2021 ".encode("utf-8")
+        cl = "(\u2184) ESS - 2021 ".encode("utf-8")
         self.addstr(
             self.scr,
             1,

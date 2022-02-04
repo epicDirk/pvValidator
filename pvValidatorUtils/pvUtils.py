@@ -112,6 +112,9 @@ class pvUtils:
         self.VRuleD = {}
         self.VWarnD = {}
         self.VNameD = {}
+        self.SysStructCheckList = {}
+        self.DevStructCheckList = {}
+        self.EssNameCheckList = {}
         self.PVNotValid = 0
         self.PVRuleFail = 0
         self.PVInternal = 0
@@ -237,12 +240,15 @@ class pvUtils:
 
         if self.checkonlyfmt:
             Info += "The Validation through Naming Service was skipped\n"
-            Info += "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i\nThe PVs Internal are = %i\n" % (
-                self.PVTot,
-                self.PVWrongFormat,
-                self.PVRuleFail,
-                self.PVRuleWarn,
-                self.PVInternal,
+            Info += (
+                "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i\nThe PVs Internal are = %i\n"
+                % (
+                    self.PVTot,
+                    self.PVWrongFormat,
+                    self.PVRuleFail,
+                    self.PVRuleWarn,
+                    self.PVInternal,
+                )
             )
         else:
             Info += (
@@ -250,8 +256,8 @@ class pvUtils:
             )
             Info += (
                 "The Total PVs are = %i\nThe Total Not Valid PVs are = %i\nThe PVs with Wrong Format are = %i"
-                "\nThe PVs with Rule Failure are = %i\nThe PV with Rule Warning = %i"
-                "\nThe Not Registered Names are = %i\nThe PVs Internal are = %i\n"
+                "\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i"
+                "\nThe PVs with NOT Registered Name are = %i\nThe PVs Internal are = %i\n"
                 % (
                     self.PVTot,
                     self.PVNotValid,
@@ -484,72 +490,77 @@ class pvUtils:
                 sys = s
                 subsys = ""
 
-            syscheck, subsyscheck = self._CheckSysStructName(sys, subsys)
-
-            if not (essname.endswith(":")):
-                dis, dev, idx = (essname.split(":")[1]).split("-")
-                discheck, devcheck = self._CheckDevStructName(dis, dev)
-            else:
-                discheck, devcheck = self.empty, self.empty
+            if s not in self.SysStructCheckList.keys():
+                self._CheckSysStructName(sys, subsys)
 
             scheck = ""
             checkname = True
             nameok = False
-            if syscheck == self.notexist:
+            sname = ""
+            if self.SysStructCheckList[sys] == self.notexist:
                 scheck += (
                     'Error: the System "%s" does not exist in the Naming Service\n'
                     % sys
                 )
                 checkname = False
 
-            if subsyscheck == self.notexist:
+            if subsys != "" and self.SysStructCheckList[s] == self.notexist:
                 scheck += (
-                    'Error: the Subsystem "%s" does not exist in the Naming Service\n'
-                    % subsys
+                    'Error: the Subsystem "%s" of the System "%s" does not exist in the Naming Service\n'
+                    % (subsys, sys)
                 )
                 checkname = False
 
-            if discheck == self.notexist:
-                scheck += (
-                    'Error: the Discipline "%s" does not exist in the Naming Service\n'
-                    % dis
-                )
-                checkname = False
+            if not (essname.endswith(":")):
+                dis, dev, idx = (essname.split(":")[1]).split("-")
+                d = dis + "-" + dev
+                if d not in self.DevStructCheckList.keys():
+                    self._CheckDevStructName(dis, dev)
 
-            if devcheck == self.notexist:
-                scheck += (
-                    'Error: the Device "%s" does not exist in the Naming Service\n'
-                    % dev
-                )
-                checkname = False
+                if self.DevStructCheckList[dis] == self.notexist:
+                    scheck += (
+                        'Error: the Discipline "%s" does not exist in the Naming Service\n'
+                        % dis
+                    )
+                    checkname = False
+
+                if self.DevStructCheckList[d] == self.notexist:
+                    scheck += (
+                        'Error: the Device "%s" of the Discipline "%s" does not exist in the Naming Service\n'
+                        % (dev, dis)
+                    )
+                    checkname = False
+
+                sname = essname
+            else:
+                sname = s
 
             if checkname:
-                if essname.endswith(":"):
-                    sname = essname.split(":")[0]
-                else:
-                    sname = essname
-                req = self.urlname + sname
-                resp = requests.get(req, headers=self.headers)
-                try:
-                    r = resp.json()
-                    if r["status"] == "ACTIVE":
+                if sname not in self.EssNameCheckList.keys():
+                    req = self.urlname + sname
+                    resp = requests.get(req, headers=self.headers)
+                    try:
+                        r = resp.json()
+                        if r["status"] == "ACTIVE":
+                            scheck += (
+                                'Info: The Name "%s" is registered in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = True
+                    except Exception:
                         scheck += (
-                            'Info: The Name "%s" is registered in the Naming Service\n'
+                            'Error: The Name "%s" is not registered in the Naming Service\n'
                             % sname
                         )
-                        nameok = True
-                except Exception:
-                    scheck += (
-                        'Error: The Name "%s" is not registered in the Naming Service\n'
-                        % sname
-                    )
-                    nameok = False
+                        nameok = False
+
+            self.EssNameCheckList[sname] = nameok
 
             for prop in self.PVDict[essname]:
                 pv = essname + ":" + prop
                 if scheck not in self.datainfo[pv]:
                     self.datainfo[pv] += scheck
-                if (not checkname) or (not nameok):
+                if (not checkname) or (not self.EssNameCheckList[sname]):
                     self.VNameD[pv] = False
                 else:
                     self.VNameD[pv] = True
@@ -558,60 +569,64 @@ class pvUtils:
         req = self.urlparts + sys
         resp = requests.get(req, headers=self.headers)
         SysExist = 0
-        struct = "System Structure"
+        SubsysExist = 0
         for item in resp.json():
             if (
                 item["status"] == "Approved"
-                and item["type"] == struct
+                and item["type"] == "System Structure"
                 and (item["level"] == "2" or item["level"] == "1")
             ):
                 SysExist = 1
                 break
 
         if subsys != "":
-            req = self.urlparts + subsys
-            resp = requests.get(req, headers=self.headers)
-            SubsysExist = 0
-            for item in resp.json():
-                if (
-                    item["status"] == "Approved"
-                    and item["type"] == struct
-                    and item["level"] == "3"
-                ):
-                    if sys + "-" + subsys in item["mnemonicPath"]:
-                        SubsysExist = 1
-                        break
-            return SysExist, SubsysExist
-        else:
-            return SysExist, 2
+            s = sys + "-" + subsys
+            if SysExist:
+                req = self.urlparts + subsys
+                resp = requests.get(req, headers=self.headers)
+                for item in resp.json():
+                    if (
+                        item["status"] == "Approved"
+                        and item["type"] == "System Structure"
+                        and item["level"] == "3"
+                    ):
+                        if s in item["mnemonicPath"]:
+                            SubsysExist = 1
+                            break
+            self.SysStructCheckList[s] = SubsysExist
+
+        self.SysStructCheckList[sys] = SysExist
 
     def _CheckDevStructName(self, dis, dev):
-        if dis == "":
-            return 2, 2
+
         req = self.urlparts + dis
         resp = requests.get(req, headers=self.headers)
         DisExist = 0
-        struct = "Device Structure"
-        for item in resp.json():
-            if (
-                item["status"] == "Approved"
-                and item["type"] == struct
-                and item["level"] == "1"
-            ):
-                DisExist = 1
-                break
-        req = self.urlparts + dev
-        resp = requests.get(req, headers=self.headers)
         DevExist = 0
         for item in resp.json():
             if (
                 item["status"] == "Approved"
-                and item["type"] == struct
-                and item["level"] == "3"
+                and item["type"] == "Device Structure"
+                and item["level"] == "1"
             ):
-                DevExist = 1
+                DisExist = 1
                 break
-        return DisExist, DevExist
+        d = dis + "-" + dev
+        if DisExist:
+            req = self.urlparts + dev
+            resp = requests.get(req, headers=self.headers)
+            for item in resp.json():
+                if (
+                    item["status"] == "Approved"
+                    and item["type"] == "Device Structure"
+                    and item["level"] == "3"
+                ):
+                    if d in item["mnemonicPath"]:
+                        DevExist = 1
+                        break
+
+        self.DevStructCheckList[d] = DevExist
+        self.DevStructCheckList[dis] = DisExist
 
     def _GetPVFormat(self, pv):
         try:
@@ -631,6 +646,8 @@ class pvUtils:
         if d != "":
             try:
                 dis, dev, idx = d.split("-")
+                if dis == "" or dev == "":
+                    return []
             except Exception:
                 return []
         else:
