@@ -4,7 +4,7 @@ setup(
     name="pvValidatorUtils",
     packages=find_packages(),
     package_data={"": ["*.so"]},
-    version="1.4.1",
+    version="1.4.2",
     description="pvValidator Utils Python Wrapper",
     author="Alfio Rizzo",
     author_email="alfio.rizzo@ess.eu",
