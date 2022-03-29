@@ -23,3 +23,7 @@
 - Fixed missing check on Device type in the Discipline
 # Mon 14 Mar 2022 11:02:44 AM CET [1.4.1]
 - Fixed bug on the leading zero regex
+# Tue Mar 29 15:05:12 CEST 2022 [1.4.2]
+- Fixed bug on the leading zero regex string replace
+- Fixed missing catch on "empty" PV Property
+- Added warning message on some internal ECMCCFG PV (> 25 chars issue)

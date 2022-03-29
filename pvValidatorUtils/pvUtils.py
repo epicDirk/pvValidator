@@ -328,9 +328,23 @@ class pvUtils:
             self.datainfo[pv] = "Info: The PV follows ESS Name Format\n"
             return True
 
+    def _CheckDataInfo2(self, pv1, pv2, err1, err2):
+        if err1 not in self.datainfo[pv1]:
+            self.datainfo[pv1] += err1
+        if err2 not in self.datainfo[pv2]:
+            self.datainfo[pv2] += err2
+
+    def _CheckDataInfo1(self, pv, msg):
+        if msg not in self.datainfo[pv]:
+            self.datainfo[pv] += msg
+
     def _CheckPropRules(self):
         PVErrList = []
         PVWarnList = []
+        TempErr = ["-Drv01-SyncErr-Alrm", "-Enc01-LtchAutRstSp"]
+        tmperrmsg = (
+            "      !!!This issue should be fixed in version 8 of ECMCCFG Module!!!\n"
+        )
         errs = "Error: The PV Property is not unique"
         regex = "0+(?![_A-Za-z-])"
         for dev, plist in self.PVDict.items():
@@ -338,126 +352,141 @@ class pvUtils:
                 pv1 = dev + ":" + p1
                 pv2 = dev + ":" + p2
                 dupl = False
+                errmgspv1 = ""
+                errmgspv2 = ""
                 if p1 == p2:
                     self.datainfo[pv1] += "%s (duplication issue)\n" % (errs)
                     PVErrList.append(pv1)
                     dupl = True
                 if (p1.lower() == p2.lower()) and not dupl:
-                    self.datainfo[pv1] += "%s (case issue, check %s)\n" % (errs, pv2)
-                    self.datainfo[pv2] += "%s (case issue, check %s)\n" % (errs, pv1)
+                    e1 = "%s (case issue, check %s)\n" % (errs, pv2)
+                    e2 = "%s (case issue, check %s)\n" % (errs, pv1)
+                    self._CheckDataInfo2(pv1, pv2, e1, e2)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
                 if (
                     p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O")
                 ) and not dupl:
-                    self.datainfo[pv1] += "%s (0 O issue, check %s)\n" % (errs, pv2)
-                    self.datainfo[pv2] += "%s (0 O issue, check %s)\n" % (errs, pv1)
+                    errmgspv1 = "%s (0 O issue, check %s)\n" % (errs, pv2)
+                    errmgspv2 = "%s (0 O issue, check %s)\n" % (errs, pv1)
+                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
                 if (
                     p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV")
                 ) and not dupl:
-                    self.datainfo[pv1] += "%s (VV W issue, check %s)\n" % (errs, pv2)
-                    self.datainfo[pv2] += "%s (VV W issue, check %s)\n" % (errs, pv1)
+                    errmgspv1 = "%s (VV W issue, check %s)\n" % (errs, pv2)
+                    errmgspv2 = "%s (VV W issue, check %s)\n" % (errs, pv1)
+                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
                 if (
                     p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1")
                 ) and not dupl:
-                    self.datainfo[pv1] += "%s (1 I issue, check %s)\n" % (errs, pv2)
-                    self.datainfo[pv2] += "%s (1 I issue, check %s)\n" % (errs, pv1)
+                    errmgspv1 = "%s (1 I issue, check %s)\n" % (errs, pv2)
+                    errmgspv2 = "%s (1 I issue, check %s)\n" % (errs, pv1)
+                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
                 if (
                     p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1")
                 ) and not dupl:
-                    self.datainfo[pv1] += "%s (1 l issue, check %s)\n" % (errs, pv2)
-                    self.datainfo[pv2] += "%s (1 l issue, check %s)\n" % (errs, pv1)
+                    errmgspv1 = "%s (1 l issue, check %s)\n" % (errs, pv2)
+                    errmgspv2 = "%s (1 l issue, check %s)\n" % (errs, pv1)
+                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
                 if (
                     p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I")
                 ) and not dupl:
-                    self.datainfo[pv1] += "%s (l I issue, check %s)\n" % (errs, pv2)
-                    self.datainfo[pv2] += "%s (l I issue, check %s)\n" % (errs, pv1)
+                    errmgspv1 = "%s (l I issue, check %s)\n" % (errs, pv2)
+                    errmgspv2 = "%s (l I issue, check %s)\n" % (errs, pv1)
+                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
                     PVErrList.append(pv1)
                     PVErrList.append(pv2)
 
                 if (re.search(regex, p1) and re.search(regex, p2)) and not dupl:
-                    if re.sub(regex, "", p1) == re.sub(regex, "", p2):
-                        self.datainfo[pv1] += "%s (leading zero issue, check %s)\n" % (
-                            errs,
-                            pv2,
-                        )
-                        self.datainfo[pv2] += "%s (leading zero issue, check %s)\n" % (
-                            errs,
-                            pv1,
-                        )
+                    if re.sub(regex, "@", p1) == re.sub(regex, "@", p2):
+                        errmgspv1 = "%s (leading zero issue, check %s)\n" % (errs, pv2)
+                        errmgspv2 = "%s (leading zero issue, check %s)\n" % (errs, pv1)
+                        self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
                         PVErrList.append(pv1)
                         PVErrList.append(pv2)
 
             for prop in plist:
-
+                errmsg = ""
+                warnmsg = ""
+                infomsg = ""
                 pv = dev + ":" + prop
                 if len(pv) > 60:
-                    self.datainfo[pv] += "Error: The PV is beyond 60 characters\n"
+                    errmsg = "Error: The PV is beyond 60 characters\n"
+                    self._CheckDataInfo1(pv, errmsg)
+                    PVErrList.append(pv)
+
+                if len(prop) == 0:
+                    errmsg = "Error: The PV Property is missing\n"
+                    self._CheckDataInfo1(pv, errmsg)
                     PVErrList.append(pv)
 
                 if len(prop) > 25:
-                    self.datainfo[
-                        pv
-                    ] += "Error: The PV Property is beyond 25 characters\n"
+                    errmsg = (
+                        "Error: The PV Property is beyond 25 characters (%i)\n"
+                        % len(prop)
+                    )
+                    self._CheckDataInfo1(pv, errmsg)
+                    if (TempErr[0] in prop) or (TempErr[1] in prop):
+                        self._CheckDataInfo1(pv, tmperrmsg)
                     PVErrList.append(pv)
 
                 elif len(prop) > 20:
                     if not (
                         (prop.endswith("-R") or prop.endswith("-S")) and len(prop) <= 22
                     ) and not ((prop.endswith("-RB")) and len(prop) <= 23):
-                        self.datainfo[pv] += (
+                        warnmsg = (
                             "Warning: The PV Property is beyond 20 characters (%i)\n"
                             % len(prop)
                         )
+                        self._CheckDataInfo1(pv, warnmsg)
                         PVWarnList.append(pv)
-                if len(prop) < 4 and prop != "Pwr":
-                    self.datainfo[
-                        pv
-                    ] += "Warning: The PV Property is below 4 characters (%i)\n" % len(
-                        prop
+                if len(prop) > 1 and len(prop) < 4 and prop != "Pwr":
+                    warnmsg = (
+                        "Warning: The PV Property is below 4 characters (%i)\n"
+                        % len(prop)
                     )
+                    self._CheckDataInfo1(pv, warnmsg)
                     PVWarnList.append(pv)
 
                 if any((c in self.charnotallow) for c in prop):
-                    self.datainfo[
-                        pv
-                    ] += "Error: The PV Property contains not allowed character(s)\n"
+                    errmsg = (
+                        "Error: The PV Property contains not allowed character(s)\n"
+                    )
+                    self._CheckDataInfo1(pv, errmsg)
                     PVErrList.append(pv)
 
                 if "#" in prop:
                     if prop.startswith("#"):
-                        self.datainfo[pv] += 'Info: The PV is an "Internal PV"\n'
+                        infomsg = 'Info: The PV is an "Internal PV"\n'
+                        self._CheckDataInfo1(pv, infomsg)
                         self.PVInternal += 1
                     else:
-                        self.datainfo[
-                            pv
-                        ] += "Error: The PV Property contains the # character in not allowed position\n"
+                        errmsg = "Error: The PV Property contains the # character in not allowed position\n"
+                        self._CheckDataInfo1(pv, errmsg)
                         PVErrList.append(pv)
 
-                if (
+                if len(prop) > 0 and (
                     prop[0].isdigit()
                     or (prop[0] in self.charnotallow)
                     or (prop[0] == "_")
                     or (prop[0] == "-")
                 ):
-                    self.datainfo[
-                        pv
-                    ] += "Error: The PV Property does not start alphabetical\n"
+                    errmsg = "Error: The PV Property does not start alphabetical\n"
+                    self._CheckDataInfo1(pv, errmsg)
                     PVErrList.append(pv)
-                if prop[0].islower():
-                    self.datainfo[
-                        pv
-                    ] += "Warning: The PV Property does nost start in upper case\n"
+                if len(prop) > 0 and prop[0].islower():
+                    warnmsg = "Warning: The PV Property does nost start in upper case\n"
+                    self._CheckDataInfo1(pv, warnmsg)
                     PVWarnList.append(pv)
 
         for dev, plist in self.PVDict.items():
