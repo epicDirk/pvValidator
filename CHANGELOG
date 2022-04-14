@@ -27,3 +27,5 @@
 - Fixed bug on the leading zero regex string replace
 - Fixed missing catch on "empty" PV Property
 - Added warning message on some internal ECMCCFG PV (> 25 chars issue)
+# Thu 14 Apr 2022 07:27:40 AM CEST [1.4.3]
+- Fix incomplete fix on leading zero regex
