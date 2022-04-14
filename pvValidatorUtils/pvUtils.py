@@ -346,7 +346,7 @@ class pvUtils:
             "      !!!This issue should be fixed in version 8 of ECMCCFG Module!!!\n"
         )
         errs = "Error: The PV Property is not unique"
-        regex = "0+(?![_A-Za-z-])"
+        regex = "0+(?![_A-Za-z-])(?!$)"
         for dev, plist in self.PVDict.items():
             for p1, p2 in itertools.combinations(plist, 2):
                 pv1 = dev + ":" + p1
