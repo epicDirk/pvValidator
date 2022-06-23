@@ -11,7 +11,9 @@ from . import epicsUtils, tabview
 
 
 class pvUtils:
-    def __init__(self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb, stdout):
+    def __init__(
+        self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb, stdout
+    ):
         self.version = get_distribution("pvValidatorUtils").version
         pkginfo = get_distribution("pvValidatorUtils").get_metadata("PKG-INFO")
         meta = message_from_string(pkginfo)
@@ -308,9 +310,9 @@ class pvUtils:
 
             if self.stdout:
                 for d in self.data:
-                    print(' '.join(d))
+                    print(" ".join(d))
                 print(self.ioctitle)
-                print(Info)         
+                print(Info)
             else:
                 self.data[0].append(self.ioctitle)
                 self.data[1].append(Info)

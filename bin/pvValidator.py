@@ -105,7 +105,13 @@ def main():
             parser.error(args.epicsdb[0] + " is not a valid file")
 
     pv = pvUtils(
-        pvepics, args.nameservice, args.noapi, args.pvfile, args.csvfile, args.epicsdb, args.stdout
+        pvepics,
+        args.nameservice,
+        args.noapi,
+        args.pvfile,
+        args.csvfile,
+        args.epicsdb,
+        args.stdout,
     )
     pv.run()
 
