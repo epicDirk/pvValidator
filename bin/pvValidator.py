@@ -20,7 +20,7 @@ def main():
         "--version",
         action="version",
         version="%(prog)s " + version,
-        help="print version and exit",
+        help="Print version and exit",
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -38,23 +38,31 @@ def main():
         "--inpvfile",
         dest="pvfile",
         default=None,
-        help="input PV list file (offline validation)",
+        help="Input PV list file (offline validation)",
     )
     group.add_argument(
         "-e",
         "--epicsdb",
         dest="epicsdb",
         default=None,
-        help="input EPICS DB file (.db) [macro definition file] (offline validation)",
+        help="Input EPICS DB file (.db) [macro definition file] (offline validation)",
         metavar=("EPICSDB", "MACRODEF"),
         nargs="+",
     )
-    parser.add_argument(
+    outgroup = parser.add_mutually_exclusive_group(required=False)
+    outgroup.add_argument(
         "-o",
         "--outcsvfile",
         dest="csvfile",
         default=None,
-        help="write Validation Table directly on csv file (do not start interactive session)",
+        help="Write Validation Table directly on csv file (do not start interactive session)",
+    )
+    outgroup.add_argument(
+        "--stdout",
+        dest="stdout",
+        action="store_true",
+        default=False,
+        help="Write Validation Table directly on STDOUT (do not start interactive session)",
     )
     namegroup = parser.add_mutually_exclusive_group(required=False)
     namegroup.add_argument(
@@ -70,7 +78,7 @@ def main():
         dest="noapi",
         action="store_true",
         default=False,
-        help="check only PV format and rules, skip connection to Naming Service endpoint",
+        help="Check only PV format and rules, skip connection to Naming Service endpoint",
     )
 
     args = parser.parse_args()
@@ -97,7 +105,7 @@ def main():
             parser.error(args.epicsdb[0] + " is not a valid file")
 
     pv = pvUtils(
-        pvepics, args.nameservice, args.noapi, args.pvfile, args.csvfile, args.epicsdb
+        pvepics, args.nameservice, args.noapi, args.pvfile, args.csvfile, args.epicsdb, args.stdout
     )
     pv.run()
 
