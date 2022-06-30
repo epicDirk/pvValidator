@@ -29,3 +29,6 @@
 - Added warning message on some internal ECMCCFG PV (> 25 chars issue)
 # Thu 14 Apr 2022 07:27:40 AM CEST [1.4.3]
 - Fix incomplete fix on leading zero regex
+# Thu 23 Jun 2022 10:48:21 AM CEST [1.5.0]
+- Added --stdout option to dump output on screen (no interactive session)
+- Added exit code
