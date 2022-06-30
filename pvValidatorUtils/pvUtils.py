@@ -11,7 +11,9 @@ from . import epicsUtils, tabview
 
 
 class pvUtils:
-    def __init__(self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb):
+    def __init__(
+        self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb, stdout
+    ):
         self.version = get_distribution("pvValidatorUtils").version
         pkginfo = get_distribution("pvValidatorUtils").get_metadata("PKG-INFO")
         meta = message_from_string(pkginfo)
@@ -25,6 +27,8 @@ class pvUtils:
         self.pvfile = pvfile
         self.csvfile = csvfile
         self.epicsdb = epicsdb
+        self.stdout = stdout
+        self.exiterror = False
         url = None
         self.NS = None
         if namingservice == "dev":
@@ -41,7 +45,7 @@ class pvUtils:
             with open(pvfile, "r") as pvf:
                 Lines = pvf.readlines()
             for lin in Lines:
-                if not lin.startswith("%"):
+                if not lin.startswith("%") and lin.strip():
                     self.pvepics.pvstringlist.push_back(lin.strip())
 
         if epicsdb is not None:
@@ -161,6 +165,7 @@ class pvUtils:
                 comm = "NOT VALID (Wrong Format)"
                 self.PVNotValid += 1
                 self.PVWrongFormat += 1
+                self.exiterror = True
             elif (
                 self.VFormD[pv]
                 and (not self.VRuleD[pv])
@@ -169,6 +174,7 @@ class pvUtils:
             ):
                 comm = "OK Format, Rule Fail"
                 self.PVRuleFail += 1
+                self.exiterror = True
             elif self.VFormD[pv] and self.VRuleD[pv] and self.checkonlyfmt:
                 comm = "OK Format, OK Rule"
             elif self.VFormD[pv] and self.VWarnD[pv] and self.checkonlyfmt:
@@ -197,6 +203,7 @@ class pvUtils:
                 self.PVNotRegistered += 1
                 if self.VWarnD[pv]:
                     self.PVRuleWarn += 1
+                self.exiterror = True
 
             elif (
                 self.VFormD[pv]
@@ -206,6 +213,7 @@ class pvUtils:
                 comm = "NOT VALID (Rule Fail)"
                 self.PVNotValid += 1
                 self.PVRuleFail += 1
+                self.exiterror = True
             elif (
                 self.VFormD[pv]
                 and (not self.VRuleD[pv])
@@ -216,6 +224,7 @@ class pvUtils:
                 self.PVNotValid += 1
                 self.PVRuleFail += 1
                 self.PVNotRegistered += 1
+                self.exiterror = True
 
             _data.append(pv)
             _data.append(comm)
@@ -281,7 +290,7 @@ class pvUtils:
             % self.license
         )
 
-        if self.csvfile is None:
+        if self.csvfile is None and not self.stdout:
             tabview.view(
                 self.data,
                 info=Info,
@@ -296,15 +305,22 @@ class pvUtils:
             self.data[0].append(self.sumtitle)
             self.data[0].append(self.ioctitle)
             for j, d in enumerate(self.data):
-
                 if j != 0:
                     self.data[j].append(i[d[6]])
 
-            self.data[1].append(Info)
-
-            with open(self.csvfile, "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerows(self.data)
+            if self.stdout:
+                for d in self.data:
+                    print(" ".join(d))
+                print(self.ioctitle)
+                print(Info)
+            else:
+                self.data[0].append(self.ioctitle)
+                self.data[1].append(Info)
+                with open(self.csvfile, "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerows(self.data)
+        if self.exiterror:
+            sys.exit(1)
 
     def _CheckValidFormat(self):
         for pv in self.pvlist:

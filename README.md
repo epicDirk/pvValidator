@@ -58,7 +58,7 @@ Then you can run the CLI **pvValidator.py**
 ```
 pvValidator.py -h
 usage: pvValidator.py [-h] [-V] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACRODEF ...])
-                        [-o CSVFILE] [-n {prod,dev,stag} | --noapi]
+                        [-o CSVFILE | --stdout] [-n {prod,dev,stag} | --noapi]
 
 EPICS PV Validation Tool
 
@@ -74,6 +74,7 @@ optional arguments:
                         input EPICS DB file (.db) [macro definition file] (offline validation)
   -o CSVFILE, --outcsvfile CSVFILE
                         write Validation Table directly on csv file (do not start interactive session)
+  --stdout              Write Validation Table directly on STDOUT (do not start interactive session)
   -n {prod,dev,stag}, --nameservice {prod,dev,stag}
                         Select Naming Service endpoint: prod(uction), dev(elopment), stag(ing) [Default=prod]
   --noapi               check only PV format and rules, skip connection to Naming Service endpoint
