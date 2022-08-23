@@ -50,17 +50,17 @@ swig: $(SRC)/$(CMOD).i
 
 $(SRC)/%.o: $(SRC)/%.cxx $(SRC)/$(CMOD).h
 	@echo "compiling $@..."
-	g++ -O2 -fPIC $(INC) -c $< -o $@
+	g++ -O2 -fPIC $(INC) $(CFLAGS) -c $< -o $@
 
 
 $(SRC)/$(CMOD)_wrap.o: $(SRC)/$(CMOD)_wrap.cxx
 	@echo "compiling $@..."
-	g++ -O2 -fPIC $(INC) -c $< -o $@
+	g++ -O2 -fPIC $(INC) $(CFLAGS) -c $< -o $@
 
 
 $(MOD)/_$(CMOD).so: $(SRC)/$(CMOD).o $(SRC)/$(CMOD)_wrap.o
 	@echo "creating shared library $@..."
-	g++ -shared $^ -o $@ -Wl,-rpath=$(LPATH) $(ELIBS)
+	g++ -shared $(CFLAGS) $^ -o $@ -Wl,-rpath=$(LPATH) $(ELIBS)
 
 
 
