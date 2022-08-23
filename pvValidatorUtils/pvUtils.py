@@ -45,8 +45,8 @@ class pvUtils:
             with open(pvfile, "r") as pvf:
                 Lines = pvf.readlines()
             for lin in Lines:
-                if not lin.startswith("%") and lin.strip():
-                    self.pvepics.pvstringlist.push_back(lin.strip())
+                if not lin.startswith("%") and not lin.startswith("#") and lin.strip():
+                    self.pvepics.pvstringlist.push_back(lin.strip().split()[0])
 
         if epicsdb is not None:
             w = "record"
