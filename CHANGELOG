@@ -32,3 +32,5 @@
 # Thu 23 Jun 2022 10:48:21 AM CEST [1.5.0]
 - Added --stdout option to dump output on screen (no interactive session)
 - Added exit code
+# Tue 23 Aug 2022 12:55:49 PM CEST [1.5.1]
+- Added split line when reading PV from file
