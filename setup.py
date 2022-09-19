@@ -3,8 +3,8 @@ from setuptools import find_packages, setup
 setup(
     name="pvValidatorUtils",
     packages=find_packages(),
-    package_data={"": ["*.so"]},
-    version="1.5.1",
+    package_data={"": ["*.so*"]},
+    version="1.5.2",
     description="pvValidator Utils Python Wrapper",
     author="Alfio Rizzo",
     author_email="alfio.rizzo@ess.eu",
