@@ -9,7 +9,6 @@ from pvValidatorUtils import epicsUtils, pvUtils, version
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description="EPICS PV Validation Tool",
         formatter_class=lambda prog: argparse.HelpFormatter(prog, width=200),
@@ -31,7 +30,7 @@ def main():
         "-s",
         "--server",
         dest="iocserver",
-        help="IOC server IP or GUID to get PV list (online validation)",
+        help="IOC server IP[:PORT] or GUID to get PV list (online validation)",
     )
     group.add_argument(
         "-i",
