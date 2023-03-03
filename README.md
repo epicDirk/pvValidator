@@ -67,7 +67,7 @@ optional arguments:
   -V, --version         print version and exit
   -d, --discover        discover IOC Servers and exit
   -s IOCSERVER, --server IOCSERVER
-                        IOC server IP or GUID to get PV list (online validation)
+                        IOC server IP[:PORT] or GUID to get PV list (online validation)
   -i PVFILE, --inpvfile PVFILE
                         input PV list file (offline validation)
   -e EPICSDB [MACRODEF ...], --epicsdb EPICSDB [MACRODEF ...]
