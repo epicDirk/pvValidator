@@ -955,7 +955,6 @@ class Viewer:
             j = []
             if self.header_offset == self.header_offset_orig:
                 for x in range(0, self.num_data_columns):
-
                     s = self.header[x]
                     j.append(s.strip())
             j.append(self.summarytitle)
@@ -965,7 +964,6 @@ class Viewer:
             for y in range(0, len(self.data)):
                 j = []
                 for x in range(0, self.num_data_columns):
-
                     s = self.data[y][x]
                     j.append(s.strip())
                 d = self.data[y][6]
@@ -979,7 +977,6 @@ class Viewer:
                 writer.writerows(it)
 
     def strpad(self, s, width):
-
         if width < 1:
             return str()
         if "\n" in s:
@@ -1300,10 +1297,8 @@ def view(
     if info is None:
         info = ""
     try:
-
         while True:
             try:
-
                 if len(data) == 1 and b"\r" in data[0]:
                     data = data[0].split(b"\r")
 
