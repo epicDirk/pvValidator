@@ -30,7 +30,7 @@ def main():
         "-s",
         "--server",
         dest="iocserver",
-        help="IOC server IP or GUID to get PV list (online validation)",
+        help="IOC server IP[:PORT] or GUID to get PV list (online validation)",
     )
     group.add_argument(
         "-i",
