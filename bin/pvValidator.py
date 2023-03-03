@@ -9,7 +9,6 @@ from pvValidatorUtils import epicsUtils, pvUtils, version
 
 
 def main():
-
     parser = argparse.ArgumentParser(
         description="EPICS PV Validation Tool",
         formatter_class=lambda prog: argparse.HelpFormatter(prog, width=200),
