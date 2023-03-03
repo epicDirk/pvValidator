@@ -592,6 +592,19 @@ class pvUtils:
                                 % sname
                             )
                             nameok = True
+                        if r["status"] == "OBSOLETE":
+                            scheck += (
+                                'Error: The Name "%s" was modified in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = False
+                        if r["status"] == "DELETED":
+                            scheck += (
+                                'Error: The Name "%s" was canceled in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = False
+
                     except Exception:
                         scheck += (
                             'Error: The Name "%s" is not registered in the Naming Service\n'
