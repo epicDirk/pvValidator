@@ -34,3 +34,8 @@
 - Added exit code
 # Tue 23 Aug 2022 12:55:49 PM CEST [1.5.1]
 - Added split line when reading PV from file
+# Mon 19 Sep 2022 16:39:50 PM CEST [1.5.2]
+- This upgrade is done just to keep the tag version sync with the pip3 build version, where there the setup.py had a typo
+which is harmless in this src version. I have anyhow updated the setup.py also in this version just to have both sync
+# Fri 03 Mar 2023 10:41:29 AM CET [1.6.0]
+- Addedd the Error verbosity when a Name is canceled or modified in the Naming Service

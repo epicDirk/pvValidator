@@ -324,7 +324,6 @@ class pvUtils:
 
     def _CheckValidFormat(self):
         for pv in self.pvlist:
-
             pvelem = self._GetPVFormat(pv)
             if self._IsValidFormat(pvelem, pv):
                 self.VFormD[pv] = True
@@ -592,6 +591,19 @@ class pvUtils:
                                 % sname
                             )
                             nameok = True
+                        if r["status"] == "OBSOLETE":
+                            scheck += (
+                                'Error: The Name "%s" was modified in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = False
+                        if r["status"] == "DELETED":
+                            scheck += (
+                                'Error: The Name "%s" was canceled in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = False
+
                     except Exception:
                         scheck += (
                             'Error: The Name "%s" is not registered in the Naming Service\n'
@@ -643,7 +655,6 @@ class pvUtils:
         self.SysStructCheckList[sys] = SysExist
 
     def _CheckDevStructName(self, dis, dev):
-
         req = self.urlparts + dis
         resp = requests.get(req, headers=self.headers)
         DisExist = 0
