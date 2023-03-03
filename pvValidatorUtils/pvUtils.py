@@ -324,7 +324,6 @@ class pvUtils:
 
     def _CheckValidFormat(self):
         for pv in self.pvlist:
-
             pvelem = self._GetPVFormat(pv)
             if self._IsValidFormat(pvelem, pv):
                 self.VFormD[pv] = True
@@ -656,7 +655,6 @@ class pvUtils:
         self.SysStructCheckList[sys] = SysExist
 
     def _CheckDevStructName(self, dis, dev):
-
         req = self.urlparts + dis
         resp = requests.get(req, headers=self.headers)
         DisExist = 0
