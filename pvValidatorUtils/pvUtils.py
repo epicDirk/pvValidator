@@ -40,7 +40,7 @@ class pvUtils:
             )
             self.NS = "Staging"
         else:
-            url = "https://naming-test-02.cslab.esss.lu.se/"
+            url = "https://naming-test-02.cslab.esss.lu.se/"  # CHANGE TO PRODUCTION
             self.NS = "Production"
 
         if pvfile is not None:
@@ -251,12 +251,15 @@ class pvUtils:
 
         if self.checkonlyfmt:
             Info += "The Validation through Naming Service was skipped\n"
-            Info += "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i\nThe PVs Internal are = %i\n" % (
-                self.PVTot,
-                self.PVWrongFormat,
-                self.PVRuleFail,
-                self.PVRuleWarn,
-                self.PVInternal,
+            Info += (
+                "The Total PVs are = %i\nThe PVs with Wrong Format are = %i\nThe PVs with Rule Failure are = %i\nThe PVs with Rule Warning are = %i\nThe PVs Internal are = %i\n"
+                % (
+                    self.PVTot,
+                    self.PVWrongFormat,
+                    self.PVRuleFail,
+                    self.PVRuleWarn,
+                    self.PVInternal,
+                )
             )
         else:
             Info += (
@@ -349,7 +352,7 @@ class pvUtils:
         info1 = kwargs.get("info1")
         pv2 = kwargs.get("pv2")
         err2 = kwargs.get("err2")
-        
+
         if pv1 is not None:
             if err1 is not None and err1 not in self.datainfo[pv1]:
                 self.datainfo[pv1] += err1
@@ -361,14 +364,13 @@ class pvUtils:
                     self.PVWarnList.append(pv1)
             if info1 is not None and info1 not in self.datainfo[pv1]:
                 self.datainfo[pv1] += info1
-                self.PVInternal += 1    
+                self.PVInternal += 1
 
         if pv2 is not None:
             if err2 is not None and err2 not in self.datainfo[pv2]:
                 self.datainfo[pv2] += err2
                 if pv2 not in self.PVErrList:
                     self.PVErrList.append(pv2)
-
 
     def _CheckPropRules(self):
         self.PVErrList = []
@@ -444,15 +446,11 @@ class pvUtils:
                 pv = dev + ":" + prop
                 if len(pv) > 60:
                     errmsg = "Error: The PV is beyond 60 characters\n"
-                    self._CheckDataMsg(
-                        pv1=pv, err1=errmsg
-                    )
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if len(prop) == 0:
                     errmsg = "Error: The PV Property is missing\n"
-                    self._CheckDataMsg(
-                        pv1=pv, err1=errmsg
-                    )
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if len(prop) > 25:
                     errmsg = (
@@ -461,9 +459,7 @@ class pvUtils:
                     )
                     if (TempErr[0] in prop) or (TempErr[1] in prop):
                         errmsg += tmperrmsg
-                    self._CheckDataMsg(
-                        pv1=pv, err1=errmsg
-                    )
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 elif len(prop) > 20:
                     if not (
@@ -473,37 +469,27 @@ class pvUtils:
                             "Warning: The PV Property is beyond 20 characters (%i)\n"
                             % len(prop)
                         )
-                        self._CheckDataMsg(
-                            pv1=pv, warn1=warnmsg
-                        )
+                        self._CheckDataMsg(pv1=pv, warn1=warnmsg)
                 if len(prop) > 1 and len(prop) < 4 and prop != "Pwr":
                     warnmsg = (
                         "Warning: The PV Property is below 4 characters (%i)\n"
                         % len(prop)
                     )
-                    self._CheckDataMsg(
-                        pv1=pv, warn1=warnmsg
-                    )
+                    self._CheckDataMsg(pv1=pv, warn1=warnmsg)
 
                 if any((c in self.charnotallow) for c in prop):
                     errmsg = (
                         "Error: The PV Property contains not allowed character(s)\n"
                     )
-                    self._CheckDataMsg(
-                        pv1=pv, err1=errmsg
-                    )
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if "#" in prop:
                     if prop.startswith("#"):
                         infomsg = 'Info: The PV is an "Internal PV"\n'
-                        self._CheckDataMsg(
-                            pv1=pv, info1=infomsg
-                        )
+                        self._CheckDataMsg(pv1=pv, info1=infomsg)
                     else:
                         errmsg = "Error: The PV Property contains the # character in not allowed position\n"
-                        self._CheckDataMsg(
-                            pv1=pv, err1=errmsg
-                        )
+                        self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if len(prop) > 0 and (
                     prop[0].isdigit()
@@ -512,14 +498,10 @@ class pvUtils:
                     or (prop[0] == "-")
                 ):
                     errmsg = "Error: The PV Property does not start alphabetical\n"
-                    self._CheckDataMsg(
-                        pv1=pv, err1=errmsg
-                    )
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
                 if len(prop) > 0 and prop[0].islower():
                     warnmsg = "Warning: The PV Property does nost start in upper case\n"
-                    self._CheckDataMsg(
-                        pv1=pv, warn1=warnmsg
-                    )
+                    self._CheckDataMsg(pv1=pv, warn1=warnmsg)
 
         for dev, plist in self.PVDict.items():
             for prop in plist:
