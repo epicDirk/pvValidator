@@ -586,13 +586,13 @@ class pvUtils:
                     r = resp.json()
                     if r["value"]:
                         scheck += (
-                            'Info: The ESS Name "%s" is active in the Naming Service\n'
+                            'Info: The ESS Name "%s" is registered in the Naming Service\n'
                             % sname
                         )
                         nameok = True
                     else:
                         scheck += (
-                            'Error: The ESS Name "%s" is not active the Naming Service\n'
+                            'Error: The ESS Name "%s" is not registered the Naming Service\n'
                             % sname
                         )
                         nameok = False
