@@ -1,0 +1,34 @@
+record(ai, "$(P)$(R)MyAnalogVar") {
+    field(DESC,"This is a record description")
+    field(VAL, "100")
+    field(PINI, "YES")
+    field(EGU, "kg")
+}
+
+# This is a db comments for the records
+
+#record(ao, "$(P)$(R)commentedout") {
+#    field(DESC, "description")
+#    field(PREC, "3")
+#    field(EGU,  "Volts")
+#    field(DRVL, "-10")
+#    field(DRVH, "+10")
+#    field(VAL,  "0.000")
+#}
+
+record(bo, "$(P)$(R)MyBoolVar") {
+    field(VAL,  "1")
+    field(ZNAM, "On")
+    field(ZSV, "MAJOR")
+    field(ONAM, "Off")
+    field(PINI, "YES")
+}
+
+record(waveform, "$(P)$(R)MyWaveVar") {
+    field(DESC, "description")
+    field(NELM, "256")
+    field(FTVL, "FLOAT")
+    field(INP, "[2,3,5]")
+    field(PINI, "YES")
+    info("test_variable", "record")
+}

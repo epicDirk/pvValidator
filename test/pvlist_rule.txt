@@ -1,0 +1,15 @@
+DTL-010::Temperature
+DTL-010::Temperature
+DTL-010::Temperature
+DTL-010:EMR-TT-010:2Temperature1
+DTL-010:EMR-TT-010:2Temperaturel
+DTL-010:EMR-TT-011:TemperatureTemperatureTemperatureTemperature
+DTL:Ctrl-ECAT-002:#m3s052-Enc01-LtchAutRstSp
+DTL:Ctrl-ECAT-002:#m3s052-Enc01-LtchAutRstSp
+DTL-010:EMR-TT-011:TeoVV
+DTL-010:EMR-TT-011:TeoW
+DTL-010:EMR-TT-011:Temp!Min
+DTL-010:EMR-TT-010:2Temperaturel
+DTL-010:EMR-TT-010:2Temperaturel
+DTL-010:EMR-TT-010:2Temperaturel
+DTL-010:EMR-TT-011:#Te
