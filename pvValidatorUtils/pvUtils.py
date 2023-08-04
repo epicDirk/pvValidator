@@ -500,7 +500,7 @@ class pvUtils:
                     self._CheckDataInfo1(pv, errmsg)
                     PVErrList.append(pv)
                 if len(prop) > 0 and prop[0].islower():
-                    warnmsg = "Warning: The PV Property does nost start in upper case\n"
+                    warnmsg = "Warning: The PV Property does not start in upper case\n"
                     self._CheckDataInfo1(pv, warnmsg)
                     PVWarnList.append(pv)
 
