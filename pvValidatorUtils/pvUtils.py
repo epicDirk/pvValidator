@@ -500,7 +500,7 @@ class pvUtils:
                     errmsg = "Error: The PV Property does not start alphabetical\n"
                     self._CheckDataMsg(pv1=pv, err1=errmsg)
                 if len(prop) > 0 and prop[0].islower():
-                    warnmsg = "Warning: The PV Property does nost start in upper case\n"
+                    warnmsg = "Warning: The PV Property does not start in upper case\n"
                     self._CheckDataMsg(pv1=pv, warn1=warnmsg)
 
         for dev, plist in self.PVDict.items():
