@@ -49,7 +49,7 @@ set(CMOD epicsUtils)
 set(EPICS $ENV{EPICS_BASE})
 set(ARCH $ENV{EPICS_HOST_ARCH})
 
-set(EPICSLIB ${EPICS}/lib/${ARCH}/libpvAccessCA.so)
+set(EPICSLIB -L${EPICS}/lib/${ARCH} -lpvAccessCA -lpvAccess -lpvData -lca -lCom)
 set(CMAKE_INSTALL_RPATH ${EPICS}/lib/${ARCH})
 
 
