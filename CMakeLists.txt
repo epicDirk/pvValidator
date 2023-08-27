@@ -36,10 +36,24 @@ execute_process (
 
 
 if (NO_PYTHON_SETUPTOOLS)
-    message(FATAL_ERROR "Missing Python setuptools module! Exit.")
+    message(FATAL_ERROR "Missing Python module setuptools! Please install it. Exit.")
 else()
-    message(STATUS "Python Module setuptools installed")
+    message(STATUS "Python module setuptools installed")
 endif()
+
+execute_process (
+    COMMAND ${Python_EXECUTABLE} -c "import run_iocsh"
+    RESULT_VARIABLE NO_RUN_IOCSH
+    ERROR_QUIET
+)
+
+if (NO_RUN_IOCSH)
+    message(FATAL_ERROR "Missing Python module run_iocsh! Please install it from ESS Artifactory (https://gitlab.esss.lu.se/ics-infrastructure/run-iocsh). Exit.")
+else()
+    message(STATUS "Python module run_iocsh installed")
+endif()
+
+
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "_")
 set(MOD pvValidatorUtils)
@@ -49,7 +63,7 @@ set(CMOD epicsUtils)
 set(EPICS $ENV{EPICS_BASE})
 set(ARCH $ENV{EPICS_HOST_ARCH})
 
-set(EPICSLIB ${EPICS}/lib/${ARCH}/libpvAccessCA.so)
+set(EPICSLIB -L${EPICS}/lib/${ARCH} -lpvAccessCA -lpvAccess -lpvData -lca -lCom)
 set(CMAKE_INSTALL_RPATH ${EPICS}/lib/${ARCH})
 
 
