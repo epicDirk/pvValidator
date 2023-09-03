@@ -1,4 +1,9 @@
+import os
+
 from setuptools import find_packages, setup
+
+os.environ["SETUPTOOLS_USE_DISTUTILS"] = "stdlib"
+
 
 setup(
     name="pvValidatorUtils",
@@ -12,5 +17,9 @@ setup(
     zip_safe=False,
     platforms=["Linux", "WSL"],
     scripts=["bin/pvValidator.py"],
-    install_requires=["requests"],
+    dependency_links=[
+        "https://artifactory.esss.lu.se/artifactory/ics-pypi/run-iocsh/0.8.0/run-iocsh-0.8.0.tar.gz"
+    ],
+    install_requires=["requests", "pytest", "run-iocsh"],
+    tests_require=["pytest"],
 )

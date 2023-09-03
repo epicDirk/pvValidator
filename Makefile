@@ -63,9 +63,12 @@ $(MOD)/_$(CMOD).so: $(SRC)/$(CMOD).o $(SRC)/$(CMOD)_wrap.o
 	g++ -shared $(CFLAGS) $^ -o $@ -Wl,-rpath=$(LPATH) $(ELIBS)
 
 
+.PHONY: all test clean
 
 clean:
 	rm -fr $(SRC)/*.o $(MOD)/_$(CMOD).so $(MOD)/$(CMOD).py $(SRC)/$(CMOD)_wrap.cxx build dist $(MOD).egg*
 
 install:
 	$(PY) setup.py install --user
+test:
+	pytest -ra

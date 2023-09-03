@@ -36,24 +36,10 @@ execute_process (
 
 
 if (NO_PYTHON_SETUPTOOLS)
-    message(FATAL_ERROR "Missing Python module setuptools! Please install it. Exit.")
+    message(FATAL_ERROR "Missing Python setuptools module! Please install them. Exit.")
 else()
     message(STATUS "Python module setuptools installed")
 endif()
-
-execute_process (
-    COMMAND ${Python_EXECUTABLE} -c "import run_iocsh"
-    RESULT_VARIABLE NO_RUN_IOCSH
-    ERROR_QUIET
-)
-
-if (NO_RUN_IOCSH)
-    message(FATAL_ERROR "Missing Python module run_iocsh! Please install it from ESS Artifactory (https://gitlab.esss.lu.se/ics-infrastructure/run-iocsh). Exit.")
-else()
-    message(STATUS "Python module run_iocsh installed")
-endif()
-
-
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "_")
 set(MOD pvValidatorUtils)
@@ -71,6 +57,7 @@ file(COPY ${PROJECT_SOURCE_DIR}/bin DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${PROJECT_SOURCE_DIR}/${MOD} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${PROJECT_SOURCE_DIR}/setup.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
+
 add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/src/${CMOD}_wrap.cxx ${CMAKE_CURRENT_BINARY_DIR}/${MOD}/${CMOD}.py
     COMMAND swig -c++ -outdir ${CMAKE_CURRENT_BINARY_DIR}/${MOD} -python ${PROJECT_SOURCE_DIR}/src/${CMOD}.i
     )
@@ -87,11 +74,13 @@ include_directories(${PROJECT_SOURCE_DIR}/src/pv ${PROJECT_SOURCE_DIR}/src ${EPI
 
 
 
-
+enable_testing()
 
 add_library(${CMOD} SHARED ${PROJECT_SOURCE_DIR}/src/${CMOD}_wrap.cxx ${PROJECT_SOURCE_DIR}/src/${CMOD}.cxx)
 target_link_libraries(${CMOD} ${EPICSLIB})
 
+
+add_test(NAME pvValidatorTest COMMAND pytest -ra ${PROJECT_SOURCE_DIR} WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 install(TARGETS ${CMOD} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${MOD})
 

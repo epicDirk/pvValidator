@@ -305,7 +305,6 @@ class pvUtils:
             )
         else:
             self.data[0].append(self.sumtitle)
-            self.data[0].append(self.ioctitle)
             for j, d in enumerate(self.data):
                 if j != 0:
                     self.data[j].append(i[d[6]])
