@@ -10,8 +10,9 @@ from pvValidatorUtils import epicsUtils, pvUtils, version
 
 def main():
     parser = argparse.ArgumentParser(
-        description="EPICS PV Validation Tool",
+        description="EPICS PV Validation Tool (" + version + ")",
         formatter_class=lambda prog: argparse.HelpFormatter(prog, width=200),
+        epilog="Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)",
     )
 
     parser.add_argument(

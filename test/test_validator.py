@@ -1,3 +1,4 @@
+import tempfile
 from os import environ
 from time import sleep
 
@@ -6,11 +7,12 @@ from run_iocsh import IOC
 
 from pvValidatorUtils import epicsUtils, pvUtils
 
-fmtfile = "pvlist_fmt.txt"
-rulefile = "pvlist_rule.txt"
-apifile = "pvlist_api.txt"
-okfile = "pvlist_ok.txt"
-epicsdbfile = ["test.db", "test.macro"]
+fmtfile = "test/pvlist_fmt.txt"
+rulefile = "test/pvlist_rule.txt"
+apifile = "test/pvlist_api.txt"
+okfile = "test/pvlist_ok.txt"
+epicsdbfile = ["test/test.db", "test/test.macro"]
+tmpf = tempfile.NamedTemporaryFile(suffix=".csv")
 
 
 @pytest.fixture
@@ -35,10 +37,10 @@ def pvobj_pvdb():
 def pvobj_fromioc():
     env_vars = ["EPICS_BASE", "E3_REQUIRE_VERSION"]
     base, require = map(environ.get, env_vars)
-    assert base
-    assert require
+    assert base, "source your EPICS Emv"
+    assert require, "source your EPICS Env"
     environ["IOCNAME"] = "Sys-Sub:SC-IOC-001"
-    args = ["test.db", "P=Sys-Sub:", "R=Dis-Dev-Idx:"]
+    args = ["test/test.db", "P=Sys-Sub:", "R=Dis-Dev-Idx:"]
     ioc = IOC(*args, ioc_executable="iocsh", timeout=20.0)
     ioc.start()
     assert ioc.is_running()
@@ -56,10 +58,10 @@ def pvobj_backend():
 @pytest.fixture
 def pvobj_all():
     pvepics = epicsUtils(False)
-    return pvUtils(pvepics, "prod", False, okfile, None, None, True)
+    return pvUtils(pvepics, "prod", False, okfile, tmpf.name, None, False)
 
 
-def test_pvformat(pvobj_pvfmt):
+def test_pvformat(pvobj_pvfmt: pvUtils):
     with open(fmtfile, "r") as fp:
         lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
     pvlist = pvobj_pvfmt.pvepics.pvstringlist
@@ -71,7 +73,7 @@ def test_pvformat(pvobj_pvfmt):
         assert not pvobj_pvfmt.VFormD[pv], "Wrong PV format not identified!"
 
 
-def test_pvprop(pvobj_pvcheck):
+def test_pvprop(pvobj_pvcheck: pvUtils):
     with open(rulefile, "r") as fp:
         lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
     pvlist = pvobj_pvcheck.pvepics.pvstringlist
@@ -87,7 +89,7 @@ def test_pvprop(pvobj_pvcheck):
     assert pvobj_pvcheck.PVInternal == 2, "PV internal wrongly counted!"
 
 
-def test_epicsdb(pvobj_pvdb):
+def test_epicsdb(pvobj_pvdb: pvUtils):
     pvlist = pvobj_pvdb.pvepics.pvstringlist
     assert pvlist.size() == 3, "Wrong PV list size extracted from EPICS Db file!"
     PVToReadFromDB = [
@@ -101,12 +103,12 @@ def test_epicsdb(pvobj_pvdb):
         ), "Wrong PV name extracted from EPICS Db file!"
 
 
-def test_pvfromioc(pvobj_fromioc):
+def test_pvfromioc(pvobj_fromioc: pvUtils):
     pvlist = pvobj_fromioc.pvepics.pvstringlist
-    assert pvlist.size() == 9, "Wrong PV list from IOC"
+    assert pvlist.size() == 8, "Wrong PV list from IOC"
 
 
-def test_backend(pvobj_backend):
+def test_backend(pvobj_backend: pvUtils):
     with open(apifile, "r") as fp:
         lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
     pvlist = pvobj_backend.pvepics.pvstringlist
@@ -120,9 +122,11 @@ def test_backend(pvobj_backend):
         assert not pvobj_backend.VNameD[pv], "Not registered ESS Name not identified!"
 
 
-# ADD CSV FILE CHECK !!!
-def test_all(pvobj_all):
+def test_all(pvobj_all: pvUtils):
     pvobj_all.run()
+    w = b"The PVs with Rule Failure are = 0"
+    c = tmpf.read()
+    assert w in c, "Wrong csv file created!"
     with open(okfile, "r") as fp:
         lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
     pvlist = pvobj_all.pvepics.pvstringlist

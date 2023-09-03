@@ -2,8 +2,32 @@
 include:
   - 'https://gitlab.esss.lu.se/ics-infrastructure/gitlab-ci-yml/raw/master/PreCommit.gitlab-ci.yml'
 
+
+.runner_tags: &runner_tags
+  tags:
+    - docker
+
+
 stages:
   - check
   - build
   - test
   - release
+
+
+test-conda-python38:
+  <<: *runner_tags
+  stage: test
+  image: registry.esss.lu.se/ics-docker/miniconda
+  before_script:
+    - source /etc/profile.d/conda.sh
+    - conda create -n pvvtest -y -c conda-e3-virtual python=3.8 cmake make essioc swig cxx-compiler
+    - conda activate pvvtest
+    - mkdir build
+    - cd build
+    - cmake ../
+    - make install
+    - export PATH="$PATH:$HOME/.local/bin"
+  script:
+    - pvValidator.py -h
+    - ctest -V
