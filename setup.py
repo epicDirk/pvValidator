@@ -17,9 +17,5 @@ setup(
     zip_safe=False,
     platforms=["Linux", "WSL"],
     scripts=["bin/pvValidator.py"],
-    dependency_links=[
-        "https://artifactory.esss.lu.se/artifactory/ics-pypi/run-iocsh/0.8.0/run-iocsh-0.8.0.tar.gz"
-    ],
-    install_requires=["requests", "pytest", "run-iocsh"],
-    tests_require=["pytest"],
+    install_requires=["requests"],
 )
