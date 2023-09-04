@@ -2,7 +2,12 @@ import csv
 import itertools
 import re
 import sys
-from importlib.metadata import distribution
+
+if sys.version_info >= (3, 8, 0):
+    from importlib.metadata import metadata
+else:
+    from email import message_from_string
+    from pkg_resources import get_distribution
 
 import requests
 
@@ -13,12 +18,20 @@ class pvUtils:
     def __init__(
         self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb, stdout
     ):
-        dist = distribution("pvValidatorUtils")
-        self.version = dist.version
-        self.author = dist.metadata["Author"]
-        self.email = dist.metadata["Author-email"]
-        self.license = dist.metadata["License"]
-        self.platform = dist.metadata["Platform"]
+        if sys.version_info >= (3, 8, 0):
+            meta = metadata("pvValidatorUtils")
+        else:
+            dist = get_distribution("pvValidatorUtils")
+            try:
+                pkginfo = dist.get_metadata("METADATA")
+            except FileNotFoundError:
+                pkginfo = dist.get_metadata("PKG-INFO")
+            meta = message_from_string(pkginfo)
+        self.version = meta.get("Version")
+        self.author = meta.get("Author")
+        self.email = meta.get("Author-email")
+        self.license = meta.get("License")
+        self.platform = meta.get_all("Platform")
         self.epicsinfo = epicsUtils().getVersion
         self.pvepics = pvepics
         self.checkonlyfmt = checkonlyfmt

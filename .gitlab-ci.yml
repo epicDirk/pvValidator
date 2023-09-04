@@ -21,7 +21,7 @@ test-conda-python38:
   image: registry.esss.lu.se/ics-docker/miniconda
   before_script:
     - source /etc/profile.d/conda.sh
-    - conda create -n pvvtest -y -c conda-e3-virtual python=3.8 cmake make essioc swig cxx-compiler
+    - conda create -n pvvtest -y -c conda-e3-virtual python=3.8 cmake make epics-base require swig cxx-compiler
     - conda activate pvvtest
     - mkdir build
     - cd build
