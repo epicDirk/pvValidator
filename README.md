@@ -1,6 +1,6 @@
 # pvValidator.py
 
-Tool to validate EPICS PVs based on CHESS document [ESS-0000757](https://chess.esss.lu.se/enovia/link/ESS-3218463/21308.51166.39936.65207/valid).
+Tool to validate EPICS PVs based on CHESS document [ESS-0000757](https://chess.esss.lu.se/enovia/link/ESS-0000757/21308.51166.43264.12914/valid).
 
 **Install via pip package on CentOS7 Distribution**
 
