@@ -7,6 +7,24 @@ MOD = pvValidatorUtils
 PYBIND = $(PYBINDPATH)
 
 
+
+
+
+PYTHON_VERSION_MIN = "(3,6,0)"
+PYTHON_VERSION :=$(shell python3 --version)
+PYTHON_VERSION_OK :=$(shell python3 -c 'import sys; print(sys.version_info >= eval($(PYTHON_VERSION_MIN)))' )
+MY_SETUPTOOLS = $(shell python3 -c 'import setuptools' 2>&1)
+
+
+ifeq ($(findstring ModuleNotFoundError,$(MY_SETUPTOOLS)),ModuleNotFoundError)
+$(error "Module setuptools not found!")
+endif
+
+ifeq ($(PYTHON_VERSION_OK),False)
+$(error "Need Python >= $(PYTHON_VERSION_MIN), found $(PYTHON_VERSION)")
+endif
+
+
 ifndef PYBINDPATH
 $(error PYBINDPATH is not set)
 endif
@@ -25,17 +43,11 @@ EPICSINC = -I$(EPICS)/include -I$(EPICS)/include/compiler/gcc -I$(EPICS)/include
 
 INC = $(EPICSINC) -I$(PYBIND)
 
-ifeq ($(findstring python2,$(PYBIND)),python2)
-	PY = python2
-endif
-
-ifeq ($(findstring python3,$(PYBIND)),python3)
-	PY = python3
-endif
-
 
 LPATH= $(EPICS)/lib/$(ARCH)
 ELIBS = -L$(LPATH) -lpvAccessCA -lpvAccess -lpvData -lca -lCom
+
+
 
 
 
@@ -69,6 +81,6 @@ clean:
 	rm -fr $(SRC)/*.o $(MOD)/_$(CMOD).so $(MOD)/$(CMOD).py $(SRC)/$(CMOD)_wrap.cxx build dist $(MOD).egg*
 
 install:
-	$(PY) setup.py install --user
+	python3 setup.py install --user
 test:
 	pytest -ra
