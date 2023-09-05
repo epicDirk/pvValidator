@@ -25,7 +25,7 @@ set(MY_PYTHON_VERSION "" CACHE STRING "Optional user-selected Python version")
 if(MY_PYTHON_VERSION)
     find_package(Python ${MY_PYTHON_VERSION} EXACT REQUIRED COMPONENTS Interpreter Development)
 else()
-  find_package(Python REQUIRED COMPONENTS Interpreter Development)
+  find_package(Python 3.6 REQUIRED COMPONENTS Interpreter Development)
 endif()
 
 execute_process (
