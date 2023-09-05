@@ -10,7 +10,8 @@ Requiremenmts: `Python3` and `pip3`
 
 
 **Requirements for compilation from sources**:
-- python3 development tool ( `python3-dev(el)` , python recommended version >=3.80)
+- python recommended version >=3.8
+- python3 development tool ( `python3-dev(el)` )
 - python setuptools module
 - c++
 - swig ( http://www.swig.org ), you can install it via `apt` (debian/ubuntu) or `dnf/yum` (fedora/centos)
