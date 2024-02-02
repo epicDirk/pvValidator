@@ -16,7 +16,7 @@ def main():
     )
 
     parser.add_argument(
-        "-V",
+        "-v",
         "--version",
         action="version",
         version="%(prog)s " + version,
@@ -116,5 +116,4 @@ def main():
     pv.run()
 
 
-if __name__ == "__main__":
-    main()
+
