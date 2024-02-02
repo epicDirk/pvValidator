@@ -99,4 +99,3 @@ add_test(NAME pvValidatorTest COMMAND pytest -ra ${PROJECT_SOURCE_DIR} WORKING_D
 install(TARGETS ${CMOD} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${MOD})
 
 install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_CURRENT_BINARY_DIR} --break-system-packages)")
-
