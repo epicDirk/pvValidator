@@ -21,7 +21,7 @@ test-conda-python38:
   image: registry.esss.lu.se/ics-docker/miniconda
   before_script:
     - source /etc/profile.d/conda.sh
-    - conda create -n pvvtest -y -c conda-e3-virtual python=3.8 cmake make pytest epics-base require swig cxx-compiler
+    - conda create -n pvvtest -y -c conda-e3-virtual python=3.11 cmake make pytest epics-base require swig cxx-compiler
     - conda activate pvvtest
     - pip install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user
     - mkdir build
