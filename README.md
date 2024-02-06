@@ -4,7 +4,7 @@ Tool to validate EPICS PVs based on CHESS document [ESS-0000757](https://chess.e
 
 **On Centos7 the installation is only via a pre-compiled pip package**
 
-Requiremenmts: `Python3` and `pip3`
+Requirements: `Python3` and `pip3`
 
 `pip3 install pvValidatorUtils -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user`
 
