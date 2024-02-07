@@ -82,7 +82,7 @@ def test_pvprop(pvobj_pvcheck: pvUtils):
     pvobj_pvcheck._CheckPropRules()
     for c, pv in enumerate(pvlist):
         print(pv)
-        if c > 14:
+        if c > 18:
             assert not pvobj_pvcheck.VWarnD[pv], "PV rule warning not identified!"
         else:
             assert not pvobj_pvcheck.VRuleD[pv], "PV rule failure not identified!"

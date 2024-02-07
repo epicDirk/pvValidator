@@ -471,16 +471,19 @@ class pvUtils:
                         errmsg += tmperrmsg
                     self._CheckDataMsg(pv1=pv, err1=errmsg)
 
-                elif len(prop) > 20:
-                    if not (
-                        (prop.endswith("-R") or prop.endswith("-S")) and len(prop) <= 22
-                    ) and not ((prop.endswith("-RB")) and len(prop) <= 23):
-                        warnmsg = (
-                            "Warning: The PV Property is beyond 20 characters (%i)\n"
-                            % len(prop)
-                        )
-                        self._CheckDataMsg(pv1=pv, warn1=warnmsg)
-                if len(prop) > 1 and len(prop) < 4 and prop != "Pwr":
+                if prop.endswith("-S") or prop.endswith("_S"):
+                    errmsg = "Error: The PV Property for a Setpoint value should end with -SP\n"
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
+
+                if prop.endswith("-R") or prop.endswith("_R"):
+                    errmsg = "Error: The PV Property for a Reading value should not contain any suffix\n"
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
+
+                if prop.endswith("-RBV") or prop.endswith("_RBV"):
+                    errmsg = "Error: The PV Property for a Readback value should end with -RB\n"
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
+
+                if len(prop) > 1 and len(prop) < 4:
                     warnmsg = (
                         "Warning: The PV Property is below 4 characters (%i)\n"
                         % len(prop)
@@ -530,9 +533,6 @@ class pvUtils:
                 if not (pv in self.PVWarnList or pv in self.PVErrList):
                     self.datainfo[pv] += "Info: The PV follows ESS PV Property Rules\n"
 
-    # def _HasAlias(self,pv):
-    #    print (self.pvepics.HasAlias(pv))
-
     def _CheckValidName(self):
         for essname in self.PVDict.keys():
             s = essname.split(":")[0]
@@ -566,6 +566,13 @@ class pvUtils:
             if not (essname.endswith(":")):
                 dis, dev, idx = (essname.split(":")[1]).split("-")
                 d = dis + "-" + dev
+                if dev == "Virt":
+                    scheck += (
+                        'Error: The Device "%s" of the Discipline "%s" is not valid\n'
+                        % (dev, dis)
+                    )
+                    checkname = False
+
                 if d not in self.DevStructCheckList.keys():
                     self._CheckDevStructName(dis, dev)
 

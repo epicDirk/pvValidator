@@ -9,7 +9,7 @@ Requirements: `Python3` and `pip3`
 `pip3 install pvValidatorUtils -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user`
 
 
-**Requirements for compilation from sources for newer Linux distributions or WSL**:
+**Requirements for compilation from sources for newer Linux distributions or WSL**
 - python recommended version >=3.8
 - python3 development tool ( `python3-dev(el)` )
 - python setuptools module
@@ -35,7 +35,7 @@ Requirements: `Python3` and `pip3`
   `cmake -DNO_PIP_ENV=1 <PATH_TO_YOUR_GIT_CLONE_DIR>`
 - If you want to compile against a different version of `python` that the one found in the build check in the first place add
 
-  `cmake <PATH_TO_YOUR_GIT_CLONE_DIR> -DMY_PYTHON_VERSION=X.Y` (e.g. `-DMY_PYTHON_VERSION=3.7`)
+  `cmake <PATH_TO_YOUR_GIT_CLONE_DIR> -DMY_PYTHON_VERSION=X.Y` (e.g. `-DMY_PYTHON_VERSION=3.10`)
 - If you need to compile with the C++ 11 option add the following
 
   `cmake <PATH_TO_YOUR_GIT_CLONE_DIR> -DCMAKE_CXX_STANDARD=11`
