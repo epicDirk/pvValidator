@@ -32,7 +32,7 @@ Requirements: `Python3` and `pip3`
 
 - In some Linux distribution (e.g. Debian) as default is required to create a virtual environment to install externally mananged packages ([PEP 688](https://peps.python.org/pep-0668)), to skip the creation of the virtual environment add this option in the cmake
 
-  `cmake -DNO_PIP_ENV=1 <PATH_TO_YOUR_GIT_CLONE_DIR>`
+  `cmake -DNO_PIP_VENV=1 <PATH_TO_YOUR_GIT_CLONE_DIR>`
 - If you want to compile against a different version of `python` that the one found in the build check in the first place add
 
   `cmake <PATH_TO_YOUR_GIT_CLONE_DIR> -DMY_PYTHON_VERSION=X.Y` (e.g. `-DMY_PYTHON_VERSION=3.10`)

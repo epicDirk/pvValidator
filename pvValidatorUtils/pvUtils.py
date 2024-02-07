@@ -51,7 +51,7 @@ class pvUtils:
             )
             self.NS = "Staging"
         else:
-            url = "https://naming-test-02.cslab.esss.lu.se/"  # CHANGE TO PRODUCTION
+            url = "https://naming.esss.lu.se/"
             self.NS = "Production"
 
         if pvfile is not None:
@@ -118,8 +118,8 @@ class pvUtils:
         self.Title = "pvValidator %s" % self.version
         self.Widths = [6, 9, 10, 6, 6, 25, 60, 30]
         self.headers = {"accept": "application/json"}
-        self.urlparts = url + "api/v1/structures/exists/"
-        self.urlname = url + "api/v1/names/exists/"
+        self.urlparts = url + "rest/parts/mnemonic/"
+        self.urlname = url + "rest/deviceNames/"
         self.exist = 1
         self.notexist = 0
         self.empty = 2
@@ -143,7 +143,7 @@ class pvUtils:
 
         if not checkonlyfmt:
             try:
-                requests.head(url, timeout=1, verify=False)  # REMOVE verify
+                requests.head(url, timeout=1)
             except requests.exceptions.ConnectionError as e:
                 print(e)
                 print("Fail to connect to Naming Service, exit!")
@@ -597,19 +597,31 @@ class pvUtils:
             if checkname:
                 if sname not in self.EssNameCheckList.keys():
                     req = self.urlname + sname
-                    resp = requests.get(
-                        req, headers=self.headers, verify=False
-                    )  # REMOVE Verify
-                    r = resp.json()
-                    if r["value"]:
+                    resp = requests.get(req, headers=self.headers)
+                    try:
+                        r = resp.json()
+                        if r["status"] == "ACTIVE":
+                            scheck += (
+                                'Info: The Name "%s" is registered in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = True
+                        if r["status"] == "OBSOLETE":
+                            scheck += (
+                                'Error: The Name "%s" was modified in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = False
+                        if r["status"] == "DELETED":
+                            scheck += (
+                                'Error: The Name "%s" was canceled in the Naming Service\n'
+                                % sname
+                            )
+                            nameok = False
+
+                    except Exception:
                         scheck += (
-                            'Info: The ESS Name "%s" is registered in the Naming Service\n'
-                            % sname
-                        )
-                        nameok = True
-                    else:
-                        scheck += (
-                            'Error: The ESS Name "%s" is not registered the Naming Service\n'
+                            'Error: The Name "%s" is not registered in the Naming Service\n'
                             % sname
                         )
                         nameok = False
@@ -626,44 +638,63 @@ class pvUtils:
                     self.VNameD[pv] = True
 
     def _CheckSysStructName(self, sys, subsys):
-        req = self.urlparts + "SYSTEM/" + sys
-        resp = requests.get(req, headers=self.headers, verify=False)  # REMOVE Verify
+        req = self.urlparts + sys
+        resp = requests.get(req, headers=self.headers)
         SysExist = 0
         SubsysExist = 0
-        r = resp.json()
-        if r["value"]:
-            SysExist = 1
+        for item in resp.json():
+            if (
+                item["status"] == "Approved"
+                and item["type"] == "System Structure"
+                and (item["level"] == "2" or item["level"] == "1")
+            ):
+                SysExist = 1
+                break
 
         if subsys != "":
             s = sys + "-" + subsys
             if SysExist:
-                req = self.urlparts + "SUBSYSTEM/" + s
-                resp = requests.get(
-                    req, headers=self.headers, verify=False
-                )  # REMOVE Verify
-                r = resp.json()
-                if r["value"]:
-                    SubsysExist = 1
+                req = self.urlparts + subsys
+                resp = requests.get(req, headers=self.headers)
+                for item in resp.json():
+                    if (
+                        item["status"] == "Approved"
+                        and item["type"] == "System Structure"
+                        and item["level"] == "3"
+                    ):
+                        if s in item["mnemonicPath"]:
+                            SubsysExist = 1
+                            break
             self.SysStructCheckList[s] = SubsysExist
 
         self.SysStructCheckList[sys] = SysExist
 
     def _CheckDevStructName(self, dis, dev):
-        req = self.urlparts + "DISCIPLINE/" + dis
-        resp = requests.get(req, headers=self.headers, verify=False)  # REMOVE Verify
+        req = self.urlparts + dis
+        resp = requests.get(req, headers=self.headers)
         DisExist = 0
         DevExist = 0
-        r = resp.json()
-        if r["value"]:
-            DisExist = 1
-
+        for item in resp.json():
+            if (
+                item["status"] == "Approved"
+                and item["type"] == "Device Structure"
+                and item["level"] == "1"
+            ):
+                DisExist = 1
+                break
         d = dis + "-" + dev
         if DisExist:
-            req = self.urlparts + "DEVICETYPE/" + d
-            resp = requests.get(req, headers=self.headers, verify=False)
-            r = resp.json()
-            if r["value"]:
-                DevExist = 1
+            req = self.urlparts + dev
+            resp = requests.get(req, headers=self.headers)
+            for item in resp.json():
+                if (
+                    item["status"] == "Approved"
+                    and item["type"] == "Device Structure"
+                    and item["level"] == "3"
+                ):
+                    if d in item["mnemonicPath"]:
+                        DevExist = 1
+                        break
 
         self.DevStructCheckList[d] = DevExist
         self.DevStructCheckList[dis] = DisExist
