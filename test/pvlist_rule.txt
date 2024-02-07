@@ -1,6 +1,7 @@
 DTL-010::Temperature
 DTL-010::Temperature
-DTL-010::Temperature
+DTL-010::Temperature_S
+DTL-010::Temperature-S
 DTL-010:EMR-TT-010:2Temperature1
 DTL-010:EMR-TT-010:2Temperaturel
 DTL-010:EMR-TT-011:TemperatureTemperatureTemperatureTemperature
@@ -11,5 +12,8 @@ DTL-010:EMR-TT-011:TeoW
 DTL-010:EMR-TT-011:Temp!Min
 DTL-010:EMR-TT-010:2Temperaturel
 DTL-010:EMR-TT-010:2Temperaturel
-DTL-010:EMR-TT-010:2Temperaturel
+DTL-010:EMR-TT-010:Temperature_R
+DTL-010:EMR-TT-010:Temperature-R
+DTL-010:EMR-TT-010:Temperature-RBV
+DTL-010:EMR-TT-010:Temperature_RBV
 DTL-010:EMR-TT-011:#Te
