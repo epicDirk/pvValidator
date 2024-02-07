@@ -28,6 +28,15 @@ else()
   find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development)
 endif()
 
+
+set(NO_PIP_VENV "" CACHE STRING "Optional to skip creation of virtual environment" )
+
+if (NO_PIP_VENV)
+    set(PIP_BREAK_OPTION "--break-system-packages")
+else()
+    set(PIP_BREAK_OPTION "")
+endif()
+
 execute_process (
     COMMAND ${Python_EXECUTABLE} -c "import setuptools"
     RESULT_VARIABLE NO_PYTHON_SETUPTOOLS
@@ -66,8 +75,6 @@ set(ARCH $ENV{EPICS_HOST_ARCH})
 set(EPICSLIB -L${EPICS}/lib/${ARCH} -lpvAccessCA -lpvAccess -lpvData -lca -lCom)
 set(CMAKE_INSTALL_RPATH ${EPICS}/lib/${ARCH})
 
-
-
 file(COPY ${PROJECT_SOURCE_DIR}/${MOD} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 file(COPY ${PROJECT_SOURCE_DIR}/pyproject.toml DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -96,8 +103,8 @@ target_link_libraries(${CMOD} ${EPICSLIB})
 
 add_test(NAME pvValidatorTest COMMAND pytest -ra ${PROJECT_SOURCE_DIR} WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
+
+
 install(TARGETS ${CMOD} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${MOD})
 
-#install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_CURRENT_BINARY_DIR})")
-
-install(CODE "execute_process(COMMAND pipx install ${CMAKE_CURRENT_BINARY_DIR})")
+install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_CURRENT_BINARY_DIR} ${PIP_BREAK_OPTION})")
