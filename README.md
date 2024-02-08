@@ -50,27 +50,26 @@ Requirements: `Python3` and `pip3`
 Then you can run the CLI **pvValidator.py**
 ```
 $ pvValidator.py -h
-usage: pvValidator.py [-h] [-v] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACRODEF ...])
-                        [-o CSVFILE | --stdout] [-n {prod,dev,stag} | --noapi]
+usage: pvValidator.py [-h] [-v] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACRODEF ...]) [-o CSVFILE | --stdout] [-n {prod,test} | --noapi]
 
 EPICS PV Validation Tool (1.7.0)
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -v, --version         print version and exit
+  -v, --version         Print version and exit
   -d, --discover        discover IOC Servers and exit
   -s IOCSERVER, --server IOCSERVER
                         IOC server IP[:PORT] or GUID to get PV list (online validation)
   -i PVFILE, --inpvfile PVFILE
-                        input PV list file (offline validation)
+                        Input PV list file (offline validation)
   -e EPICSDB [MACRODEF ...], --epicsdb EPICSDB [MACRODEF ...]
-                        input EPICS DB file (.db) [macro definition file] (offline validation)
+                        Input EPICS DB file (.db) [macro definition file] (offline validation)
   -o CSVFILE, --outcsvfile CSVFILE
-                        write Validation Table directly on csv file (do not start interactive session)
+                        Write Validation Table directly on csv file (do not start interactive session)
   --stdout              Write Validation Table directly on STDOUT (do not start interactive session)
-  -n {prod,dev,stag}, --nameservice {prod,dev,stag}
-                        Select Naming Service endpoint: prod(uction), dev(elopment), stag(ing) [Default=prod]
-  --noapi               check only PV format and rules, skip connection to Naming Service endpoint
+  -n {prod,test}, --nameservice {prod,test}
+                        Select Naming Service endpoint: prod(uction), test(ing) [Default=prod]
+  --noapi               Check only PV format and rules, skip connection to Naming Service endpoint
 
 Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)
 ```

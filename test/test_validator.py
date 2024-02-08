@@ -12,7 +12,8 @@ rulefile = "test/pvlist_rule.txt"
 apifile = "test/pvlist_api.txt"
 okfile = "test/pvlist_ok.txt"
 epicsdbfile = ["test/test.db", "test/test.macro"]
-tmpf = tempfile.NamedTemporaryFile(suffix=".csv")
+tmpf1 = tempfile.NamedTemporaryFile(suffix=".csv")
+tmpf2 = tempfile.NamedTemporaryFile(suffix=".csv")
 
 
 @pytest.fixture
@@ -58,7 +59,13 @@ def pvobj_backend():
 @pytest.fixture
 def pvobj_all():
     pvepics = epicsUtils(False)
-    return pvUtils(pvepics, "prod", False, okfile, tmpf.name, None, False)
+    return pvUtils(pvepics, "prod", False, okfile, tmpf1.name, None, False)
+
+
+@pytest.fixture
+def pvobj_all_nt():
+    pvepics = epicsUtils(False)
+    return pvUtils(pvepics, "test", False, okfile, tmpf2.name, None, False)
 
 
 def test_pvformat(pvobj_pvfmt: pvUtils):
@@ -125,7 +132,7 @@ def test_backend(pvobj_backend: pvUtils):
 def test_all(pvobj_all: pvUtils):
     pvobj_all.run()
     w = b"The PVs with Rule Failure are = 0"
-    c = tmpf.read()
+    c = tmpf1.read()
     assert w in c, "Wrong csv file created!"
     with open(okfile, "r") as fp:
         lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
@@ -135,3 +142,24 @@ def test_all(pvobj_all: pvUtils):
     for pv in pvlist:
         print(pv)
         assert pvobj_all.VNameD[pv], "Wrong PV validation!"
+
+
+def test_all_nt(pvobj_all_nt: pvUtils):
+    pvobj_all_nt.run()
+    w = b"The PVs with Rule Failure are = 0"
+    c = tmpf2.read()
+    assert w in c, "Wrong csv file created for the naming testing service!"
+    with open(okfile, "r") as fp:
+        lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
+    pvlist = pvobj_all_nt.pvepics.pvstringlist
+    assert (
+        pvlist.size() == lines
+    ), "Wrong PV list size extracted from input text file for the naming testing service!"
+    assert (
+        len(pvobj_all_nt.VNameD) == lines
+    ), "Wrong PV Name dictionary size for the naming testing service!"
+    for pv in pvlist:
+        print(pv)
+        assert pvobj_all_nt.VNameD[
+            pv
+        ], "Wrong PV validation for the naming testing service!"

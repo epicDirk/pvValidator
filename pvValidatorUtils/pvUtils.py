@@ -42,14 +42,9 @@ class pvUtils:
         self.exiterror = False
         url = None
         self.NS = None
-        if namingservice == "dev":
-            url = "https://icsvd-app01.esss.lu.se:8443/names-test/"  # CHANGE TO NEW DEVELOPMENT IF ANY
-            self.NS = "Development"
-        elif namingservice == "stag":
-            url = (
-                "https://icsvs-app01.esss.lu.se/naming/"  # CHANGE TO NEW STAGING IF ANY
-            )
-            self.NS = "Staging"
+        if namingservice == "test":
+            url = "https://naming-test-01.cslab.esss.lu.se/"
+            self.NS = "Testing"
         else:
             url = "https://naming.esss.lu.se/"
             self.NS = "Production"
@@ -143,7 +138,7 @@ class pvUtils:
 
         if not checkonlyfmt:
             try:
-                requests.head(url, timeout=1)
+                requests.head(url, timeout=1, verify=False)
             except requests.exceptions.ConnectionError as e:
                 print(e)
                 print("Fail to connect to Naming Service, exit!")
@@ -597,7 +592,7 @@ class pvUtils:
             if checkname:
                 if sname not in self.EssNameCheckList.keys():
                     req = self.urlname + sname
-                    resp = requests.get(req, headers=self.headers)
+                    resp = requests.get(req, headers=self.headers, verify=False)
                     try:
                         r = resp.json()
                         if r["status"] == "ACTIVE":
@@ -639,7 +634,7 @@ class pvUtils:
 
     def _CheckSysStructName(self, sys, subsys):
         req = self.urlparts + sys
-        resp = requests.get(req, headers=self.headers)
+        resp = requests.get(req, headers=self.headers, verify=False)
         SysExist = 0
         SubsysExist = 0
         for item in resp.json():
@@ -655,7 +650,7 @@ class pvUtils:
             s = sys + "-" + subsys
             if SysExist:
                 req = self.urlparts + subsys
-                resp = requests.get(req, headers=self.headers)
+                resp = requests.get(req, headers=self.headers, verify=False)
                 for item in resp.json():
                     if (
                         item["status"] == "Approved"
@@ -671,7 +666,7 @@ class pvUtils:
 
     def _CheckDevStructName(self, dis, dev):
         req = self.urlparts + dis
-        resp = requests.get(req, headers=self.headers)
+        resp = requests.get(req, headers=self.headers, verify=False)
         DisExist = 0
         DevExist = 0
         for item in resp.json():
@@ -685,7 +680,7 @@ class pvUtils:
         d = dis + "-" + dev
         if DisExist:
             req = self.urlparts + dev
-            resp = requests.get(req, headers=self.headers)
+            resp = requests.get(req, headers=self.headers, verify=False)
             for item in resp.json():
                 if (
                     item["status"] == "Approved"
