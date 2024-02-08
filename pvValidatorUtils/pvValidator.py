@@ -70,8 +70,8 @@ def main():
         "--nameservice",
         dest="nameservice",
         default="prod",
-        choices=["prod", "dev", "stag"],
-        help="Select Naming Service endpoint: prod(uction), dev(elopment), stag(ing) [Default=prod]",
+        choices=["prod", "test"],
+        help="Select Naming Service endpoint: prod(uction), test(ing) [Default=prod]",
     )
     namegroup.add_argument(
         "--noapi",
