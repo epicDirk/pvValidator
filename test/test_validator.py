@@ -1,3 +1,4 @@
+import pathlib
 import tempfile
 from os import environ
 from time import sleep
@@ -68,31 +69,40 @@ def pvobj_all_nt():
     return pvUtils(pvepics, "test", False, okfile, tmpf2.name, None, False)
 
 
+def get_lines(file):
+    return sum(
+        not line.isspace() and not line.startswith("%")
+        for line in pathlib.Path(file).open()
+    )
+
+
 def test_pvformat(pvobj_pvfmt: pvUtils):
-    with open(fmtfile, "r") as fp:
-        lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
+    lines = get_lines(fmtfile)
     pvlist = pvobj_pvfmt.pvepics.pvstringlist
     assert pvlist.size() == lines, "Wrong PV list size extracted from input text file!"
     pvobj_pvfmt._CheckValidFormat()
     assert len(pvobj_pvfmt.VFormD) == lines, "Wrong PV format dictionary size!"
     for pv in pvlist:
-        print(pv)
-        assert not pvobj_pvfmt.VFormD[pv], "Wrong PV format not identified!"
+        assert not pvobj_pvfmt.VFormD[pv], (
+            "Wrong format of PV " + pv + " was not identified!"
+        )
 
 
 def test_pvprop(pvobj_pvcheck: pvUtils):
-    with open(rulefile, "r") as fp:
-        lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
+    lines = get_lines(rulefile)
     pvlist = pvobj_pvcheck.pvepics.pvstringlist
     assert pvlist.size() == lines, "Wrong PV list size extracted from input text file!"
     pvobj_pvcheck._CheckValidFormat()
     pvobj_pvcheck._CheckPropRules()
     for c, pv in enumerate(pvlist):
-        print(pv)
         if c > 18:
-            assert not pvobj_pvcheck.VWarnD[pv], "PV rule warning not identified!"
+            assert not pvobj_pvcheck.VWarnD[pv], (
+                "PV " + pv + ", rule warning not identified!"
+            )
         else:
-            assert not pvobj_pvcheck.VRuleD[pv], "PV rule failure not identified!"
+            assert not pvobj_pvcheck.VRuleD[pv], (
+                "PV " + pv + ", rule failure not identified!"
+            )
     assert pvobj_pvcheck.PVInternal == 2, "PV internal wrongly counted!"
 
 
@@ -116,8 +126,7 @@ def test_pvfromioc(pvobj_fromioc: pvUtils):
 
 
 def test_backend(pvobj_backend: pvUtils):
-    with open(apifile, "r") as fp:
-        lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
+    lines = get_lines(apifile)
     pvlist = pvobj_backend.pvepics.pvstringlist
     assert pvlist.size() == lines, "Wrong PV list size extracted from input text file!"
     pvobj_backend._CheckValidFormat()
@@ -125,8 +134,9 @@ def test_backend(pvobj_backend: pvUtils):
     pvobj_backend._CheckValidName()
     assert len(pvobj_backend.VNameD) == lines, "Wrong PV Name dictionary size!"
     for pv in pvlist:
-        print(pv)
-        assert not pvobj_backend.VNameD[pv], "Not registered ESS Name not identified!"
+        assert not pvobj_backend.VNameD[pv], (
+            "Not registered ESS Name " + pv + " was not identified!"
+        )
 
 
 def test_all(pvobj_all: pvUtils):
@@ -134,14 +144,12 @@ def test_all(pvobj_all: pvUtils):
     w = b"The PVs with Rule Failure are = 0"
     c = tmpf1.read()
     assert w in c, "Wrong csv file created!"
-    with open(okfile, "r") as fp:
-        lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
+    lines = get_lines(okfile)
     pvlist = pvobj_all.pvepics.pvstringlist
     assert pvlist.size() == lines, "Wrong PV list size extracted from input text file!"
     assert len(pvobj_all.VNameD) == lines, "Wrong PV Name dictionary size!"
     for pv in pvlist:
-        print(pv)
-        assert pvobj_all.VNameD[pv], "Wrong PV validation!"
+        assert pvobj_all.VNameD[pv], "Wrong PV " + pv + " validation!"
 
 
 def test_all_nt(pvobj_all_nt: pvUtils):
@@ -149,8 +157,7 @@ def test_all_nt(pvobj_all_nt: pvUtils):
     w = b"The PVs with Rule Failure are = 0"
     c = tmpf2.read()
     assert w in c, "Wrong csv file created for the naming testing service!"
-    with open(okfile, "r") as fp:
-        lines = sum(not line.isspace() and not line.startswith("%") for line in fp)
+    lines = get_lines(okfile)
     pvlist = pvobj_all_nt.pvepics.pvstringlist
     assert (
         pvlist.size() == lines
@@ -159,7 +166,6 @@ def test_all_nt(pvobj_all_nt: pvUtils):
         len(pvobj_all_nt.VNameD) == lines
     ), "Wrong PV Name dictionary size for the naming testing service!"
     for pv in pvlist:
-        print(pv)
-        assert pvobj_all_nt.VNameD[
-            pv
-        ], "Wrong PV validation for the naming testing service!"
+        assert pvobj_all_nt.VNameD[pv], (
+            "Wrong PV " + pv + " validation for the naming testing service!"
+        )

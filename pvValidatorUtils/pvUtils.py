@@ -3,12 +3,6 @@ import itertools
 import re
 import sys
 
-if sys.version_info >= (3, 8, 0):
-    from importlib.metadata import metadata
-else:
-    from email import message_from_string
-    from pkg_resources import get_distribution
-
 import requests
 
 from . import epicsUtils, tabview
@@ -18,21 +12,7 @@ class pvUtils:
     def __init__(
         self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb, stdout
     ):
-        if sys.version_info >= (3, 8, 0):
-            meta = metadata("pvValidatorUtils")
-        else:
-            dist = get_distribution("pvValidatorUtils")
-            try:
-                pkginfo = dist.get_metadata("METADATA")
-            except FileNotFoundError:
-                pkginfo = dist.get_metadata("PKG-INFO")
-            meta = message_from_string(pkginfo)
-        self.version = meta.get("Version")
-        self.author = meta.get("Author")
-        self.email = meta.get("Author-email")
-        self.license = meta.get("License")
-        self.platform = meta.get_all("Platform")
-        self.epicsinfo = epicsUtils().getVersion
+        self._GetMeta()
         self.pvepics = pvepics
         self.checkonlyfmt = checkonlyfmt
         self.pvfile = pvfile
@@ -40,14 +20,13 @@ class pvUtils:
         self.epicsdb = epicsdb
         self.stdout = stdout
         self.exiterror = False
-        url = None
-        self.NS = None
-        if namingservice == "test":
-            url = "https://naming-test-01.cslab.esss.lu.se/"
-            self.NS = "Testing"
-        else:
-            url = "https://naming.esss.lu.se/"
-            self.NS = "Production"
+
+        urlinfo = {
+            "test": ["https://naming-test-01.cslab.esss.lu.se/", "Testing"],
+            "prod": ["https://naming.esss.lu.se/", "Production"],
+        }
+        url = urlinfo[namingservice][0]
+        self.NS = urlinfo[namingservice][1]
 
         if pvfile is not None:
             with open(pvfile, "r") as pvf:
@@ -287,14 +266,14 @@ class pvUtils:
             )
 
         i = self._GetDataInfo()
-        Readme = "pvValidator %s\n" % self.version
+        Readme = "pvValidator.py %s\n" % self.version
         Readme += "Author: %s\n" % self.author
         Readme += "Author email: %s\n" % self.email
-        Readme += "Platform: %s\n" % self.platform
+        Readme += "Platforms: %s\n" % self.platform
         Readme += "%s\n" % self.epicsinfo
-        Readme += 'pvValidator is an EPICS PV validation tool based on the "ESS Naming Convention" document (ESS-0000757)\n'
+        Readme += "%s\n" % self.description
         Readme += (
-            "pvValidator is realeased under the %s license (ESS - 2021)\n"
+            "pvValidator.py is realeased under the %s license (ESS - 2021)\n"
             % self.license
         )
 
@@ -329,6 +308,34 @@ class pvUtils:
         if self.exiterror:
             sys.exit(1)
 
+    def _GetMeta(self):
+        pkg = "pvValidatorUtils"
+        if sys.version_info >= (3, 8, 0):
+            from importlib.metadata import metadata
+
+            meta = metadata(pkg)
+            # split for the non-sense merging of name and email by pyproject.toml....
+            self.author = meta.get("Author-email").split(" <")[0]
+            self.email = meta.get("Author-email").split()[2]
+        else:
+            from email import message_from_string
+
+            from pkg_resources import get_distribution
+
+            dist = get_distribution(pkg)
+            try:
+                pkginfo = dist.get_metadata("METADATA")
+            except FileNotFoundError:
+                pkginfo = dist.get_metadata("PKG-INFO")
+            meta = message_from_string(pkginfo)
+            self.author = meta.get("Author")
+            self.email = meta.get("Author-email")
+        self.version = meta.get("Version")
+        self.license = meta.get("License")
+        self.platform = meta.get_all("Platform")
+        self.description = meta.get("Summary")
+        self.epicsinfo = epicsUtils().getVersion
+
     def _CheckValidFormat(self):
         for pv in self.pvlist:
             pvelem = self._GetPVFormat(pv)
@@ -350,14 +357,9 @@ class pvUtils:
             self.datainfo[pv] = "Info: The PV follows ESS Name Format\n"
             return True
 
-    def _CheckDataMsg(self, **kwargs):
-        pv1 = kwargs.get("pv1")
-        err1 = kwargs.get("err1")
-        warn1 = kwargs.get("warn1")
-        info1 = kwargs.get("info1")
-        pv2 = kwargs.get("pv2")
-        err2 = kwargs.get("err2")
-
+    def _CheckDataMsg(
+        self, pv1=None, err1=None, warn1=None, info1=None, pv2=None, err2=None
+    ):
         if pv1 is not None:
             if err1 is not None and err1 not in self.datainfo[pv1]:
                 self.datainfo[pv1] += err1
@@ -376,6 +378,9 @@ class pvUtils:
                 self.datainfo[pv2] += err2
                 if pv2 not in self.PVErrList:
                     self.PVErrList.append(pv2)
+
+    def _GetResp(self, endpoint):
+        return requests.get(endpoint, headers=self.headers, verify=False)
 
     def _CheckPropRules(self):
         self.PVErrList = []
@@ -591,8 +596,7 @@ class pvUtils:
 
             if checkname:
                 if sname not in self.EssNameCheckList.keys():
-                    req = self.urlname + sname
-                    resp = requests.get(req, headers=self.headers, verify=False)
+                    resp = self._GetResp(self.urlname + sname)
                     try:
                         r = resp.json()
                         if r["status"] == "ACTIVE":
@@ -633,8 +637,7 @@ class pvUtils:
                     self.VNameD[pv] = True
 
     def _CheckSysStructName(self, sys, subsys):
-        req = self.urlparts + sys
-        resp = requests.get(req, headers=self.headers, verify=False)
+        resp = self._GetResp(self.urlparts + sys)
         SysExist = 0
         SubsysExist = 0
         for item in resp.json():
@@ -649,8 +652,7 @@ class pvUtils:
         if subsys != "":
             s = sys + "-" + subsys
             if SysExist:
-                req = self.urlparts + subsys
-                resp = requests.get(req, headers=self.headers, verify=False)
+                resp = self._GetResp(self.urlparts + subsys)
                 for item in resp.json():
                     if (
                         item["status"] == "Approved"
@@ -665,8 +667,7 @@ class pvUtils:
         self.SysStructCheckList[sys] = SysExist
 
     def _CheckDevStructName(self, dis, dev):
-        req = self.urlparts + dis
-        resp = requests.get(req, headers=self.headers, verify=False)
+        resp = self._GetResp(self.urlparts + dis)
         DisExist = 0
         DevExist = 0
         for item in resp.json():
@@ -679,8 +680,7 @@ class pvUtils:
                 break
         d = dis + "-" + dev
         if DisExist:
-            req = self.urlparts + dev
-            resp = requests.get(req, headers=self.headers, verify=False)
+            resp = self._GetResp(self.urlparts + dev)
             for item in resp.json():
                 if (
                     item["status"] == "Approved"

@@ -49,27 +49,27 @@ Requirements: `Python3` and `pip3`
 
 Then you can run the CLI **pvValidator.py**
 ```
-$ pvValidator.py -h
-usage: pvValidator.py [-h] [-v] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACRODEF ...]) [-o CSVFILE | --stdout] [-n {prod,test} | --noapi]
+ $ pvValidator.py -h
+usage: pvValidator.py [-h] [-v] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACRODEF ...]) [-o CSVFILE] [-n {prod,test} | --noapi] [--stdout]
 
 EPICS PV Validation Tool (1.7.0)
 
 options:
   -h, --help            show this help message and exit
-  -v, --version         Print version and exit
+  -v, --version         print version and exit
   -d, --discover        discover IOC Servers and exit
   -s IOCSERVER, --server IOCSERVER
                         IOC server IP[:PORT] or GUID to get PV list (online validation)
   -i PVFILE, --inpvfile PVFILE
-                        Input PV list file (offline validation)
+                        input PV list file (offline validation)
   -e EPICSDB [MACRODEF ...], --epicsdb EPICSDB [MACRODEF ...]
-                        Input EPICS DB file (.db) [macro definition file] (offline validation)
+                        input EPICS DB file (.db) [macro definition file] (offline validation)
   -o CSVFILE, --outcsvfile CSVFILE
-                        Write Validation Table directly on csv file (do not start interactive session)
-  --stdout              Write Validation Table directly on STDOUT (do not start interactive session)
+                        write validation table directly on csv file (do not start interactive session)
   -n {prod,test}, --nameservice {prod,test}
-                        Select Naming Service endpoint: prod(uction), test(ing) [Default=prod]
-  --noapi               Check only PV format and rules, skip connection to Naming Service endpoint
+                        select Naming Service endpoint to connect: prod(uction), test(ing) [Default=prod]
+  --noapi               check only PV format and rules, skip connection to Naming Service endpoint
+  --stdout              write validation table directly on STDOUT (do not start interactive session)
 
 Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)
 ```
