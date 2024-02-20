@@ -8,7 +8,7 @@ version = "1.7.0"
 authors = [
     {name = "Alfio Rizzo", email = "alfio.rizzo@ess.eu"},
 ]
-description = "pvValidator is tool to validate EPICS PVs based on CHESS document [ESS-0000757]"
+description = "pvValidator.py is a tool to validate EPICS PVs based on CHESS document [ESS-0000757]"
 readme = "README.md"
 license = {text = "GPL"}
 classifiers = [
@@ -17,8 +17,7 @@ classifiers = [
 dependencies = [
     "requests",
 ]
-
-keywords = ["PV", "Validation","Naming Convention"]
+keywords = ["PV", "Validation", "Naming Convention"]
 
 [tool.setuptools]
 platforms = ["Linux","WSL"]
