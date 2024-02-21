@@ -39,7 +39,7 @@ def pvobj_pvdb():
 def pvobj_fromioc():
     env_vars = ["EPICS_BASE", "E3_REQUIRE_VERSION"]
     base, require = map(environ.get, env_vars)
-    assert base, "source your EPICS Emv"
+    assert base, "source your EPICS Env"
     assert require, "source your EPICS Env"
     environ["IOCNAME"] = "Sys-Sub:SC-IOC-001"
     args = ["test/test.db", "P=Sys-Sub:", "R=Dis-Dev-Idx:"]
