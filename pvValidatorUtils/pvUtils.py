@@ -2,10 +2,8 @@ import csv
 import itertools
 import re
 import sys
-from email import message_from_string
 
 import requests
-from pkg_resources import get_distribution
 
 from . import epicsUtils, tabview
 
@@ -14,14 +12,7 @@ class pvUtils:
     def __init__(
         self, pvepics, namingservice, checkonlyfmt, pvfile, csvfile, epicsdb, stdout
     ):
-        self.version = get_distribution("pvValidatorUtils").version
-        pkginfo = get_distribution("pvValidatorUtils").get_metadata("PKG-INFO")
-        meta = message_from_string(pkginfo)
-        self.author = meta.get("Author")
-        self.email = meta.get("Author-email")
-        self.license = meta.get("License")
-        self.platform = meta.get_all("Platform")
-        self.epicsinfo = epicsUtils().getVersion
+        self._GetMeta()
         self.pvepics = pvepics
         self.checkonlyfmt = checkonlyfmt
         self.pvfile = pvfile
@@ -29,17 +20,13 @@ class pvUtils:
         self.epicsdb = epicsdb
         self.stdout = stdout
         self.exiterror = False
-        url = None
-        self.NS = None
-        if namingservice == "dev":
-            url = "https://icsvd-app01.esss.lu.se:8443/names-test/"
-            self.NS = "Development"
-        elif namingservice == "stag":
-            url = "https://icsvs-app01.esss.lu.se/naming/"
-            self.NS = "Staging"
-        else:
-            url = "https://naming.esss.lu.se/"
-            self.NS = "Production"
+
+        urlinfo = {
+            "test": ["https://naming-test-01.cslab.esss.lu.se/", "Testing"],
+            "prod": ["https://naming.esss.lu.se/", "Production"],
+        }
+        url = urlinfo[namingservice][0]
+        self.NS = urlinfo[namingservice][1]
 
         if pvfile is not None:
             with open(pvfile, "r") as pvf:
@@ -130,7 +117,7 @@ class pvUtils:
 
         if not checkonlyfmt:
             try:
-                requests.head(url, timeout=1)
+                requests.head(url, timeout=1, verify=False)
             except requests.exceptions.ConnectionError as e:
                 print(e)
                 print("Fail to connect to Naming Service, exit!")
@@ -279,14 +266,14 @@ class pvUtils:
             )
 
         i = self._GetDataInfo()
-        Readme = "pvValidator %s\n" % self.version
+        Readme = "pvValidator.py %s\n" % self.version
         Readme += "Author: %s\n" % self.author
         Readme += "Author email: %s\n" % self.email
-        Readme += "Platform: %s\n" % self.platform
+        Readme += "Platforms: %s\n" % self.platform
         Readme += "%s\n" % self.epicsinfo
-        Readme += 'pvValidator is an EPICS PV validation tool based on the "ESS RULES FOR EPICS PV PROPERTY" document (ESS-3218463)\n'
+        Readme += "%s\n" % self.description
         Readme += (
-            "pvValidator is realeased under the %s license (ESS - 2021)\n"
+            "pvValidator.py is realeased under the %s license (ESS - 2021)\n"
             % self.license
         )
 
@@ -303,7 +290,6 @@ class pvUtils:
             )
         else:
             self.data[0].append(self.sumtitle)
-            self.data[0].append(self.ioctitle)
             for j, d in enumerate(self.data):
                 if j != 0:
                     self.data[j].append(i[d[6]])
@@ -321,6 +307,34 @@ class pvUtils:
                     writer.writerows(self.data)
         if self.exiterror:
             sys.exit(1)
+
+    def _GetMeta(self):
+        pkg = "pvValidatorUtils"
+        if sys.version_info >= (3, 8, 0):
+            from importlib.metadata import metadata
+
+            meta = metadata(pkg)
+            # split for the non-sense merging of name and email by pyproject.toml....
+            self.author = meta.get("Author-email").split(" <")[0]
+            self.email = meta.get("Author-email").split()[2]
+        else:
+            from email import message_from_string
+
+            from pkg_resources import get_distribution
+
+            dist = get_distribution(pkg)
+            try:
+                pkginfo = dist.get_metadata("METADATA")
+            except FileNotFoundError:
+                pkginfo = dist.get_metadata("PKG-INFO")
+            meta = message_from_string(pkginfo)
+            self.author = meta.get("Author")
+            self.email = meta.get("Author-email")
+        self.version = meta.get("Version")
+        self.license = meta.get("License")
+        self.platform = meta.get_all("Platform")
+        self.description = meta.get("Summary")
+        self.epicsinfo = epicsUtils().getVersion
 
     def _CheckValidFormat(self):
         for pv in self.pvlist:
@@ -343,92 +357,97 @@ class pvUtils:
             self.datainfo[pv] = "Info: The PV follows ESS Name Format\n"
             return True
 
-    def _CheckDataInfo2(self, pv1, pv2, err1, err2):
-        if err1 not in self.datainfo[pv1]:
-            self.datainfo[pv1] += err1
-        if err2 not in self.datainfo[pv2]:
-            self.datainfo[pv2] += err2
+    def _CheckDataMsg(
+        self, pv1=None, err1=None, warn1=None, info1=None, pv2=None, err2=None
+    ):
+        if pv1 is not None:
+            if err1 is not None and err1 not in self.datainfo[pv1]:
+                self.datainfo[pv1] += err1
+                if pv1 not in self.PVErrList:
+                    self.PVErrList.append(pv1)
+            if warn1 is not None and warn1 not in self.datainfo[pv1]:
+                self.datainfo[pv1] += warn1
+                if pv1 not in self.PVWarnList:
+                    self.PVWarnList.append(pv1)
+            if info1 is not None and info1 not in self.datainfo[pv1]:
+                self.datainfo[pv1] += info1
+                self.PVInternal += 1
 
-    def _CheckDataInfo1(self, pv, msg):
-        if msg not in self.datainfo[pv]:
-            self.datainfo[pv] += msg
+        if pv2 is not None:
+            if err2 is not None and err2 not in self.datainfo[pv2]:
+                self.datainfo[pv2] += err2
+                if pv2 not in self.PVErrList:
+                    self.PVErrList.append(pv2)
+
+    def _GetResp(self, endpoint):
+        return requests.get(endpoint, headers=self.headers, verify=False)
 
     def _CheckPropRules(self):
-        PVErrList = []
-        PVWarnList = []
+        self.PVErrList = []
+        self.PVWarnList = []
         TempErr = ["-Drv01-SyncErr-Alrm", "-Enc01-LtchAutRstSp"]
-        tmperrmsg = (
-            "      !!!This issue should be fixed in version 8 of ECMCCFG Module!!!\n"
-        )
+        tmperrmsg = "      !!!This issue is fixed since version 8 of ECMCCFG Module!!!Suggest to update your EPICS Module!!!\n"
         errs = "Error: The PV Property is not unique"
         regex = "0+(?![_A-Za-z-])(?!$)"
         for dev, plist in self.PVDict.items():
             for p1, p2 in itertools.combinations(plist, 2):
                 pv1 = dev + ":" + p1
                 pv2 = dev + ":" + p2
-                dupl = False
-                errmgspv1 = ""
-                errmgspv2 = ""
+                errmsgpv1 = ""
+                errmsgpv2 = ""
                 if p1 == p2:
-                    self.datainfo[pv1] += "%s (duplication issue)\n" % (errs)
-                    PVErrList.append(pv1)
-                    dupl = True
-                if (p1.lower() == p2.lower()) and not dupl:
-                    e1 = "%s (case issue, check %s)\n" % (errs, pv2)
-                    e2 = "%s (case issue, check %s)\n" % (errs, pv1)
-                    self._CheckDataInfo2(pv1, pv2, e1, e2)
-                    PVErrList.append(pv1)
-                    PVErrList.append(pv2)
-                if (
-                    p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O")
-                ) and not dupl:
-                    errmgspv1 = "%s (0 O issue, check %s)\n" % (errs, pv2)
-                    errmgspv2 = "%s (0 O issue, check %s)\n" % (errs, pv1)
-                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
-                    PVErrList.append(pv1)
-                    PVErrList.append(pv2)
-                if (
-                    p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV")
-                ) and not dupl:
-                    errmgspv1 = "%s (VV W issue, check %s)\n" % (errs, pv2)
-                    errmgspv2 = "%s (VV W issue, check %s)\n" % (errs, pv1)
-                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
-                    PVErrList.append(pv1)
-                    PVErrList.append(pv2)
-                if (
-                    p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1")
-                ) and not dupl:
-                    errmgspv1 = "%s (1 I issue, check %s)\n" % (errs, pv2)
-                    errmgspv2 = "%s (1 I issue, check %s)\n" % (errs, pv1)
-                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
-                    PVErrList.append(pv1)
-                    PVErrList.append(pv2)
-
-                if (
-                    p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1")
-                ) and not dupl:
-                    errmgspv1 = "%s (1 l issue, check %s)\n" % (errs, pv2)
-                    errmgspv2 = "%s (1 l issue, check %s)\n" % (errs, pv1)
-                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
-                    PVErrList.append(pv1)
-                    PVErrList.append(pv2)
-
-                if (
-                    p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I")
-                ) and not dupl:
-                    errmgspv1 = "%s (l I issue, check %s)\n" % (errs, pv2)
-                    errmgspv2 = "%s (l I issue, check %s)\n" % (errs, pv1)
-                    self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
-                    PVErrList.append(pv1)
-                    PVErrList.append(pv2)
-
-                if (re.search(regex, p1) and re.search(regex, p2)) and not dupl:
-                    if re.sub(regex, "@", p1) == re.sub(regex, "@", p2):
-                        errmgspv1 = "%s (leading zero issue, check %s)\n" % (errs, pv2)
-                        errmgspv2 = "%s (leading zero issue, check %s)\n" % (errs, pv1)
-                        self._CheckDataInfo2(pv1, pv2, errmgspv1, errmgspv2)
-                        PVErrList.append(pv1)
-                        PVErrList.append(pv2)
+                    errmsgpv1 = "%s (duplication issue)\n" % (errs)
+                    self._CheckDataMsg(pv1=pv1, err1=errmsgpv1)
+                else:
+                    if p1.lower() == p2.lower():
+                        errmsgpv1 = "%s (case issue, check %s)\n" % (errs, pv2)
+                        errmsgpv2 = "%s (case issue, check %s)\n" % (errs, pv1)
+                        self._CheckDataMsg(
+                            pv1=pv1, pv2=pv2, err1=errmsgpv1, err2=errmsgpv2
+                        )
+                    if p1 == p2.replace("O", "0") or p1 == p2.replace("0", "O"):
+                        errmsgpv1 = "%s (0 O issue, check %s)\n" % (errs, pv2)
+                        errmsgpv2 = "%s (0 O issue, check %s)\n" % (errs, pv1)
+                        self._CheckDataMsg(
+                            pv1=pv1, pv2=pv2, err1=errmsgpv1, err2=errmsgpv2
+                        )
+                    if p1 == p2.replace("VV", "W") or p1 == p2.replace("W", "VV"):
+                        errmsgpv1 = "%s (VV W issue, check %s)\n" % (errs, pv2)
+                        errmsgpv2 = "%s (VV W issue, check %s)\n" % (errs, pv1)
+                        self._CheckDataMsg(
+                            pv1=pv1, pv2=pv2, err1=errmsgpv1, err2=errmsgpv2
+                        )
+                    if p1 == p2.replace("1", "I") or p1 == p2.replace("I", "1"):
+                        errmsgpv1 = "%s (1 I issue, check %s)\n" % (errs, pv2)
+                        errmsgpv2 = "%s (1 I issue, check %s)\n" % (errs, pv1)
+                        self._CheckDataMsg(
+                            pv1=pv1, pv2=pv2, err1=errmsgpv1, err2=errmsgpv2
+                        )
+                    if p1 == p2.replace("1", "l") or p1 == p2.replace("l", "1"):
+                        errmsgpv1 = "%s (1 l issue, check %s)\n" % (errs, pv2)
+                        errmsgpv2 = "%s (1 l issue, check %s)\n" % (errs, pv1)
+                        self._CheckDataMsg(
+                            pv1=pv1, pv2=pv2, err1=errmsgpv1, err2=errmsgpv2
+                        )
+                    if p1 == p2.replace("I", "l") or p1 == p2.replace("l", "I"):
+                        errmsgpv1 = "%s (l I issue, check %s)\n" % (errs, pv2)
+                        errmsgpv2 = "%s (l I issue, check %s)\n" % (errs, pv1)
+                        self._CheckDataMsg(
+                            pv1=pv1, pv2=pv2, err1=errmsgpv1, err2=errmsgpv2
+                        )
+                    if re.search(regex, p1) and re.search(regex, p2):
+                        if re.sub(regex, "@", p1) == re.sub(regex, "@", p2):
+                            errmsgpv1 = "%s (leading zero issue, check %s)\n" % (
+                                errs,
+                                pv2,
+                            )
+                            errmsgpv2 = "%s (leading zero issue, check %s)\n" % (
+                                errs,
+                                pv1,
+                            )
+                            self._CheckDataMsg(
+                                pv1=pv1, pv2=pv2, err1=errmsgpv1, err2=errmsgpv2
+                            )
 
             for prop in plist:
                 errmsg = ""
@@ -437,58 +456,53 @@ class pvUtils:
                 pv = dev + ":" + prop
                 if len(pv) > 60:
                     errmsg = "Error: The PV is beyond 60 characters\n"
-                    self._CheckDataInfo1(pv, errmsg)
-                    PVErrList.append(pv)
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if len(prop) == 0:
                     errmsg = "Error: The PV Property is missing\n"
-                    self._CheckDataInfo1(pv, errmsg)
-                    PVErrList.append(pv)
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if len(prop) > 25:
                     errmsg = (
                         "Error: The PV Property is beyond 25 characters (%i)\n"
                         % len(prop)
                     )
-                    self._CheckDataInfo1(pv, errmsg)
                     if (TempErr[0] in prop) or (TempErr[1] in prop):
-                        self._CheckDataInfo1(pv, tmperrmsg)
-                    PVErrList.append(pv)
+                        errmsg += tmperrmsg
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
-                elif len(prop) > 20:
-                    if not (
-                        (prop.endswith("-R") or prop.endswith("-S")) and len(prop) <= 22
-                    ) and not ((prop.endswith("-RB")) and len(prop) <= 23):
-                        warnmsg = (
-                            "Warning: The PV Property is beyond 20 characters (%i)\n"
-                            % len(prop)
-                        )
-                        self._CheckDataInfo1(pv, warnmsg)
-                        PVWarnList.append(pv)
-                if len(prop) > 1 and len(prop) < 4 and prop != "Pwr":
+                if prop.endswith("-S") or prop.endswith("_S"):
+                    errmsg = "Error: The PV Property for a Setpoint value should end with -SP\n"
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
+
+                if prop.endswith("-R") or prop.endswith("_R"):
+                    errmsg = "Error: The PV Property for a Reading value should not contain any suffix\n"
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
+
+                if prop.endswith("-RBV") or prop.endswith("_RBV"):
+                    errmsg = "Error: The PV Property for a Readback value should end with -RB\n"
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
+
+                if len(prop) > 1 and len(prop) < 4:
                     warnmsg = (
                         "Warning: The PV Property is below 4 characters (%i)\n"
                         % len(prop)
                     )
-                    self._CheckDataInfo1(pv, warnmsg)
-                    PVWarnList.append(pv)
+                    self._CheckDataMsg(pv1=pv, warn1=warnmsg)
 
                 if any((c in self.charnotallow) for c in prop):
                     errmsg = (
                         "Error: The PV Property contains not allowed character(s)\n"
                     )
-                    self._CheckDataInfo1(pv, errmsg)
-                    PVErrList.append(pv)
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if "#" in prop:
                     if prop.startswith("#"):
                         infomsg = 'Info: The PV is an "Internal PV"\n'
-                        self._CheckDataInfo1(pv, infomsg)
-                        self.PVInternal += 1
+                        self._CheckDataMsg(pv1=pv, info1=infomsg)
                     else:
                         errmsg = "Error: The PV Property contains the # character in not allowed position\n"
-                        self._CheckDataInfo1(pv, errmsg)
-                        PVErrList.append(pv)
+                        self._CheckDataMsg(pv1=pv, err1=errmsg)
 
                 if len(prop) > 0 and (
                     prop[0].isdigit()
@@ -497,32 +511,27 @@ class pvUtils:
                     or (prop[0] == "-")
                 ):
                     errmsg = "Error: The PV Property does not start alphabetical\n"
-                    self._CheckDataInfo1(pv, errmsg)
-                    PVErrList.append(pv)
+                    self._CheckDataMsg(pv1=pv, err1=errmsg)
                 if len(prop) > 0 and prop[0].islower():
                     warnmsg = "Warning: The PV Property does not start in upper case\n"
-                    self._CheckDataInfo1(pv, warnmsg)
-                    PVWarnList.append(pv)
+                    self._CheckDataMsg(pv1=pv, warn1=warnmsg)
 
         for dev, plist in self.PVDict.items():
             for prop in plist:
                 pv = dev + ":" + prop
 
-                if pv in PVErrList:
+                if pv in self.PVErrList:
                     self.VRuleD[pv] = False
                     self.VWarnD[pv] = False
-                elif pv in PVWarnList:
+                elif pv in self.PVWarnList:
                     self.VRuleD[pv] = False
                     self.VWarnD[pv] = True
                 else:
                     self.VWarnD[pv] = False
                     self.VRuleD[pv] = True
 
-                if not (pv in PVWarnList or pv in PVErrList):
+                if not (pv in self.PVWarnList or pv in self.PVErrList):
                     self.datainfo[pv] += "Info: The PV follows ESS PV Property Rules\n"
-
-    # def _HasAlias(self,pv):
-    #    print (self.pvepics.HasAlias(pv))
 
     def _CheckValidName(self):
         for essname in self.PVDict.keys():
@@ -543,14 +552,13 @@ class pvUtils:
             sname = ""
             if self.SysStructCheckList[sys] == self.notexist:
                 scheck += (
-                    'Error: the System "%s" does not exist in the Naming Service\n'
-                    % sys
+                    'Error: The System "%s" is not active in the Naming Service\n' % sys
                 )
                 checkname = False
 
             if subsys != "" and self.SysStructCheckList[s] == self.notexist:
                 scheck += (
-                    'Error: the Subsystem "%s" of the System "%s" does not exist in the Naming Service\n'
+                    'Error: The Subsystem "%s" of the System "%s" is not active in the Naming Service\n'
                     % (subsys, sys)
                 )
                 checkname = False
@@ -558,19 +566,26 @@ class pvUtils:
             if not (essname.endswith(":")):
                 dis, dev, idx = (essname.split(":")[1]).split("-")
                 d = dis + "-" + dev
+                if dev == "Virt":
+                    scheck += (
+                        'Error: The Device "%s" of the Discipline "%s" is not valid\n'
+                        % (dev, dis)
+                    )
+                    checkname = False
+
                 if d not in self.DevStructCheckList.keys():
                     self._CheckDevStructName(dis, dev)
 
                 if self.DevStructCheckList[dis] == self.notexist:
                     scheck += (
-                        'Error: the Discipline "%s" does not exist in the Naming Service\n'
+                        'Error: The Discipline "%s" is not active in the Naming Service\n'
                         % dis
                     )
                     checkname = False
 
                 if self.DevStructCheckList[d] == self.notexist:
                     scheck += (
-                        'Error: the Device "%s" of the Discipline "%s" does not exist in the Naming Service\n'
+                        'Error: The Device "%s" of the Discipline "%s" is not active in the Naming Service\n'
                         % (dev, dis)
                     )
                     checkname = False
@@ -581,8 +596,7 @@ class pvUtils:
 
             if checkname:
                 if sname not in self.EssNameCheckList.keys():
-                    req = self.urlname + sname
-                    resp = requests.get(req, headers=self.headers)
+                    resp = self._GetResp(self.urlname + sname)
                     try:
                         r = resp.json()
                         if r["status"] == "ACTIVE":
@@ -623,8 +637,7 @@ class pvUtils:
                     self.VNameD[pv] = True
 
     def _CheckSysStructName(self, sys, subsys):
-        req = self.urlparts + sys
-        resp = requests.get(req, headers=self.headers)
+        resp = self._GetResp(self.urlparts + sys)
         SysExist = 0
         SubsysExist = 0
         for item in resp.json():
@@ -639,8 +652,7 @@ class pvUtils:
         if subsys != "":
             s = sys + "-" + subsys
             if SysExist:
-                req = self.urlparts + subsys
-                resp = requests.get(req, headers=self.headers)
+                resp = self._GetResp(self.urlparts + subsys)
                 for item in resp.json():
                     if (
                         item["status"] == "Approved"
@@ -655,8 +667,7 @@ class pvUtils:
         self.SysStructCheckList[sys] = SysExist
 
     def _CheckDevStructName(self, dis, dev):
-        req = self.urlparts + dis
-        resp = requests.get(req, headers=self.headers)
+        resp = self._GetResp(self.urlparts + dis)
         DisExist = 0
         DevExist = 0
         for item in resp.json():
@@ -669,8 +680,7 @@ class pvUtils:
                 break
         d = dis + "-" + dev
         if DisExist:
-            req = self.urlparts + dev
-            resp = requests.get(req, headers=self.headers)
+            resp = self._GetResp(self.urlparts + dev)
             for item in resp.json():
                 if (
                     item["status"] == "Approved"

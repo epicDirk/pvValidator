@@ -1,0 +1,4 @@
+DTL-010:EMR--001:TemperatureMin
+DTL-010:EMR-TT:TemperatureMin
+DTL-010:EMR-TT-011TemperatureMax
+DTL-::Temperature
