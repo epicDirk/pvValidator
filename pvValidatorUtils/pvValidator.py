@@ -10,16 +10,17 @@ from pvValidatorUtils import epicsUtils, pvUtils, version
 
 def main():
     parser = argparse.ArgumentParser(
-        description="EPICS PV Validation Tool",
+        description="EPICS PV Validation Tool (" + version + ")",
         formatter_class=lambda prog: argparse.HelpFormatter(prog, width=200),
+        epilog="Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)",
     )
 
     parser.add_argument(
-        "-V",
+        "-v",
         "--version",
         action="version",
         version="%(prog)s " + version,
-        help="Print version and exit",
+        help="print version and exit",
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -37,14 +38,14 @@ def main():
         "--inpvfile",
         dest="pvfile",
         default=None,
-        help="Input PV list file (offline validation)",
+        help="input PV list file (offline validation)",
     )
     group.add_argument(
         "-e",
         "--epicsdb",
         dest="epicsdb",
         default=None,
-        help="Input EPICS DB file (.db) [macro definition file] (offline validation)",
+        help="input EPICS DB file (.db) [macro definition file] (offline validation)",
         metavar=("EPICSDB", "MACRODEF"),
         nargs="+",
     )
@@ -54,30 +55,32 @@ def main():
         "--outcsvfile",
         dest="csvfile",
         default=None,
-        help="Write Validation Table directly on csv file (do not start interactive session)",
+        help="write validation table directly on csv file (do not start interactive session)",
     )
-    outgroup.add_argument(
-        "--stdout",
-        dest="stdout",
-        action="store_true",
-        default=False,
-        help="Write Validation Table directly on STDOUT (do not start interactive session)",
-    )
+
     namegroup = parser.add_mutually_exclusive_group(required=False)
     namegroup.add_argument(
         "-n",
         "--nameservice",
         dest="nameservice",
         default="prod",
-        choices=["prod", "dev", "stag"],
-        help="Select Naming Service endpoint: prod(uction), dev(elopment), stag(ing) [Default=prod]",
+        choices=["prod", "test"],
+        help="select Naming Service endpoint to connect: prod(uction), test(ing) [Default=prod]",
     )
     namegroup.add_argument(
         "--noapi",
         dest="noapi",
         action="store_true",
         default=False,
-        help="Check only PV format and rules, skip connection to Naming Service endpoint",
+        help="check only PV format and rules, skip connection to Naming Service endpoint",
+    )
+
+    outgroup.add_argument(
+        "--stdout",
+        dest="stdout",
+        action="store_true",
+        default=False,
+        help="write validation table directly on STDOUT (do not start interactive session)",
     )
 
     args = parser.parse_args()
@@ -113,7 +116,3 @@ def main():
         args.stdout,
     )
     pv.run()
-
-
-if __name__ == "__main__":
-    main()
