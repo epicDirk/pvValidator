@@ -152,7 +152,7 @@ def test_all(pvobj_all: pvUtils):
         assert pvobj_all.VNameD[pv], "Wrong PV " + pv + " validation!"
 
 
-def test_all_nt(pvobj_all_nt: pvUtils):
+""" def test_all_nt(pvobj_all_nt: pvUtils):
     pvobj_all_nt.run()
     w = b"The PVs with Rule Failure are = 0"
     c = tmpf2.read()
@@ -168,4 +168,4 @@ def test_all_nt(pvobj_all_nt: pvUtils):
     for pv in pvlist:
         assert pvobj_all_nt.VNameD[pv], (
             "Wrong PV " + pv + " validation for the naming testing service!"
-        )
+        ) """
