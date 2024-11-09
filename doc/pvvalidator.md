@@ -21,9 +21,9 @@ As default, the tool will connect to the production Naming Service API in order 
 
 ## Running Options
 
-Once compiled, the tool can be run from its CLI, called **pvValidator.py**.
+Once compiled, the tool can be run from its CLI, called **pvValidator**.
 
-The required options are `-d`, `-s`,`-i` or `-e` which are mutually exclusive.
+The required option is the input PV list which are passed via one the following mutually exclusive options: `-s`,`-i`, `-e` or `-m`.
 
 In the following paragraphs the description of each option.
 
@@ -31,11 +31,11 @@ In the following paragraphs the description of each option.
 
 ### Help and Version
 
-`> pvValidator.py -h`
+`> pvValidator -h`
 
 Will shows the help message with the list of all available options
 
-`> pvValidator.py -v`
+`> pvValidator -v`
 
 Will shows the current version of the tool
 
@@ -46,7 +46,7 @@ Will shows the current version of the tool
 Running the tool with the discovery option (which is equivalent to the `pvlist` EPICS command line) it will print out the list of available IOCs reachable from the host with their GUID and IP:Port, e.g.
 
 ```shell
-> pvValidator.py -d
+> pvValidator -d
 GUID 0x0D63F85F00000000C82E9D36 version 2: tcp@[172.30.6.12:5075]
 GUID 0x10AC5D600000000044DFFC32 version 2: tcp@[172.30.6.104:5075]
 GUID 0x18ACF7A54835478A98FAE1EF version 1: tcp@[172.30.6.89:5075]
@@ -56,6 +56,7 @@ GUID 0x385FF85F000000007957420B version 2: tcp@[172.30.4.104:49549]
 GUID 0x385FF85F00000000ABD17D03 version 2: tcp@[172.30.4.104:5075]
 ```
 **Notice**: pvValidator is installed in all the nxbastion VMs which can discover then all the IOCs running on TN.
+
 **Notice**: it depends how the EPICS gateways are setup in the host, you maybe cannot see all the available running IOCs, however if you can ping their IP you can still use it to fetch the PVs list.
 
 ---
@@ -66,19 +67,19 @@ GUID 0x385FF85F00000000ABD17D03 version 2: tcp@[172.30.4.104:5075]
 
 The **online** interactive validation can be done taken the list of PVs from running IOC,  using the following command
 
-`> pvValidator.py -s <IP[:Port]>`
+`> pvValidator -s <IP[:Port]>`
 
 or
 
-`> pvValidator.py -s <GUID>`
+`> pvValidator -s <GUID>`
 
 where `<IP[:Port]>` is the IP of the Host IOC, or the `<GUID>` is the IOC GUID that can be fecthed using the `-d` command.
 
 E.g.
 
-`> pvValidator.py -s 172.30.6.12`
+`> pvValidator -s 172.30.6.12`
 
-`> pvValidator.py -s 172.30.4.104:49549`
+`> pvValidator -s 172.30.4.104:49549`
 
 in this last case the port is needed to identify the IOC from the others running in the host.
 Or equivalently can be done using its GUID
@@ -87,24 +88,17 @@ Or equivalently can be done using its GUID
 
 Below the syntax if you are running the tool in the same host where it is running the IOC.
 
-`> pvValidator.py -s localhost`
+`> pvValidator -s localhost`
 
 **Notice**: we strongly reccomend to not install pvValidator in the host where the IOC is running for production, but do the online validation from any nxbastion VM (see previous paragraph about discovery IOC).
 
 **Offline**
 
-When is not (yet) available a running IOC, the list of PVs can be given through a text file.
+When there is no running IOC, the list of PVs can be given through a text file. The text file can be:
 
-The text file can be an EPICS DB (.db), along with an additional optional file which should contain macro definition if needed, or a plain text file with just the list of PVs.
-
-The macro definition file should contain in the first column the macro and in the second its definition. E.g.
-
-```
-$(P) MySystem
-$(R) MySubsystem
-$(DEV) MyDevice
-......
-```
+- An EPICS DB (.db), with an optional string of this form `VAR=VALUE,...` which contains the possible macro definition for the db file.
+- An EPICS substitutions file with the path to the template files and some macro definition like this `'VAR=VALUE,...'`
+- A plain text file with just the list of PVs.
 
 In text file with the list of PVs, each line should contain only one PV. E.g.
 
@@ -114,23 +108,33 @@ Sys-Subsys::Property
 ......
 ```
 
-In both macro definition and pv list file, comments can inserted putting the `%` character at the beginning of the line.
+In the PV list file, comments can inserted putting the `%` character at the beginning of the line.
 
-The command to do the **offline** validation in this case is the following
+***Running commands***
 
-`> pvValidator.py -e <EPICSDB> [MACRODEF]`
+The command to do the **offline** validation can be then
+
+`> pvValidator -e <dbfile> [VAR=VALUE,...]`
 
 E.g.
 
-`pvValidator.py -e MyepicsDb.db Mymacrodef.txt`
+`> pvValidator -e MyEpicsDb.db 'P=System,R=Device'`
 
 Or
 
-`> pvValidator.py -i <INPUTPVFILE>`
+`> pvValidator -m <subsfile> [/path/to/template] [VAR=VALUE,...]`
+
+If the path to the template is missing, it will take the current directory, i.e. '.' as default, e.g.
+
+`> pvValidator -m MyEpicsSubs.substituttions P=System,R=Device`
+
+Or
+
+`> pvValidator -i <pvfile>`
 
 E.g.
 
-`> pvValidator.py -i mypvfile.txt`
+`> pvValidator -i mypvfile.txt`
 
 See the **Interactive Session Guide** below to have more detail about the interactive validation.
 
@@ -142,27 +146,31 @@ The outcome of the validation, as shown in the interactive session, can be saved
 
 For online validation
 
-`> pvValidator.py -s <IP[:Port]> -o <CSVFILE>`
+`> pvValidator -s <IP[:Port]> -o <csvfile>`
 
 For offline validation
 
-`> pvValidator.py -i <INPUTPVFILE> -o <CSVFILE>`
+`> pvValidator -i <pvfile> -o <csvfile>`
 
-`> pvValidator.py -e <EPICSDB> -o <CSVFILE>`
+`> pvValidator -e <dbfile> -o <csvfile>`
+
+`> pvValidator -m <subsfile> -o <csvfile>`
 
 E.g.
 
-`> pvValidator.py -s 172.30.6.12 -o myoutfile.csv`
+`> pvValidator -s 172.30.6.12 -o myoutfile.csv`
 
 or
 
-`> pvValidator.py -i mypvfile.txt -o myoutfile.csv`
+`> pvValidator -i mypvfile.txt -o myoutfile.csv`
 
-`> pvValidator.py -e myepicsdb.db -o myoutfile.csv`
+`> pvValidator -e myepicsdb.db -o myoutfile.csv`
+
+`> pvValidator -m myepicssubs.substitutions -o myoutfile.csv`
 
 The outcome of the validation can be also shown directly on standard output
 
-`> pvValidator.py -s 172.30.6.12 --stdout`
+`> pvValidator -s 172.30.6.12 --stdout`
 
 The same can be done for offline validation using db or text file.
 
@@ -176,17 +184,17 @@ Only for testing purpose, the validation can be done connecting to the Testing N
 
 Here the syntax:
 
-`> pvValidator.py -s <IP[:Port]> -n {prod,test}`
+`> pvValidator -s <IP[:Port]> -n {prod,test}`
 
 E.g.
 
-`> pvValidator.py -s 172.30.6.12 -n test`
+`> pvValidator -s 172.30.6.12 -n test`
 
 As it said before, the `-n prod` option is redundant as it is the default one.
 
 If for any reason the validation through the Naming Service API cannot be done, the following option should be added
 
-`> pVValidator.py -s 172.30.6.12 --noapi`
+`> pvValidator -s 172.30.6.12 --noapi`
 
 The same for offline validation.
 

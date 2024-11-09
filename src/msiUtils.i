@@ -1,5 +1,5 @@
-/* epicsUtils.i */
-%module epicsUtils
+/* msiUtils.i */
+%module msiUtils
 %include <std_string.i>
 %include <std_vector.i>
 
@@ -22,7 +22,7 @@ namespace epics{
 
 
 %{
-#include "epicsUtils.h"
+#include "msiUtils.h"
 %}
 
-%include "epicsUtils.h"
+%include "msiUtils.h"

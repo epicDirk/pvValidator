@@ -67,7 +67,7 @@ endif()
 set(CMAKE_SHARED_LIBRARY_PREFIX "_")
 set(MOD pvValidatorUtils)
 set(CMOD epicsUtils)
-
+set(MSI msiUtils)
 
 set(EPICS $ENV{EPICS_BASE})
 set(ARCH $ENV{EPICS_HOST_ARCH})
@@ -83,7 +83,9 @@ add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/src/${CMOD}_wrap.cxx ${CMAKE_CUR
     COMMAND swig -c++ -outdir ${CMAKE_CURRENT_BINARY_DIR}/${MOD} -python ${PROJECT_SOURCE_DIR}/src/${CMOD}.i
     )
 
-
+add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/src/${MSI}_wrap.cxx ${CMAKE_CURRENT_BINARY_DIR}/${MOD}/${MSI}.py
+    COMMAND swig -c++ -outdir ${CMAKE_CURRENT_BINARY_DIR}/${MOD} -python ${PROJECT_SOURCE_DIR}/src/${MSI}.i
+    )
 
 
 include_directories(${PROJECT_SOURCE_DIR}/src/pv ${PROJECT_SOURCE_DIR}/src ${EPICS}/include
@@ -97,14 +99,15 @@ include_directories(${PROJECT_SOURCE_DIR}/src/pv ${PROJECT_SOURCE_DIR}/src ${EPI
 
 enable_testing()
 
-add_library(${CMOD} SHARED ${PROJECT_SOURCE_DIR}/src/${CMOD}_wrap.cxx ${PROJECT_SOURCE_DIR}/src/${CMOD}.cxx)
+add_library(${CMOD} SHARED ${PROJECT_SOURCE_DIR}/src/${CMOD}_wrap.cxx ${PROJECT_SOURCE_DIR}/src/${CMOD}.cxx )
+add_library(${MSI} SHARED ${PROJECT_SOURCE_DIR}/src/${MSI}_wrap.cxx ${PROJECT_SOURCE_DIR}/src/${MSI}.cxx)
 target_link_libraries(${CMOD} ${EPICSLIB})
-
+target_link_libraries(${MSI} ${EPICSLIB})
 
 add_test(NAME pvValidatorTest COMMAND pytest -ra ${PROJECT_SOURCE_DIR} WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 
 
-install(TARGETS ${CMOD} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${MOD})
+install(TARGETS ${CMOD} ${MSI} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/${MOD})
 
 install(CODE "execute_process(COMMAND ${Python_EXECUTABLE} -m pip install ${CMAKE_CURRENT_BINARY_DIR} ${PIP_BREAK_OPTION})")
