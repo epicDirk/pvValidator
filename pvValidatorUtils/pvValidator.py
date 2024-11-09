@@ -1,6 +1,4 @@
 #!/usr/bin/python
-
-
 import argparse
 import os
 import sys
@@ -8,10 +6,61 @@ import sys
 from pvValidatorUtils import epicsUtils, pvUtils, version
 
 
+def pvinput(args):
+    """Handle input for PV validation"""
+    pvepics = None
+
+    if args.iocserver:  # PVs from the input IOC
+        pvepics = epicsUtils(args.iocserver)
+
+    elif args.pvfile:  # PVs from a text file
+        if os.path.isfile(args.pvfile):
+            pvepics = epicsUtils()
+        else:
+            raise argparse.ArgumentTypeError(f"{args.pvfile} is not a valid file")
+
+    elif args.epicsdb:  # PVs from an EPICS DB
+        max_args = 2
+        if len(args.epicsdb) <= max_args:
+            dbfile = args.epicsdb[0]
+            if os.path.isfile(dbfile):
+                pvepics = epicsUtils()
+            else:
+                raise argparse.ArgumentTypeError(f"{dbfile} is not a valid file")
+        else:
+            raise argparse.ArgumentTypeError(
+                f"too many arguments for -e, the maximum is {max_args}"
+            )
+
+    elif args.msi:  # PVs from a substitution file
+        max_args = 3
+        if len(args.msi) <= max_args:
+            subsfile = args.msi[0]
+            if os.path.isfile(subsfile):
+                pvepics = epicsUtils()
+            else:
+                raise argparse.ArgumentTypeError(f"{subsfile} is not a valid file")
+        else:
+            raise argparse.ArgumentTypeError(
+                f"too many arguments for -m, the maximum is {max_args}"
+            )
+
+    return pvepics
+
+
+class DiscoverAction(argparse.Action):
+    """Custom action to handle immediate discovery"""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(epicsUtils(True).getServerList())
+        sys.exit()
+
+
 def main():
+    """Main function to handle the EPICS PV Validation Tool"""
     parser = argparse.ArgumentParser(
-        description="EPICS PV Validation Tool (" + version + ")",
-        formatter_class=lambda prog: argparse.HelpFormatter(prog, width=200),
+        description=f"EPICS PV Validation Tool ({version})",
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, width=150),
         epilog="Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)",
     )
 
@@ -23,96 +72,92 @@ def main():
         help="print version and exit",
     )
 
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument(
-        "-d", "--discover", action="store_true", help="discover IOC Servers and exit"
+    parser.add_argument(
+        "-d",
+        "--discover",
+        action=DiscoverAction,
+        nargs=0,
+        help="discover IOC servers and exit",
     )
-    group.add_argument(
+
+    # Input parser
+    input_parser_group = parser.add_mutually_exclusive_group(required=True)
+    input_parser_group.add_argument(
         "-s",
-        "--server",
         dest="iocserver",
+        metavar="(IP[:PORT] | GUID)",
         help="IOC server IP[:PORT] or GUID to get PV list (online validation)",
     )
-    group.add_argument(
+    input_parser_group.add_argument(
         "-i",
-        "--inpvfile",
         dest="pvfile",
+        metavar="pvfile",
         default=None,
         help="input PV list file (offline validation)",
     )
-    group.add_argument(
+    input_parser_group.add_argument(
         "-e",
-        "--epicsdb",
         dest="epicsdb",
-        default=None,
-        help="input EPICS DB file (.db) [macro definition file] (offline validation)",
-        metavar=("EPICSDB", "MACRODEF"),
         nargs="+",
-    )
-    outgroup = parser.add_mutually_exclusive_group(required=False)
-    outgroup.add_argument(
-        "-o",
-        "--outcsvfile",
-        dest="csvfile",
+        metavar=("dbfile", "VAR=VALUE"),
         default=None,
-        help="write validation table directly on csv file (do not start interactive session)",
+        help="input EPICS db file (.db) [VAR=VALUE, ...] (offline validation)",
+    )
+    input_parser_group.add_argument(
+        "-m",
+        dest="msi",
+        nargs="+",
+        default=None,
+        metavar=("subsfile", "path_to_templates VAR=VALUE"),
+        help="input substitution file (.substitutions) [/path/to/templates VAR=VALUE, ...] (offline validation)",
     )
 
-    namegroup = parser.add_mutually_exclusive_group(required=False)
-    namegroup.add_argument(
+    # Naming parser
+    naming_parser_group = parser.add_mutually_exclusive_group()
+    naming_parser_group.add_argument(
         "-n",
-        "--nameservice",
         dest="nameservice",
         default="prod",
         choices=["prod", "test"],
-        help="select Naming Service endpoint to connect: prod(uction), test(ing) [Default=prod]",
+        help="select naming service endpoint to connect: prod(uction), test(ing) [default=prod]",
     )
-    namegroup.add_argument(
+    naming_parser_group.add_argument(
         "--noapi",
         dest="noapi",
         action="store_true",
         default=False,
-        help="check only PV format and rules, skip connection to Naming Service endpoint",
+        help="check only PV format and rules, skip connection to naming service endpoint",
     )
 
-    outgroup.add_argument(
+    # Output parser
+    output_parser_group = parser.add_mutually_exclusive_group()
+    output_parser_group.add_argument(
+        "-o",
+        dest="csvfile",
+        metavar="csvfile",
+        default=None,
+        help="write the validation table directly to CSV file",
+    )
+    output_parser_group.add_argument(
         "--stdout",
         dest="stdout",
         action="store_true",
         default=False,
-        help="write validation table directly on STDOUT (do not start interactive session)",
+        help="write the validation table directly to STDOUT",
     )
 
     args = parser.parse_args()
 
-    if args.discover:
-        print(epicsUtils(True).getServerList())
-        sys.exit()
-
-    if args.iocserver:
-        pvepics = epicsUtils(args.iocserver)
-
-    if args.pvfile:
-        if os.path.isfile(args.pvfile):
-            pvepics = epicsUtils(False)
-        else:
-            parser.error(args.pvfile + " is not a valid file")
-
-    if args.epicsdb:
-        if os.path.isfile(args.epicsdb[0]):
-            pvepics = epicsUtils(False)
-            if len(args.epicsdb) > 1 and not os.path.isfile(args.epicsdb[1]):
-                parser.error(args.epicsdb[1] + " is not a valid file")
-        else:
-            parser.error(args.epicsdb[0] + " is not a valid file")
+    pvepics = pvinput(args)
 
     pv = pvUtils(
-        pvepics,
-        args.nameservice,
-        args.noapi,
-        args.pvfile,
-        args.csvfile,
-        args.epicsdb,
-        args.stdout,
+        pvepics=pvepics,
+        namingservice=args.nameservice,
+        checkonlyfmt=args.noapi,
+        pvfile=args.pvfile,
+        csvfile=args.csvfile,
+        epicsdb=args.epicsdb,
+        msiobj=args.msi,
+        stdout=args.stdout,
     )
     pv.run()
