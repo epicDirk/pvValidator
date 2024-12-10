@@ -1,0 +1,5 @@
+##
+file test/test.db {
+pattern {P,R}
+{"$(PP)","$(RR)"}
+}

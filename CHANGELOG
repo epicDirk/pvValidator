@@ -46,3 +46,9 @@ which is harmless in this src version. I have anyhow updated the setup.py also i
 - Changed packaging tool
 - Addedd unit test
 - Removed staging, development and addedd testing naming service
+ # Mon Nov  18 11:52:16 AM CET 2024 [1.8.0]
+ - Removed .py extenstion to the CLI
+ - Added msiUtils C++ code (msi modification)
+ - Added input substitution file (code from msi)
+ - Added related test
+ - Improved code readibilty adding more comments
