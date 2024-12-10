@@ -1,4 +1,4 @@
-# pvValidator.py
+# pvValidator
 
 Tool to validate EPICS PVs based on CHESS document [ESS-0000757](https://chess.esss.lu.se/enovia/link/ESS-0000757/21308.51166.43264.12914/valid).
 
@@ -8,6 +8,9 @@ Requirements: `Python3` and `pip3`
 
 `pip3 install pvValidatorUtils -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user`
 
+**Platform supported**
+
+Linux, WSL
 
 **Requirements for compilation from sources for newer Linux distributions or WSL**
 - python recommended version >=3.8
@@ -47,31 +50,41 @@ Requirements: `Python3` and `pip3`
   - `ctest -V`
 
 
-Then you can run the CLI **pvValidator.py**
+Then you can run the CLI **pvValidator**
 ```
- $ pvValidator.py -h
-usage: pvValidator.py [-h] [-v] (-d | -s IOCSERVER | -i PVFILE | -e EPICSDB [MACRODEF ...]) [-o CSVFILE] [-n {prod,test} | --noapi] [--stdout]
+ $ pvValidator -h
+usage: pvValidator [-h] [-v] [-d] (-s (IP[:PORT] | GUID) | -i pvfile | -e dbfile [VAR=VALUE ...] | -m subsfile
+                   [path_to_templates VAR=VALUE ...]) [-n {prod,test} | --noapi] [-o csvfile | --stdout]
 
-EPICS PV Validation Tool (1.7.0)
+EPICS PV Validation Tool (1.8.0)
 
 options:
   -h, --help            show this help message and exit
   -v, --version         print version and exit
-  -d, --discover        discover IOC Servers and exit
-  -s IOCSERVER, --server IOCSERVER
+  -d, --discover        discover IOC servers and exit
+  -s (IP[:PORT] | GUID)
                         IOC server IP[:PORT] or GUID to get PV list (online validation)
-  -i PVFILE, --inpvfile PVFILE
-                        input PV list file (offline validation)
-  -e EPICSDB [MACRODEF ...], --epicsdb EPICSDB [MACRODEF ...]
-                        input EPICS DB file (.db) [macro definition file] (offline validation)
-  -o CSVFILE, --outcsvfile CSVFILE
-                        write validation table directly on csv file (do not start interactive session)
-  -n {prod,test}, --nameservice {prod,test}
-                        select Naming Service endpoint to connect: prod(uction), test(ing) [Default=prod]
-  --noapi               check only PV format and rules, skip connection to Naming Service endpoint
-  --stdout              write validation table directly on STDOUT (do not start interactive session)
+  -i pvfile             input PV list file (offline validation)
+  -e dbfile [VAR=VALUE ...]
+                        input EPICS db file (.db) [VAR=VALUE, ...] (offline validation)
+  -m subsfile [path_to_templates VAR=VALUE ...]
+                        input substitution file (.substitutions) [path_to_templates VAR=VALUE, ...] (offline validation)
+  -n {prod,test}        select naming service endpoint to connect: prod(uction), test(ing) [default=prod]
+  --noapi               check only PV format and rules, skip connection to naming service endpoint
+  -o csvfile            write the validation table directly to CSV file
+  --stdout              write the validation table directly to STDOUT
 
 Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)
 ```
 
 For more details please see the [documentation](doc/pvvalidator.md)
+
+## Author
+Alfio Rizzo (alfio.rizzo@ess.eu)
+
+## Acknowledgment
+
+EPICS https://epics-controls.org
+
+## License
+GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007
