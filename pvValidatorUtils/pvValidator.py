@@ -54,7 +54,7 @@ class DiscoverAction(argparse.Action):
 
     def __call__(self, parser, namespace, values, option_string=None):
         print(epicsUtils(True).getServerList())
-        sys.exit()
+        raise SystemExit(0)
 
 
 def main():

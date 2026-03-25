@@ -1,0 +1,24 @@
+# Test EPICS database file for DB parser tests
+# Tests: comma in value, PV starting with f/i, multiline, comments
+
+record(ai, "DTL-010:EMR-TT-001:Temperature")
+record(ao, "DTL-010:EMR-TT-001:SetPoint-SP")
+
+# PVs starting with f and i (previously filtered by startswith bug)
+record(ai, "ISrc:Vac-VG-001:filamentCurrent")
+record(ai, "ISrc:Vac-VG-001:ionGaugePressure")
+
+# Record with comma in field value — previously broke split(",")
+record(calcout, "DTL-010:EMR-Calc-001:ConvertedValue") {
+    field(CALC, "A>B?1,0")
+    field(DESC, "Comma, in description")
+}
+
+# Commented-out record — should be skipped
+# record(ai, "SHOULD-NOT:APPEAR:InResults")
+
+# Record type starting with 'f' (fanout) — was previously filtered
+record(fanout, "DTL-010:EMR-FO-001:FanSeq")
+
+# Record type starting with 'i' (int64in) — was previously filtered
+record(int64in, "DTL-010:EMR-II-001:IntValue")

@@ -10,6 +10,7 @@ API endpoints used:
 
 import logging
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote as url_quote
 
 import requests
 
@@ -86,7 +87,7 @@ class NamingServiceClient:
             return self._parts_cache[mnemonic]
         try:
             resp = self.session.get(
-                self.parts_url + mnemonic,
+                self.parts_url + url_quote(mnemonic, safe="-:"),
                 timeout=self.timeout,
             )
             resp.raise_for_status()
@@ -104,7 +105,7 @@ class NamingServiceClient:
             return self._names_cache[name]
         try:
             resp = self.session.get(
-                self.names_url + name,
+                self.names_url + url_quote(name, safe="-:"),
                 timeout=self.timeout,
             )
             resp.raise_for_status()
