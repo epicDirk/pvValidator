@@ -1,0 +1,20 @@
+% Valid PV format examples — all 4 structural formats from ESS-0000757
+% Format: Sys-Sub:Dis-Dev-Idx:Property (full device PV with subsystem)
+DTL-010:EMR-TT-001:Temperature
+PBI-BCM01:Ctrl-MTCA-100:Status
+CWM-CWS03:WtrC-PT-011:Pressure
+YMIR-SpScn:MC-MCU-001:Position
+ISrc-CS:ISS-Magtr-01:Current
+Tgt-HeC1010:Proc-TT-003:Temperature
+% Format: Sys-Sub::Property (high-level system PV with subsystem)
+DTL-010::Temperature
+CWM-CWS03::RunMode
+CWM-CWS03::SKID_Ok
+TD-M::OscillatorSyncStatus
+% Format: Sys::Property (high-level system PV)
+DTL::ReadyForBeam
+Tgt::Status
+Tgt::PowerConsumption
+ISrc::Status
+TD::LastSentDataBlock
+LoKI-SC::ReadyForBeam

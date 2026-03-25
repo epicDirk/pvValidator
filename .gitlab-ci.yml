@@ -1,3 +1,93 @@
 ---
 include:
   - 'https://gitlab.esss.lu.se/ics-infrastructure/gitlab-ci-yml/raw/master/PreCommit.gitlab-ci.yml'
+
+stages:
+  - lint
+  - build
+  - test
+
+variables:
+  CONDA_ENV: e3
+  PIP_BREAK: "--break-system-packages"
+
+# ---------------------------------------------------------------------------
+# Build: Compile SWIG modules
+# ---------------------------------------------------------------------------
+
+build:
+  stage: build
+  image: condaforge/miniforge3:latest
+  before_script:
+    - conda config --prepend channels https://artifactory.esss.lu.se/artifactory/api/conda/ess-conda-local
+    - conda config --set channel_priority strict
+    - conda create --name=$CONDA_ENV -y epics-base require swig cmake gcc_linux-64 gxx_linux-64 make python=3.10 pip requests pyyaml
+  script:
+    - conda run -n $CONDA_ENV bash -c "
+        mkdir -p build && cd build &&
+        cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DMY_PYTHON_VERSION=3.10 .. &&
+        make install &&
+        cp pvValidatorUtils/_epicsUtils.so ../pvValidatorUtils/ &&
+        cp pvValidatorUtils/_msiUtils.so ../pvValidatorUtils/ &&
+        cp pvValidatorUtils/epicsUtils.py ../pvValidatorUtils/ &&
+        cp pvValidatorUtils/msiUtils.py ../pvValidatorUtils/"
+    - conda run -n $CONDA_ENV pip install -e ".[test]" $PIP_BREAK
+  artifacts:
+    paths:
+      - pvValidatorUtils/
+      - build/
+    expire_in: 1 day
+
+# ---------------------------------------------------------------------------
+# Test: Offline (no ESS network needed)
+# ---------------------------------------------------------------------------
+
+test:offline:
+  stage: test
+  image: condaforge/miniforge3:latest
+  needs:
+    - job: build
+      artifacts: true
+  before_script:
+    - conda config --prepend channels https://artifactory.esss.lu.se/artifactory/api/conda/ess-conda-local
+    - conda config --set channel_priority strict
+    - conda create --name=$CONDA_ENV -y epics-base require python=3.10 pip requests pyyaml
+    - conda run -n $CONDA_ENV pip install -e ".[test]" $PIP_BREAK
+  script:
+    - conda run -n $CONDA_ENV pytest test/ -v
+        -k "not backend and not pvepics and not test_all"
+        --junitxml=report.xml
+        --tb=short
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+
+# ---------------------------------------------------------------------------
+# Test: API (requires ESS network — runner on ESS TN)
+# ---------------------------------------------------------------------------
+
+test:api:
+  stage: test
+  image: condaforge/miniforge3:latest
+  tags:
+    - ess-network
+  needs:
+    - job: build
+      artifacts: true
+  before_script:
+    - conda config --prepend channels https://artifactory.esss.lu.se/artifactory/api/conda/ess-conda-local
+    - conda config --set channel_priority strict
+    - conda create --name=$CONDA_ENV -y epics-base require python=3.10 pip requests pyyaml
+    - conda run -n $CONDA_ENV pip install -e ".[test]" $PIP_BREAK
+    - conda run -n $CONDA_ENV pip install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple $PIP_BREAK || true
+  script:
+    - conda run -n $CONDA_ENV pytest test/ -v
+        --ess-network
+        --junitxml=report-api.xml
+        --tb=short
+  artifacts:
+    when: always
+    reports:
+      junit: report-api.xml
+  allow_failure: true

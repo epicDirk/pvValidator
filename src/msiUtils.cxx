@@ -190,41 +190,7 @@ void msiUtils::inputOpenFile(inputData *pinputData,
   pinputData->inputFileList.push_front(inFile);
 }
 
-void inputAddPath(inputData *const pinputData, const char *const path) {
-  const char *pcolon;
-  const char *pdir;
-  size_t len;
-  const char sep = *OSI_PATH_LIST_SEPARATOR;
-
-  pdir = path;
-  /*an empty name at beginning, middle, or end means current directory*/
-  while (pdir && *pdir) {
-    bool emptyName = (*pdir == sep);
-    if (emptyName)
-      ++pdir;
-
-    std::string directory;
-    if (!emptyName) {
-      pcolon = strchr(pdir, sep);
-      len = (pcolon ? (pcolon - pdir) : strlen(pdir));
-      if (len > 0) {
-        directory = std::string(pdir, len);
-        pdir = pcolon;
-        /*unless at end skip past first colon*/
-        if (pdir && *(pdir + 1) != 0)
-          ++pdir;
-      } else { /*must have been trailing : */
-        emptyName = true;
-      }
-    }
-
-    if (emptyName) {
-      directory = ".";
-    }
-
-    pinputData->pathList.push_back(directory);
-  }
-}
+// Duplicate free function inputAddPath() removed — identical to msiUtils::inputAddPath() below
 
 void msiUtils::inputAddPath(inputData *const pinputData,
                             const char *const path) {

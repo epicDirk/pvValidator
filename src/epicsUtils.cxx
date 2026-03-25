@@ -117,27 +117,7 @@ epicsUtils::epicsUtils(string serverAddress) {
 
 string epicsUtils::getServerList() { return serverlist; }
 
-string epicsUtils::HasAlias(string pv) {
-  /*
-  pvac::ClientProvider provider("pva");
-  pvac::ClientChannel channel(provider.connect(pv+".NAME$"));
-  stringstream pvstream;
-  string pvstr;
-  pvstream << channel.get()->getSubField("value");
-  pvstream >> pvstr;
-  pvstr.pop_back();
-  pvstr.erase(pvstr.begin());
-  pvstr.pop_back();
-  stringstream pvout;
-  string token;
-  stringstream instream(pvstr);
-  while (getline(instream, token, ','))
-      pvout << ((char)stoi(token)) ;
-  if (pv != pvout.str())
-      return pvout.str();
-  else*/
-  return "";
-}
+// HasAlias() removed — was dead code (fully commented out, never called)
 
 epicsUtils::~epicsUtils() {}
 

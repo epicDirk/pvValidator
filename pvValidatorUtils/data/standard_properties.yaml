@@ -1,0 +1,108 @@
+# ESS-0000757 Standard Property Names
+# Tables 6-10 from the naming convention document
+# Used for informational validation (suggestions, not errors)
+
+quantities:
+  # Table 6: Physical quantities (ISO/IEC 80000)
+  - {full: "Current", abbrev: "Curr", unit: "A", category: "physical"}
+  - {full: "Charge", abbrev: "Char", unit: "C", category: "physical"}
+  - {full: "Voltage", abbrev: "Volt", unit: "V", category: "physical"}
+  - {full: "Resistance", abbrev: "Resi", unit: "Ohm", category: "physical"}
+  - {full: "Capacitance", abbrev: "Capa", unit: "F", category: "physical"}
+  - {full: "Pressure", abbrev: "Pres", unit: "Pa", category: "physical"}
+  - {full: "Temperature", abbrev: "Temp", unit: "C", category: "physical"}
+  - {full: "Length", abbrev: "Leng", unit: "m", category: "physical"}
+  - {full: "Mass", abbrev: "Mass", unit: "kg", category: "physical"}
+  - {full: "Time", abbrev: "Time", unit: "s", category: "physical"}
+  - {full: "Acceleration", abbrev: "Acce", unit: "m/s2", category: "physical"}
+  - {full: "Power", abbrev: "Pwr", unit: "W", category: "physical"}
+  - {full: "Energy", abbrev: "Ener", unit: "J", category: "physical"}
+  - {full: "Frequency", abbrev: "Freq", unit: "Hz", category: "physical"}
+  - {full: "Volume", abbrev: "Volu", unit: "m3", category: "physical"}
+  - {full: "Velocity", abbrev: "Velo", unit: "m/s", category: "physical"}
+  - {full: "Area", abbrev: "Area", unit: "m2", category: "physical"}
+  - {full: "Force", abbrev: "Forc", unit: "N", category: "physical"}
+  - {full: "Inductance", abbrev: "Indu", unit: "H", category: "physical"}
+  - {full: "Activity", abbrev: "Acti", unit: "Bq", category: "physical"}
+  - {full: "Density", abbrev: "Dens", unit: "kg/m3", category: "physical"}
+  - {full: "Conductivity", abbrev: null, unit: "S/m", category: "physical"}
+  - {full: "MagneticFlux", abbrev: "MagnFlux", unit: "Wb", category: "physical"}
+  - {full: "MagneticFluxDensity", abbrev: "MagnFluxDens", unit: "T", category: "physical"}
+  - {full: "LuminousFlux", abbrev: "LumiFlux", unit: "lm", category: "physical"}
+  - {full: "PlaneAngle", abbrev: "PlanAng", unit: "rad", category: "physical"}
+  - {full: "SolidAngle", abbrev: "SoliAng", unit: "sr", category: "physical"}
+  - {full: "AbsorbedDose", abbrev: "AbsoDose", unit: "Gy", category: "physical"}
+  - {full: "DoseEquivalent", abbrev: "DoseEqui", unit: "Sv", category: "physical"}
+  - {full: "CatalycticActivity", abbrev: "CataActi", unit: "kat", category: "physical"}
+  - {full: "MassFlow", abbrev: "MassFlow", unit: "kg/s", category: "physical"}
+  - {full: "VolumeFlow", abbrev: "VoluFlow", unit: "m3/s", category: "physical"}
+  # Table 7: Information science quantities
+  - {full: "StorageSize", abbrev: "StorSize", unit: "B", category: "info"}
+  - {full: "TrafficIntensity", abbrev: "TraffInt", unit: "E", category: "info"}
+  - {full: "TransferRate", abbrev: "TrasfRate", unit: "B/s", category: "info"}
+  - {full: "ModulationRate", abbrev: "ModuRate", unit: "Bd", category: "info"}
+  - {full: "ClockRate", abbrev: "ClockRate", unit: "Hz", category: "info"}
+  - {full: "CarrierPower", abbrev: "CarrPowe", unit: "W", category: "info"}
+  - {full: "Entropy", abbrev: "Entro", unit: "Sh", category: "info"}
+
+actions:
+  # Table 8: Action properties
+  - {name: "Start", description: "Initiate operation"}
+  - {name: "Stop", description: "Cease operation"}
+  - {name: "Open", alternatives: ["C_Open"], description: "Open two-state device"}
+  - {name: "Close", alternatives: ["C_Close"], description: "Close two-state device"}
+  - {name: "Set", description: "Apply configuration"}
+  - {name: "Get", description: "Retrieve configuration"}
+  - {name: "Reset", description: "Restore to default"}
+  - {name: "Enable", alternatives: ["C_Enable", "Enbl"], description: "Allow operability"}
+  - {name: "Disable", alternatives: ["C_Disable", "Disbl"], description: "Disallow operability"}
+  - {name: "Inhibit", description: "Cease temporarily"}
+  - {name: "Hold", description: "Retain state"}
+  - {name: "Release", description: "Remove hold"}
+  - {name: "C_Force", description: "Override value"}
+  - {name: "Lock", description: "Prevent operation"}
+  - {name: "Scale", description: "Convert units"}
+  - {name: "Ack", description: "Acknowledge event"}
+  - {name: "Trigger", description: "Initiate event-based action"}
+  - {name: "Press", description: "Actuate physical device"}
+  - {name: "Scan", description: "Detect/read physical device"}
+  - {name: "Search", description: "Search physical areas"}
+
+states:
+  # Table 9: State properties
+  - {name: "Opened", description: "Position feedback open"}
+  - {name: "Closed", description: "Position feedback closed"}
+  - {name: "On", description: "Power on"}
+  - {name: "Off", description: "Power off"}
+  - {name: "Error", description: "Abnormal condition"}
+  - {name: "Failure", description: "Abnormal condition"}
+  - {name: "Fault", description: "Abnormal condition"}
+  - {name: "Tripped", description: "Breaker tripped"}
+  - {name: "High", description: "High limit reached"}
+  - {name: "Low", description: "Low limit reached"}
+  - {name: "Auto", description: "Automatic mode"}
+  - {name: "Manual", description: "Manual mode"}
+  - {name: "Local", description: "Local control"}
+  - {name: "Remote", description: "Remote control"}
+  - {name: "Forced", description: "Forced mode"}
+  - {name: "Locked", description: "Locked mode"}
+  - {name: "Indexed", description: "Position locked"}
+  - {name: "Connected", description: "Communication link active"}
+  - {name: "Enabled", description: "Operability active"}
+  - {name: "Disabled", description: "Operability inactive"}
+  - {name: "Ready", description: "Ready to operate"}
+  - {name: "Configured", description: "Configuration applied"}
+  - {name: "Requested", description: "Configuration requested"}
+  - {name: "Pressed", description: "Physical device actuated"}
+  - {name: "Searched", description: "Area search state"}
+  - {name: "In", description: "Position in"}
+  - {name: "Out", description: "Position out"}
+  - {name: "Ok", description: "Healthy status"}
+  - {name: "NotOk", alternatives: ["NOK"], description: "Abnormal status"}
+  - {name: "Transitioning", description: "Between states"}
+
+prefixes:
+  # Table 10: Property prefixes
+  - {prefix: "Ch{n}-", description: "Channel n (0-9)"}
+  - {prefix: "Clk-", description: "Clock parameters"}
+  - {prefix: "C_", description: "Command/Action disambiguation"}

@@ -1,0 +1,253 @@
+# ESS-0000757 Rev. 10 — Validation Rules
+# "ESS rules and recommendations for ESS EPICS names"
+# Owner: Jorick Lochet (ESS Naming Coordinator)
+#
+# This file encodes ALL validation rules from the document.
+# When Rev 11 is published: update this file, no code changes needed.
+#
+# Severity levels:
+#   error   = SHALL (mandatory, violation = invalid PV)
+#   warning = SHOULD (recommended, violation = warning only)
+#   info    = informational (no action required)
+
+metadata:
+  document: "ESS-0000757"
+  revision: 10
+  title: "ESS rules and recommendations for ESS EPICS names"
+  owner: "Jorick Lochet"
+  naming_service:
+    prod: "https://naming.esss.lu.se/"
+    test: "https://naming-test-01.cslab.esss.lu.se/"
+
+# ============================================================
+# PV Format Rules
+# ============================================================
+
+format:
+  valid_patterns:
+    - id: "FMT-1"
+      pattern: "Sys-Sub:Dis-Dev-Idx:Property"
+      description: "Full device PV with subsystem"
+      reference: "Section 3"
+
+    - id: "FMT-2"
+      pattern: "Sys:Dis-Dev-Idx:Property"
+      description: "Device PV without subsystem"
+      reference: "Section 3"
+
+    - id: "FMT-3"
+      pattern: "Sys-Sub::Property"
+      description: "High-level system PV with subsystem"
+      reference: "Section 4.2"
+
+    - id: "FMT-4"
+      pattern: "Sys::Property"
+      description: "High-level system PV"
+      reference: "Section 4.2"
+
+# ============================================================
+# Name Element Rules (System, Subsystem, Discipline, Device)
+# ============================================================
+
+elements:
+  - id: "ELEM-1"
+    check: "alphanumeric"
+    applies_to: ["System", "Subsystem", "Discipline", "Device"]
+    severity: "error"
+    message: "Name element must be alphanumeric (a-z, A-Z, 0-9)"
+    reference: "Section 3, Rule 1"
+
+  - id: "ELEM-2"
+    check: "starts_with_letter"
+    applies_to: ["System", "Discipline", "Device"]
+    severity: "error"
+    message: "Name element must start with a letter"
+    note: "Subsystem exempted — ESS uses numeric subsystems (e.g., DTL-010)"
+    reference: "Section 3, Rule 2"
+
+  - id: "ELEM-5"
+    check: "min_length"
+    value: 1
+    applies_to: ["System", "Subsystem", "Discipline", "Device"]
+    severity: "error"
+    message: "Name element must be at least 1 character"
+    reference: "Section 3, Rule 5"
+
+  - id: "ELEM-6"
+    check: "max_length"
+    value: 6
+    applies_to: ["System", "Subsystem", "Discipline", "Device"]
+    severity: "error"
+    message: "Name element exceeds 6 characters"
+    reference: "Section 3, Rule 6"
+
+# ============================================================
+# Device Index Rules
+# ============================================================
+
+index:
+  - id: "IDX-MANDATORY"
+    check: "required"
+    severity: "error"
+    message: "Device index is mandatory"
+    reference: "Section 5.2"
+
+  - id: "IDX-SCIENTIFIC"
+    check: "scientific_style"
+    pattern: "^\\d{1,4}$"
+    severity: "warning"
+    message: "Index should follow Scientific style (1-4 digits)"
+    reference: "Section 5.2.1"
+
+  - id: "IDX-PID"
+    check: "pid_style"
+    pattern: "^\\d{3}[a-z]{0,3}$"
+    severity: "warning"
+    message: "Index should follow P&ID style (3 digits + optional lowercase)"
+    reference: "Section 5.2.2"
+
+  - id: "IDX-SC"
+    check: "sc_style"
+    pattern: "^\\d+$"
+    applies_to_discipline: "SC"
+    severity: "error"
+    message: "IOC index must be digits only"
+    reference: "Section 5.2.3"
+
+  - id: "IDX-LEN"
+    check: "max_length"
+    value: 6
+    severity: "error"
+    message: "Index exceeds 6 characters"
+    reference: "Section 5.2"
+
+# ============================================================
+# PV Property Rules
+# ============================================================
+
+property:
+  - id: "PV-LEN"
+    check: "pv_max_length"
+    value: 60
+    severity: "error"
+    message: "Total PV length exceeds 60 characters"
+    reference: "Section 3"
+
+  - id: "PROP-1"
+    check: "unique_per_device"
+    confusables:
+      - {chars: "I/l/1", description: "Capital I, lowercase L, digit one"}
+      - {chars: "O/0", description: "Capital O, digit zero"}
+      - {chars: "VV/W", description: "Double V, letter W"}
+      - {type: "leading_zeros", description: "Leading zeros stripped"}
+      - {type: "case", description: "Case-insensitive comparison"}
+    severity: "error"
+    message: "Property is not unique within device"
+    reference: "Section 6.2, Rule 1"
+
+  - id: "PROP-2"
+    check: "max_length"
+    value: 25
+    exclude_suffixes: ["-SP", "-RB"]
+    severity: "error"
+    message: "Property exceeds 25 characters (suffixes excluded)"
+    reference: "Section 6.2, Rule 2"
+
+  - id: "PROP-3"
+    check: "min_length"
+    value: 4
+    severity: "warning"
+    message: "Property is below 4 characters"
+    reference: "Section 6.2, Rule 3"
+
+  - id: "PROP-SP"
+    check: "suffix"
+    invalid: ["-S", "_S"]
+    correct: "-SP"
+    severity: "error"
+    message: "Setpoint suffix must be -SP (not -S or _S)"
+    reference: "Section 6.2, Rule 9a"
+
+  - id: "PROP-RB"
+    check: "suffix"
+    invalid: ["-RBV", "_RBV"]
+    correct: "-RB"
+    severity: "error"
+    message: "Readback suffix must be -RB (not -RBV or _RBV)"
+    reference: "Section 6.2, Rule 9b"
+
+  - id: "PROP-R"
+    check: "suffix"
+    invalid: ["-R", "_R"]
+    severity: "error"
+    message: "Reading value should not have -R or _R suffix"
+    reference: "Section 6.2"
+
+  - id: "PROP-INT"
+    check: "internal_pv"
+    prefix: "#"
+    severity: "info"
+    message: "Internal PV (debugging/intermediate)"
+    reference: "Section 6.8"
+
+  - id: "PROP-11"
+    check: "starts_alphabetical"
+    severity: "error"
+    message: "Property must start with a letter"
+    reference: "Section 6.2, Rule 11"
+
+  - id: "PROP-11-CASE"
+    check: "starts_uppercase"
+    severity: "warning"
+    message: "Property should start with uppercase letter"
+    reference: "Section 6.2, Rule 11"
+
+  - id: "PROP-11-CHAR"
+    check: "no_special_chars"
+    disallowed: "!@$%^&*()+={}[]|\\:;'\"<>,.?/~`"
+    severity: "error"
+    message: "Property contains disallowed characters"
+    reference: "Section 6.2, Rule 11"
+
+  - id: "PROP-11-HASH"
+    check: "hash_position"
+    severity: "error"
+    message: "# character only allowed as first character (internal PV)"
+    reference: "Section 6.2, Rule 10"
+
+# ============================================================
+# Legacy Rules (Annex C)
+# ============================================================
+
+legacy:
+  - id: "LEGACY-PREFIX"
+    check: "legacy_prefix"
+    prefixes: ["Cmd_", "P_", "FB_", "SP_"]
+    severity: "warning"
+    message: "Property uses legacy prefix (accepted but discouraged)"
+    reference: "Annex C"
+
+  - id: "LEGACY-5DIGIT"
+    check: "legacy_index"
+    applies_to_disciplines: ["Cryo", "Vac"]
+    max_digits: 5
+    severity: "warning"
+    message: "5-digit index is legacy (Cryo/Vacuum only)"
+    reference: "Annex C, Section 10.1"
+
+# ============================================================
+# Exception Rules (Annex B)
+# ============================================================
+
+exceptions:
+  - id: "EXC-TGT"
+    check: "target_4digit"
+    applies_to_systems: ["Tgt"]
+    description: "Target Station may use 4-digit subsystem index"
+    reference: "Annex B, Section 9.2"
+
+  - id: "EXC-MTCA"
+    check: "mtca_naming"
+    device_prefix: "Ctrl-MTCA"
+    index_format: "3-digit (1st=system, 2nd-3rd=counter)"
+    reference: "Annex A, Section 8.1"

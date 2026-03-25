@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pvValidator — ESS EPICS PV Name Validator</title>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ESS Brand Colors */
+  --ess-navy: #002855;
+  --ess-cyan: #00B0CA;
+  --ess-blue: #41B6E6;
+  --ess-green: #78BE20;
+  --ess-orange: #E87722;
+  --ess-red: #C8102E;
+
+  /* UI Colors */
+  --bg: #FFFFFF;
+  --surface: #F7F8FA;
+  --surface-2: #EEF0F4;
+  --border: #D8DCE4;
+  --border-hover: #B0B6C4;
+  --text: #1A1E2C;
+  --text-2: #5A6070;
+  --text-3: #8C92A4;
+
+  /* PV Segment Colors (bright on white) */
+  --sys: #002855;
+  --sub: #00857A;
+  --dis: #6B3FA0;
+  --dev: #C05F00;
+  --idx: #A08B00;
+  --prop: #0E7A4A;
+
+  /* Segment Background Colors */
+  --sys-bg: rgba(0,40,85,0.08);
+  --sub-bg: rgba(0,133,122,0.08);
+  --dis-bg: rgba(107,63,160,0.08);
+  --dev-bg: rgba(192,95,0,0.08);
+  --idx-bg: rgba(160,139,0,0.08);
+  --prop-bg: rgba(14,122,74,0.08);
+
+  /* Status */
+  --ok: #0E7A4A;
+  --err: #C8102E;
+  --warn: #B8860B;
+  --info: #00739E;
+  --ok-bg: rgba(14,122,74,0.06);
+  --err-bg: rgba(200,16,46,0.06);
+  --warn-bg: rgba(184,134,11,0.06);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: 'Titillium Web', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* Header */
+.header { background: var(--ess-navy); color: #fff; padding: 0; }
+.header-inner { max-width: 1140px; margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em; }
+.header h1 span { color: var(--ess-cyan); }
+.header .tag { font-size: 0.65rem; font-weight: 600; color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; padding: 3px 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.ess-link { color: rgba(255,255,255,0.5); font-size: 0.72rem; text-decoration: none; font-weight: 400; }
+.ess-link:hover { color: var(--ess-cyan); }
+
+/* Accent bar */
+.accent-bar { height: 3px; background: linear-gradient(90deg, var(--ess-cyan), var(--ess-blue), var(--ess-green), var(--ess-orange)); }
+
+/* Layout */
+.app { max-width: 1140px; margin: 0 auto; padding: 24px 24px 60px; }
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; text-align: center; transition: border-color 0.2s; }
+.stat:hover { border-color: var(--border-hover); }
+.stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 600; line-height: 1; color: var(--text); }
+.stat-lbl { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; font-weight: 600; }
+.stat-ok .stat-val { color: var(--ok); }
+.stat-err .stat-val { color: var(--err); }
+.stat-warn .stat-val { color: var(--warn); }
+
+/* Toolbar */
+.toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.btn { font-family: 'Titillium Web', sans-serif; font-size: 0.78rem; font-weight: 600; padding: 8px 16px;
+  border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-2);
+  cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface); }
+.btn svg { width: 14px; height: 14px; }
+.btn-primary { background: var(--ess-navy); color: #fff; border-color: var(--ess-navy); }
+.btn-primary:hover { background: #003A75; color: #fff; }
+.btn-accent { border-color: var(--ess-cyan); color: var(--ess-navy); }
+.btn-accent:hover { background: rgba(0,176,202,0.06); }
+#fileInput { display: none; }
+.toolbar-right { margin-left: auto; display: flex; gap: 8px; }
+
+/* Editor */
+.editor textarea { width: 100%; min-height: 150px; padding: 14px 16px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.84rem; line-height: 1.85; background: var(--bg); border: 2px solid var(--border);
+  border-radius: 8px; color: var(--text); resize: vertical; outline: none; transition: border-color 0.2s; }
+.editor textarea::placeholder { color: var(--text-3); }
+.editor textarea:focus { border-color: var(--ess-cyan); box-shadow: 0 0 0 3px rgba(0,176,202,0.12); }
+.editor { margin-bottom: 20px; }
+
+/* Legend */
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; padding: 10px 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: var(--text-2); font-weight: 600; }
+.legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+/* Results */
+.results { display: flex; flex-direction: column; gap: 4px; }
+.pv-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; padding: 10px 16px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  transition: all 0.12s; align-items: start; }
+.pv-row:hover { background: var(--surface); border-color: var(--border-hover); }
+.pv-row.has-error { border-left: 4px solid var(--err); background: var(--err-bg); }
+.pv-row.has-warning { border-left: 4px solid var(--warn); background: var(--warn-bg); }
+.pv-row.is-valid { border-left: 4px solid var(--ok); background: var(--ok-bg); }
+.pv-row.bad-format { border-left: 4px solid var(--text-3); opacity: 0.65; }
+
+.pv-parsed { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.pv-raw { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--text-3); word-break: break-all; }
+.seg { padding: 2px 7px; border-radius: 3px; font-weight: 500; }
+.seg-sys { background: var(--sys-bg); color: var(--sys); }
+.seg-sub { background: var(--sub-bg); color: var(--sub); }
+.seg-dis { background: var(--dis-bg); color: var(--dis); }
+.seg-dev { background: var(--dev-bg); color: var(--dev); }
+.seg-idx { background: var(--idx-bg); color: var(--idx); }
+.seg-prop { background: var(--prop-bg); color: var(--prop); }
+.sep { color: var(--text-3); font-weight: 400; padding: 0 1px; }
+
+.pv-msgs { display: flex; flex-direction: column; gap: 3px; min-width: 180px; text-align: right; }
+.msg { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 3px; display: inline-block; }
+.msg-err { color: var(--err); background: var(--err-bg); }
+.msg-warn { color: var(--warn); background: var(--warn-bg); }
+.msg-info { color: var(--info); background: rgba(0,115,158,0.06); }
+
+.badge { font-size: 0.63rem; font-weight: 700; padding: 3px 10px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.badge-ok { color: var(--ok); background: var(--ok-bg); border: 1px solid rgba(14,122,74,0.15); }
+.badge-err { color: var(--err); background: var(--err-bg); border: 1px solid rgba(200,16,46,0.15); }
+
+/* Empty state */
+.empty { text-align: center; padding: 52px 20px; color: var(--text-3); }
+.empty svg { width: 48px; height: 48px; margin-bottom: 14px; opacity: 0.25; }
+.empty p { font-size: 0.88rem; font-weight: 400; }
+.empty .hint { font-size: 0.75rem; margin-top: 8px; color: var(--text-3); }
+
+/* Footer */
+footer { border-top: 1px solid var(--border); margin-top: 40px; }
+.footer-inner { max-width: 1140px; margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+footer .left { font-size: 0.72rem; color: var(--text-3); }
+footer .left a { color: var(--text-2); text-decoration: none; }
+footer .left a:hover { color: var(--ess-cyan); }
+footer .right { font-size: 0.68rem; color: var(--text-3); }
+
+@media (max-width: 640px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .pv-row { grid-template-columns: 1fr; }
+  .pv-msgs { text-align: left; }
+  .toolbar-right { margin-left: 0; }
+  .header-right { margin-left: 0; }
+  .footer-inner { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <h1><span>pv</span>Validator</h1>
+    <span class="tag">ESS-0000757 Rev. 10</span>
+    <span class="tag">Offline Mode</span>
+    <div class="header-right">
+      <a href="https://ess.eu" target="_blank" class="ess-link">European Spallation Source</a>
+    </div>
+  </div>
+</div>
+<div class="accent-bar"></div>
+
+<div class="app">
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Total PVs</div></div>
+    <div class="stat stat-ok"><div class="stat-val" id="sValid">0</div><div class="stat-lbl">Valid</div></div>
+    <div class="stat stat-err"><div class="stat-val" id="sErrors">0</div><div class="stat-lbl">Errors</div></div>
+    <div class="stat stat-warn"><div class="stat-val" id="sWarnings">0</div><div class="stat-lbl">Warnings</div></div>
+  </div>
+
+  <div class="toolbar">
+    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Load File
+    </button>
+    <input type="file" id="fileInput" accept=".txt,.db,.csv" onchange="loadFile(event)">
+    <button class="btn btn-accent" onclick="loadExample()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+      Load Examples
+    </button>
+    <button class="btn" onclick="clearAll()">Clear</button>
+    <div class="toolbar-right">
+      <button class="btn" onclick="exportJSON()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        Export JSON
+      </button>
+    </div>
+  </div>
+
+  <div class="editor">
+    <textarea id="pvInput" placeholder="Paste PV names here, one per line...&#10;&#10;Click 'Load Examples' to see pvValidator in action" spellcheck="false" oninput="validate()"></textarea>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--sys)"></div>System</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--sub)"></div>Subsystem</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--dis)"></div>Discipline</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--dev)"></div>Device</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--idx)"></div>Index</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--prop)"></div>Property</div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      <p>Enter PV names above to validate against ESS-0000757</p>
+      <div class="hint">Supports: Sys-Sub:Dis-Dev-Idx:Property &nbsp;|&nbsp; Sys::Property &nbsp;|&nbsp; file upload (.txt)</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="left">
+      Based on <a href="https://chess.esss.lu.se/enovia/link/ESS-0000757" target="_blank">ESS-0000757 Rev. 10</a>
+      &mdash; ESS rules and recommendations for ESS EPICS names
+    </div>
+    <div class="right">pvValidator &mdash; European Spallation Source ERIC</div>
+  </div>
+</footer>
+
+<script>
+// PV Parser
+function parsePV(pv) {
+  if (!pv || typeof pv !== 'string') return null;
+  var parts = pv.split(':');
+  if (parts.length !== 3) return null;
+  var sysPart = parts[0], devPart = parts[1], prop = parts[2];
+  if (!prop || !sysPart) return null;
+  var system, subsystem;
+  var di = sysPart.indexOf('-');
+  if (di > -1) { system = sysPart.substring(0, di); subsystem = sysPart.substring(di + 1); if (!system || !subsystem) return null; }
+  else { system = sysPart; subsystem = ''; }
+  if (devPart === '') {
+    return { system:system, subsystem:subsystem, discipline:'', device:'', index:'', property:prop, raw:pv,
+      formatType: subsystem ? 'high-level-subsys' : 'high-level-sys' };
+  }
+  var segs = devPart.split('-');
+  if (segs.length < 3) return null;
+  var discipline = segs[0], device = segs[1], index = segs.slice(2).join('-');
+  if (!discipline || !device) return null;
+  return { system:system, subsystem:subsystem, discipline:discipline, device:device, index:index, property:prop, raw:pv,
+    formatType: subsystem ? 'full' : 'no-subsystem' };
+}
+
+// Rules
+var DISALLOWED = new Set('!@$%^&*()+={}[]|\\:;\'"<>,.?/~`'.split(''));
+var MAX_PV=60, MAX_PROP=25, MIN_PROP=4, MAX_ELEM=6;
+var LEGACY = ['Cmd_','P_','FB_','SP_'];
+function epLen(p) { return p.endsWith('-SP') ? p.length-3 : p.endsWith('-RB') ? p.length-3 : p.length; }
+function checkRules(c) {
+  var m=[], p=c.property, pv=c.raw, el=epLen(p);
+  if (pv.length>MAX_PV) m.push({s:'error',m:'PV exceeds '+MAX_PV+' chars ('+pv.length+')',r:'PV-LEN'});
+  if (el>MAX_PROP) m.push({s:'error',m:'Property exceeds '+MAX_PROP+' chars ('+el+')',r:'PROP-2'});
+  if (el>0&&el<MIN_PROP) m.push({s:'warning',m:'Property below '+MIN_PROP+' chars',r:'PROP-3'});
+  if (p.endsWith('-S')||p.endsWith('_S')) m.push({s:'error',m:'Setpoint must use -SP',r:'PROP-SP'});
+  if (p.endsWith('-R')||p.endsWith('_R')) m.push({s:'error',m:'Reading should not have -R',r:'PROP-R'});
+  if (p.endsWith('-RBV')||p.endsWith('_RBV')) m.push({s:'error',m:'Readback must use -RB',r:'PROP-RB'});
+  if (p.startsWith('#')) { m.push({s:'info',m:'Internal PV',r:'PROP-INT'}); }
+  else {
+    if (p.length>0&&(/^[0-9_\-]/.test(p)||DISALLOWED.has(p[0]))) m.push({s:'error',m:'Must start with letter',r:'PROP-11'});
+    if (p.length>0&&/^[a-z]/.test(p)) m.push({s:'warning',m:'Should start uppercase',r:'PROP-11'});
+  }
+  if (p.indexOf('#')>0) m.push({s:'error',m:'# only as first char',r:'PROP-11'});
+  for (var i=0;i<p.length;i++) if (DISALLOWED.has(p[i])){m.push({s:'error',m:'Disallowed character',r:'PROP-11'});break;}
+  var elems=[['System',c.system,true],['Subsystem',c.subsystem,false],['Discipline',c.discipline,true],['Device',c.device,true]];
+  for (var e=0;e<elems.length;e++){var v=elems[e][1];if(!v)continue;
+    if(v.length>MAX_ELEM)m.push({s:'error',m:elems[e][0]+' exceeds '+MAX_ELEM+' chars',r:'ELEM-6'});
+    if(!/^[A-Za-z0-9]+$/.test(v))m.push({s:'error',m:elems[e][0]+' non-alphanumeric',r:'ELEM-1'});
+    else if(elems[e][2]&&!/^[A-Za-z]/.test(v))m.push({s:'error',m:elems[e][0]+' must start with letter',r:'ELEM-2'});}
+  if(!c.formatType.startsWith('high-level')&&c.index){
+    if(c.index.length>6)m.push({s:'error',m:'Index exceeds 6 chars',r:'IDX-LEN'});
+    if(!/^\d{1,4}$/.test(c.index)&&!/^\d{3}[a-z]{0,3}$/.test(c.index)&&!/^\d{1,6}$/.test(c.index))
+      m.push({s:'warning',m:'Non-standard index',r:'IDX-STYLE'});}
+  for(var l=0;l<LEGACY.length;l++)if(p.startsWith(LEGACY[l])){m.push({s:'warning',m:'Legacy prefix '+LEGACY[l],r:'LEGACY'});break;}
+  return m;
+}
+function normConf(p){return p.toLowerCase().replace(/[il]/g,'1').replace(/o/g,'0').replace(/vv/g,'w').replace(/0+(?![_a-z\-])(?!$)/g,'@');}
+function checkConf(devPVs){var extra={};for(var d in devPVs){var ps=devPVs[d],seen={};for(var i=0;i<ps.length;i++){
+  var n=normConf(ps[i].p);if(seen[n]!==undefined){var k=d+':'+ps[i].p;if(!extra[k])extra[k]=[];
+  extra[k].push({s:'error',m:'Confusable with '+d+':'+seen[n],r:'PROP-1'});}else{seen[n]=ps[i].p;}}}return extra;}
+
+// Main
+var lastResults=[];
+function validate(){
+  var input=document.getElementById('pvInput').value;
+  var lines=input.split('\n').filter(function(l){var t=l.trim();return t&&!t.startsWith('%')&&!t.startsWith('#');});
+  var container=document.getElementById('results');
+  if(!lines.length){
+    container.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg><p>Enter PV names above to validate against ESS-0000757</p><div class="hint">Supports: Sys-Sub:Dis-Dev-Idx:Property | Sys::Property | file upload (.txt)</div></div>';
+    ['sTotal','sValid','sErrors','sWarnings'].forEach(function(id){document.getElementById(id).textContent='0';});
+    lastResults=[];return;}
+  var results=[],devProps={};
+  for(var i=0;i<lines.length;i++){var pv=lines[i].trim().split(/\s+/)[0];var comp=parsePV(pv);var msgs=[];
+    if(comp){msgs=checkRules(comp);var en=comp.formatType.startsWith('high-level')
+      ?(comp.subsystem?comp.system+'-'+comp.subsystem:comp.system)
+      :(comp.subsystem?comp.system+'-'+comp.subsystem+':'+comp.discipline+'-'+comp.device+'-'+comp.index
+        :comp.system+':'+comp.discipline+'-'+comp.device+'-'+comp.index);
+      if(!devProps[en])devProps[en]=[];devProps[en].push({p:comp.property,pv:pv});}
+    results.push({pv:pv,comp:comp,msgs:msgs});}
+  var cf=checkConf(devProps);
+  for(var j=0;j<results.length;j++)if(cf[results[j].pv])results[j].msgs=results[j].msgs.concat(cf[results[j].pv]);
+  lastResults=results;
+  var total=results.length,valid=0,errors=0,warnings=0;
+  for(var k=0;k<results.length;k++){var hE=results[k].msgs.some(function(m){return m.s==='error';});
+    var hW=results[k].msgs.some(function(m){return m.s==='warning';});
+    if(!results[k].comp||hE)errors++;else if(hW)warnings++;else valid++;}
+  document.getElementById('sTotal').textContent=total;
+  document.getElementById('sValid').textContent=valid;
+  document.getElementById('sErrors').textContent=errors;
+  document.getElementById('sWarnings').textContent=warnings;
+  var html='';
+  for(var r=0;r<results.length;r++){var res=results[r],c=res.comp;
+    var hErr=res.msgs.some(function(m){return m.s==='error';});
+    var hWrn=res.msgs.some(function(m){return m.s==='warning';});
+    var cls=!c?'bad-format':hErr?'has-error':hWrn?'has-warning':'is-valid';
+    html+='<div class="pv-row '+cls+'"><div>';
+    if(c){html+='<div class="pv-parsed">';
+      if(c.system)html+='<span class="seg seg-sys">'+esc(c.system)+'</span>';
+      if(c.subsystem)html+='<span class="sep">-</span><span class="seg seg-sub">'+esc(c.subsystem)+'</span>';
+      if(c.discipline)html+='<span class="sep">:</span><span class="seg seg-dis">'+esc(c.discipline)+'</span>';
+      if(c.device)html+='<span class="sep">-</span><span class="seg seg-dev">'+esc(c.device)+'</span>';
+      if(c.index)html+='<span class="sep">-</span><span class="seg seg-idx">'+esc(c.index)+'</span>';
+      if(c.property)html+='<span class="sep">:</span><span class="seg seg-prop">'+esc(c.property)+'</span>';
+      html+='</div>';}else{html+='<div class="pv-raw">'+esc(res.pv)+'</div>';}
+    html+='</div><div class="pv-msgs">';
+    if(!c){html+='<span class="badge badge-err">Invalid Format</span>';}
+    else if(hErr){for(var m=0;m<res.msgs.length;m++)if(res.msgs[m].s==='error')
+      html+='<span class="msg msg-err">['+res.msgs[m].r+'] '+esc(res.msgs[m].m)+'</span>';}
+    else if(hWrn){for(var m2=0;m2<res.msgs.length;m2++)if(res.msgs[m2].s==='warning')
+      html+='<span class="msg msg-warn">['+res.msgs[m2].r+'] '+esc(res.msgs[m2].m)+'</span>';}
+    else{html+='<span class="badge badge-ok">Valid</span>';}
+    for(var m3=0;m3<res.msgs.length;m3++)if(res.msgs[m3].s==='info')
+      html+='<span class="msg msg-info">['+res.msgs[m3].r+'] '+esc(res.msgs[m3].m)+'</span>';
+    html+='</div></div>';}
+  container.innerHTML=html;
+}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function loadFile(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(ev){document.getElementById('pvInput').value=ev.target.result;validate();};r.readAsText(f);}
+function loadExample(){document.getElementById('pvInput').value=
+  'DTL-010:EMR-TT-001:Temperature\nPBI-BCM01:Ctrl-MTCA-100:Status\nCWM-CWS03:WtrC-PT-011:Pressure\n'+
+  'YMIR-SpScn:MC-MCU-001:Position\nTgt-HeC1010:Proc-TT-003:Temperature\nTgt::PowerConsumption\n'+
+  'DTL-010::Temperature\nISrc::Status\nLoKI-SC::ReadyForBeam\n'+
+  'DTL-010:EMR-TT-001:#InternalDebug\nDTL-010:EMR-TT-001:Temperature-SP\nDTL-010:EMR-TT-001:Current-RB\n'+
+  '% Comment lines are skipped\n'+
+  'DTL-010:EMR-TT-001:Temperature-S\nDTL-010:EMR-TT-001:Temperature-RBV\nDTL-010:EMR-TT-001:2BadStart\n'+
+  'ABCDEFG-010:EMR-TT-001:Temperature\nDTL-010:EMR-TT-002:TempO\nDTL-010:EMR-TT-002:Temp0\nINVALID::FORMAT::HERE';
+  validate();}
+function clearAll(){document.getElementById('pvInput').value='';validate();}
+function exportJSON(){if(!lastResults.length)return;var out={generated:new Date().toISOString(),
+  rule_document:'ESS-0000757',summary:{total:lastResults.length,
+  valid:lastResults.filter(function(r){return r.comp&&!r.msgs.some(function(m){return m.s==='error';});}).length,
+  errors:lastResults.filter(function(r){return!r.comp||r.msgs.some(function(m){return m.s==='error';});}).length},
+  results:lastResults.map(function(r){return{pv:r.pv,format_valid:!!r.comp,components:r.comp||null,
+    messages:r.msgs.map(function(m){return{severity:m.s,message:m.m,rule_id:m.r};})};})};
+  var b=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='pvvalidator-results.json';a.click();}
+</script>
+</body>
+</html>

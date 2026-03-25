@@ -1,0 +1,29 @@
+% Invalid PV format examples — boundary cases and structural violations
+% Missing system
+:EMR-TT-001:Temperature
+% Empty subsystem after dash
+DTL-:EMR-TT-001:Temperature
+% System starts with dash
+-010:EMR-TT-001:Temperature
+% Missing device in device part
+DTL-010:EMR--001:Temperature
+% Missing index
+DTL-010:EMR-TT:TemperatureMin
+% Missing colon before property
+DTL-010:EMR-TT-011TemperatureMax
+% All structure empty
+DTL-::Temperature
+% Too many colons
+DTL-010:EMR-TT-001:Temperature:Extra
+% No colons at all
+DTL010EMRTT001Temperature
+% Only one colon (ambiguous)
+DTL-010:Temperature
+% Empty string between colons
+::Temperature
+% Just colons
+:::
+% Missing property (trailing colon only)
+DTL-010:EMR-TT-001:
+% Single character system with empty rest
+D::

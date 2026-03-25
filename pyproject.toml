@@ -16,8 +16,13 @@ classifiers = [
 ]
 dependencies = [
     "requests",
+    "pyyaml",
 ]
 keywords = ["PV", "Validation", "Naming Convention"]
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+test = ["pytest", "responses"]
 
 [tool.setuptools]
 platforms = ["Linux","WSL"]
@@ -27,6 +32,13 @@ where = ["."]
 
 [tool.setuptools.package-data]
 "pvValidatorUtils" = ["*.so*"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+markers = [
+    "ess_network: requires ESS Naming Service network access",
+    "epics_ioc: requires running EPICS IOC",
+]
 
 [project.scripts]
 "pvValidator" = "pvValidatorUtils.pvValidator:main"

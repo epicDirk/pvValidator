@@ -1,0 +1,50 @@
+% Property rule violation tests — one PV per rule
+% RULE: Setpoint suffix must be -SP not -S or _S
+DTL-010:EMR-TT-001:Temperature-S
+DTL-010:EMR-TT-001:Temperature_S
+% RULE: Readback suffix must be -RB not -RBV or _RBV
+DTL-010:EMR-TT-001:Temperature-RBV
+DTL-010:EMR-TT-001:Temperature_RBV
+% RULE: Reading suffix -R or _R not allowed
+DTL-010:EMR-TT-001:Temperature-R
+DTL-010:EMR-TT-001:Temperature_R
+% RULE: Property must start with letter (not digit)
+DTL-010:EMR-TT-001:2Temperature
+% RULE: Property must start with letter (not underscore)
+DTL-010:EMR-TT-001:_Temperature
+% RULE: Property must start with letter (not dash)
+DTL-010:EMR-TT-001:-Temperature
+% RULE: No special characters in property
+DTL-010:EMR-TT-001:Temp!Min
+DTL-010:EMR-TT-001:Temp@Max
+DTL-010:EMR-TT-001:Temp$Value
+% RULE: Property max 25 chars (excluding suffix)
+DTL-010:EMR-TT-001:TemperatureTemperatureTemperatureTemperature
+% RULE: Property min 4 chars (warning, not error)
+DTL-010:EMR-TT-001:Te
+DTL-010:EMR-TT-001:T
+% RULE: Property should start uppercase (warning)
+DTL-010:EMR-TT-001:temperature
+% RULE: Internal PV — # must be first character
+DTL-010:EMR-TT-001:Temp#Value
+% RULE: Internal PV — # as first character is OK (info, not error)
+DTL-010:EMR-TT-001:#InternalDebug
+% RULE: Duplicate detection — exact
+DTL-010:EMR-TT-010:Temperature
+DTL-010:EMR-TT-010:Temperature
+% RULE: Duplicate detection — case insensitive
+DTL-010:EMR-TT-011:Temperature
+DTL-010:EMR-TT-011:temperature
+% RULE: Confusable — O vs 0
+DTL-010:EMR-TT-012:TempO
+DTL-010:EMR-TT-012:Temp0
+% RULE: Confusable — I vs l vs 1
+DTL-010:EMR-TT-013:TempI
+DTL-010:EMR-TT-013:Templ
+DTL-010:EMR-TT-013:Temp1
+% RULE: Confusable — VV vs W
+DTL-010:EMR-TT-014:TempVV
+DTL-010:EMR-TT-014:TempW
+% RULE: Confusable — leading zeros
+DTL-010:EMR-TT-015:Temp01
+DTL-010:EMR-TT-015:Temp1
