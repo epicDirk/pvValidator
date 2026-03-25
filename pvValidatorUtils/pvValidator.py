@@ -4,6 +4,7 @@ import os
 import sys
 
 from pvValidatorUtils import epicsUtils, pvUtils, version
+from pvValidatorUtils.exceptions import PVValidatorError
 
 
 def pvinput(args):
@@ -164,17 +165,27 @@ def main():
 
     pvepics = pvinput(args)
 
-    pv = pvUtils(
-        pvepics=pvepics,
-        namingservice=args.nameservice,
-        checkonlyfmt=args.noapi,
-        pvfile=args.pvfile,
-        csvfile=args.csvfile,
-        epicsdb=args.epicsdb,
-        msiobj=args.msi,
-        stdout=args.stdout,
-    )
-    pv.run()
+    try:
+        pv = pvUtils(
+            pvepics=pvepics,
+            namingservice=args.nameservice,
+            checkonlyfmt=args.noapi,
+            pvfile=args.pvfile,
+            csvfile=args.csvfile,
+            epicsdb=args.epicsdb,
+            msiobj=args.msi,
+            stdout=args.stdout,
+        )
+        pv.run()
+    except PVValidatorError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except SystemExit:
+        raise  # Let SystemExit propagate (from validation failures)
+    except RuntimeError as e:
+        # C++ exceptions from SWIG come through as RuntimeError
+        print(f"EPICS error: {e}")
+        sys.exit(10)
 
 
 def _run_with_reporter(args, pvepics):

@@ -33,6 +33,7 @@ from pvValidatorUtils.rules import (
     check_element_lengths,
     check_device_index,
     check_legacy_prefix,
+    effective_property_length,
 )
 
 logger = logging.getLogger("pvvalidator")
@@ -266,7 +267,7 @@ class pvUtils:
                     writer = csv.writer(f)
                     writer.writerows(self.data)
         if self.exiterror:
-            sys.exit(1)
+            raise SystemExit(1)
 
     # =================================================================
     # Naming Service (delegates to NamingServiceClient)
@@ -287,8 +288,9 @@ class pvUtils:
                 self.infovalidation += f"The Validation is done through {self.NameService} Naming Service\n"
             except NamingServiceConnectionError as e:
                 logger.error(str(e))
-                print(f"Fail to connect to Naming Service {url}, exit!")
-                sys.exit(1)
+                raise NamingServiceConnectionError(
+                    f"Fail to connect to Naming Service {url}"
+                ) from e
         else:
             self.infovalidation += "The Validation through Naming Service was skipped\n"
 
@@ -460,8 +462,9 @@ class pvUtils:
                 if len(prop) == 0:
                     self._checkDataMsg(pv1=pv, err1="Error: The PV Property is missing\n")
 
-                if len(prop) > max_prop:
-                    errmsg = f"Error: The PV Property is beyond {max_prop} characters ({len(prop)})\n"
+                prop_eff_len = effective_property_length(prop)
+                if prop_eff_len > max_prop:
+                    errmsg = f"Error: The PV Property is beyond {max_prop} characters ({prop_eff_len})\n"
                     if (TempErr[0] in prop) or (TempErr[1] in prop):
                         errmsg += tmperrmsg
                     self._checkDataMsg(pv1=pv, err1=errmsg)
@@ -567,8 +570,9 @@ class pvUtils:
                 k, v = m.split("=")
                 listdb = [ll.replace("$(" + k.split()[0] + ")", v.split()[0]) for ll in listdb]
         if any("$" in s for s in listdb):
-            print(f"Missing macro definitions for {epicsdbfile}, please check! Exit!")
-            sys.exit(1)
+            raise MacroSubstitutionError(
+                f"Missing macro definitions for {epicsdbfile}, please check!"
+            )
         for ldb in listdb:
             self.pvepics.pvstringlist.push_back(ldb)
         self.infovalidation += f"The PV list is taken from the EPICS DB {epicsdbfile} file to perform offline validation\n"
@@ -602,8 +606,9 @@ class pvUtils:
                     ((r.split(",")[1]).rsplit(")", 1)[0].strip()).strip('"')
                 )
         if any("$" in s for s in listdb):
-            print(f"Missing macro definitions for {msisubsfile}, please check! Exit!")
-            sys.exit(1)
+            raise MacroSubstitutionError(
+                f"Missing macro definitions for {msisubsfile}, please check!"
+            )
         for ldb in listdb:
             self.pvepics.pvstringlist.push_back(ldb)
         self.infovalidation += f"The PV list is taken expanding the substitution file {msisubsfile} to perform offline validation\n"

@@ -70,4 +70,4 @@ See `test/cassettes/HOW_TO_RECORD.md` for instructions on recording API response
 
 - Python: PEP 8, enforced by flake8 and black
 - C++: clang-format
-- Pre-commit hooks: `pre-commit install`
+- Code style: enforced by flake8 and black

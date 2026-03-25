@@ -50,8 +50,7 @@ int msiUtils::createDB() {
     } else if ((isFile = substituteGetNextSet(substitutePvt, &filename))) {
 
       if (!filename) {
-        fprintf(stderr, "msi: No template file\n");
-        _Exit(10);
+        throw std::runtime_error("msi: No template file specified");
       }
 
       const char *macStr;
@@ -665,14 +664,12 @@ void msiUtils::addMacroReplacements(MAC_HANDLE *const macPvt,
 
   status = macParseDefns(macPvt, pval, &pairs);
   if (status == -1) {
-    fprintf(stderr, "msi: Error from macParseDefns\n");
-    _Exit(10);
+    throw std::runtime_error("msi: Error from macParseDefns");
   }
   if (status) {
     status = macInstallMacros(macPvt, pairs);
     if (!status) {
-      fprintf(stderr, ERL_ERROR " from macInstallMacros\n");
-      _Exit(10);
+      throw std::runtime_error("msi: Error from macInstallMacros");
     }
     free(pairs);
   }
