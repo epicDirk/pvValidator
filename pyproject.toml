@@ -22,7 +22,7 @@ keywords = ["PV", "Validation", "Naming Convention"]
 requires-python = ">=3.8"
 
 [project.optional-dependencies]
-test = ["pytest", "responses"]
+test = ["pytest", "responses", "hypothesis"]
 
 [tool.setuptools]
 platforms = ["Linux","WSL"]

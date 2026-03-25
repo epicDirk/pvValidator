@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  push:
+    branches: [improved, master]
+  pull_request:
+    branches: [improved]
+
+jobs:
+  test-pure-python:
+    name: Pure Python Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[test]"
+          pip install pytest-cov hypothesis
+
+      - name: Run pure Python tests
+        run: |
+          pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py -v --tb=short --junitxml=test-results.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results.xml

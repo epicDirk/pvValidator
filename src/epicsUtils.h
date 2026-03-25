@@ -14,6 +14,7 @@
 /* Mon Oct 11 04:12:32 PM CET 2021 */
 
 #include <stdio.h>
+#include <stdexcept>
 
 #include <fstream>
 #include <iostream>

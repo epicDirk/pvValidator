@@ -42,8 +42,7 @@ epicsUtils::epicsUtils(string serverAddress) {
   SET_LOG_LEVEL(logLevelError);
 
   if (serverAddress.length() == 0) {
-    cerr << "Error: The server cannot be empty string" << endl;
-    _Exit(10);
+    throw std::runtime_error("The server address cannot be empty string");
   }
   getAddress = serverAddress;
   // by GUID search
@@ -74,8 +73,7 @@ epicsUtils::epicsUtils(string serverAddress) {
     }
 
     if (!resolved) {
-      fprintf(stderr, "Failed to resolve GUID '%s'!\n", serverAddress.c_str());
-      _Exit(10);
+      throw std::runtime_error(string("Failed to resolve GUID '") + serverAddress + "'");
     }
   }
 
@@ -103,9 +101,7 @@ epicsUtils::epicsUtils(string serverAddress) {
 
     ret = rpc.request(args, timeOut, true);
   } catch (std::exception &e) {
-    std::cerr << "Error: " << e.what() << "\n";
-
-    _Exit(10);
+    throw std::runtime_error(string("EPICS RPC error: ") + e.what());
   }
 
   PVStringArray::shared_pointer pvs(ret->getSubField<PVStringArray>("value"));

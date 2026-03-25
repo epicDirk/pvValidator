@@ -15,6 +15,7 @@
 /* Fri Nov  8 02:26:42 PM CET 2024 */
 
 #include <list>
+#include <stdexcept>
 #include <string>
 
 #include <ctype.h>
