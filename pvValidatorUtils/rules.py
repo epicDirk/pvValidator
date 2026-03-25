@@ -17,8 +17,15 @@ from .parser import PVComponents
 
 MAX_PV_LENGTH = 60
 MAX_PROP_LENGTH = 25
+MAX_PROP_RECOMMENDED = 20  # SHOULD limit (ESS-0000757 §6.2 Rule 2)
 MIN_PROP_LENGTH_WARN = 4
 MAX_ELEMENT_LENGTH = 6
+
+# Known short property names from ESS-0000757 Tables 8-9 (valid despite <4 chars)
+KNOWN_SHORT_PROPERTIES = frozenset({
+    "On", "Off", "In", "Out", "Ok", "Set", "Get",
+    "Ack", "Low", "High",
+})
 
 ELEMENT_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
 LEADING_ZERO_REGEX = re.compile(r"0+(?![_A-Za-z-])(?!$)")
@@ -106,7 +113,13 @@ def check_pv_length(components: PVComponents) -> List[ValidationMessage]:
 
 
 def check_property_length(components: PVComponents) -> List[ValidationMessage]:
-    """ESS-0000757 §6.2: Property max 25 chars (-SP/-RB excluded)."""
+    """ESS-0000757 §6.2 Rules 2-4: Property length checks.
+
+    Rule 2: SHOULD max 20 chars. Can extend to 25 with justification (SHALL).
+    Rule 3: SHOULD min 4 chars.
+    Rule 4: Abbreviated forms SHALL have min 4 chars (but known short names
+            from ESS-0000757 Tables 8-9 are exempt: On, Off, In, Out, Ok, etc.)
+    """
     msgs = []
     prop = components.property
     if not prop:
@@ -116,19 +129,31 @@ def check_property_length(components: PVComponents) -> List[ValidationMessage]:
 
     effective_len = effective_property_length(prop)
 
+    # >25: SHALL violation (hard limit)
     if effective_len > MAX_PROP_LENGTH:
         msgs.append(ValidationMessage(
             Severity.ERROR,
-            f"The PV Property is beyond {MAX_PROP_LENGTH} characters ({effective_len})",
+            f"The PV Property exceeds {MAX_PROP_LENGTH} characters ({effective_len})",
             "PROP-2",
         ))
-
-    if 0 < effective_len < MIN_PROP_LENGTH_WARN:
+    # >20 and ≤25: SHOULD violation (recommended limit)
+    elif effective_len > MAX_PROP_RECOMMENDED:
         msgs.append(ValidationMessage(
             Severity.WARNING,
-            f"The PV Property is below {MIN_PROP_LENGTH_WARN} characters ({effective_len})",
-            "PROP-3",
+            f"The PV Property exceeds recommended {MAX_PROP_RECOMMENDED} characters ({effective_len})",
+            "PROP-2-WARN",
         ))
+
+    # <4 chars: check against known short property names
+    if 0 < effective_len < MIN_PROP_LENGTH_WARN:
+        # Strip prefix markers for comparison
+        clean = prop.lstrip("#")
+        if clean not in KNOWN_SHORT_PROPERTIES:
+            msgs.append(ValidationMessage(
+                Severity.WARNING,
+                f"The PV Property is below {MIN_PROP_LENGTH_WARN} characters ({effective_len})",
+                "PROP-3",
+            ))
 
     return msgs
 
