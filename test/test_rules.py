@@ -96,10 +96,23 @@ class TestPropertyLength:
     def test_beyond_25(self):
         prop = "A" * 26
         c = parse(f"DTL-010:EMR-TT-001:{prop}")
-        assert has_error(check_property_length(c), "beyond 25")
+        assert has_error(check_property_length(c), "exceeds 25")
+
+    def test_21_chars_warning(self):
+        """ESS-0000757 §6.2: SHOULD max 20 chars. 21 chars = warning."""
+        prop = "A" * 21
+        c = parse(f"DTL-010:EMR-TT-001:{prop}")
+        msgs = check_property_length(c)
+        assert has_warning(msgs, "recommended 20")
+        assert no_errors(msgs)  # Not an error, just a warning
+
+    def test_20_chars_no_warning(self):
+        prop = "A" * 20
+        c = parse(f"DTL-010:EMR-TT-001:{prop}")
+        msgs = check_property_length(c)
+        assert not has_warning(msgs, "recommended")
 
     def test_suffix_sp_excluded(self):
-        # 23 chars + "-SP" = 26 total, but effective = 23
         prop = "A" * 23 + "-SP"
         assert effective_property_length(prop) == 23
 
@@ -111,6 +124,13 @@ class TestPropertyLength:
         c = parse("DTL-010:EMR-TT-001:Te")
         msgs = check_property_length(c)
         assert has_warning(msgs, "below 4")
+
+    @pytest.mark.parametrize("prop", ["On", "Off", "In", "Out", "Ok"])
+    def test_known_short_properties_no_warning(self, prop):
+        """ESS-0000757 Table 9: Known short state properties are valid."""
+        c = parse(f"DTL-010:EMR-TT-001:{prop}")
+        msgs = check_property_length(c)
+        assert not has_warning(msgs, "below 4"), f"Known property '{prop}' should not get a warning"
 
     def test_4char_no_warning(self):
         c = parse("DTL-010:EMR-TT-001:Temp")
