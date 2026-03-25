@@ -59,7 +59,6 @@ public:
   epicsUtils();
   ~epicsUtils();
   vector<string> pvstringlist;
-  string HasAlias(string);
   string serverlist;
   string getServerList();
   string getVersion;

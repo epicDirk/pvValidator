@@ -1,90 +1,109 @@
 # pvValidator
 
-Tool to validate EPICS PVs based on CHESS document [ESS-0000757](https://chess.esss.lu.se/enovia/link/ESS-0000757/21308.51166.43264.12914/valid).
+Validates EPICS Process Variable names against the ESS Naming Convention ([ESS-0000757](https://chess.esss.lu.se/enovia/link/ESS-0000757)).
 
-**On Centos7 the installation is only via a pre-compiled pip package**
+pvValidator catches naming mistakes before they reach production. It checks format, property rules, and registration against the ESS Naming Service. Point it at a running IOC or feed it files. It'll tell you what's wrong.
 
-Requirements: `Python3` and `pip3`
+## What It Checks
 
-`pip3 install pvValidatorUtils -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user`
+**Format.** All four valid ESS structures: `Sys-Sub:Dis-Dev-Idx:Property`, `Sys:Dis-Dev-Idx:Property`, `Sys-Sub::Property`, `Sys::Property`.
 
-**Platform supported**
+**Property rules.** Length limits (60 chars total, 25 chars property). Suffix enforcement (`-SP` for setpoints, `-RB` for readbacks). Confusable character detection: `I`/`l`/`1`, `O`/`0`, `VV`/`W`, leading zeros. Duplicate properties within the same device.
 
-Linux, WSL
+**Structure elements.** System, Subsystem, Discipline, Device: max 6 characters, alphanumeric, must start with a letter.
 
-**Requirements for compilation from sources for newer Linux distributions or WSL**
-- python recommended version >=3.8
-- python3 development tool ( `python3-dev(el)` )
-- python setuptools module
-- c++
-- swig ( http://www.swig.org ), you can install it via `apt` (Debian-based distros, e.g. Ubuntu) or `dnf` (Red Hat-based distros, e.g. Fedora)
-- EPICS 7
-- `cmake` (version >=3.0)
-- Optional (only for developers)
-  - `pytest`
-  - `run-iocsh` ( `pip install run-iocsh -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user` )
+**Device index.** Scientific style (1-4 digits) and P&ID style (3 digits + optional lowercase).
 
-**Compilation**
-- Create a directory called e.g. `build`, preferably outside the local git cloned repo (e.g. `mkdir /tmp/build`)
+**Naming Service.** Checks whether the ESS name is registered and `ACTIVE` in the production or test Naming Service.
 
-- Source your EPICS environment
+Each rule traces back to a specific section of ESS-0000757. Rules live in a YAML file, so updating to a new revision doesn't require code changes.
 
-- Go into  the `build` directory and launch
+## Quick Start
 
-  `cmake <PATH_TO_YOUR_GIT_CLONE_DIR>`
-
-- In some Linux distribution (e.g. Debian) as default is required to create a virtual environment to install externally mananged packages ([PEP 688](https://peps.python.org/pep-0668)), to skip the creation of the virtual environment add this option in the cmake
-
-  `cmake -DNO_PIP_VENV=1 <PATH_TO_YOUR_GIT_CLONE_DIR>`
-- If you want to compile against a different version of `python` that the one found in the build check in the first place add
-
-  `cmake <PATH_TO_YOUR_GIT_CLONE_DIR> -DMY_PYTHON_VERSION=X.Y` (e.g. `-DMY_PYTHON_VERSION=3.10`)
-- If you need to compile with the C++ 11 option add the following
-
-  `cmake <PATH_TO_YOUR_GIT_CLONE_DIR> -DCMAKE_CXX_STANDARD=11`
-- If the build check is ok, then you can do
-  - `make` and `make install` or directly
-  - `make install` (It will do a local installation of the python modules).
-
-- Optional (for test running)
-  - `ctest -V`
-
-
-Then you can run the CLI **pvValidator**
-```
- $ pvValidator -h
-usage: pvValidator [-h] [-v] [-d] (-s (IP[:PORT] | GUID) | -i pvfile | -e dbfile [VAR=VALUE ...] | -m subsfile
-                   [path_to_templates VAR=VALUE ...]) [-n {prod,test} | --noapi] [-o csvfile | --stdout]
-
-EPICS PV Validation Tool (1.8.0)
-
-options:
-  -h, --help            show this help message and exit
-  -v, --version         print version and exit
-  -d, --discover        discover IOC servers and exit
-  -s (IP[:PORT] | GUID)
-                        IOC server IP[:PORT] or GUID to get PV list (online validation)
-  -i pvfile             input PV list file (offline validation)
-  -e dbfile [VAR=VALUE ...]
-                        input EPICS db file (.db) [VAR=VALUE, ...] (offline validation)
-  -m subsfile [path_to_templates VAR=VALUE ...]
-                        input substitution file (.substitutions) [path_to_templates VAR=VALUE, ...] (offline validation)
-  -n {prod,test}        select naming service endpoint to connect: prod(uction), test(ing) [default=prod]
-  --noapi               check only PV format and rules, skip connection to naming service endpoint
-  -o csvfile            write the validation table directly to CSV file
-  --stdout              write the validation table directly to STDOUT
-
-Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)
+**Pre-compiled (CentOS7):**
+```bash
+pip3 install pvValidatorUtils \
+  -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user
 ```
 
-For more details please see the [documentation](doc/pvvalidator.md)
+**From source** (needs Python 3.8+, SWIG, CMake 3.0+, EPICS 7, C++ compiler):
+```bash
+source /path/to/epics/environment
+mkdir build && cd build
+cmake -DMY_PYTHON_VERSION=3.10 /path/to/pvvalidator
+make install
+```
+
+**Docker** (recommended for development):
+```bash
+docker build -t pvvalidator .
+docker run pvvalidator              # run tests
+docker run -it pvvalidator bash     # interactive shell
+```
+
+The Docker image uses the official e3 setup: conda-forge for EPICS base, ESS Artifactory for `require` and ESS-specific packages.
+
+## Usage
+
+```bash
+# Online: validate PVs from a running IOC
+pvValidator -s 172.30.6.12
+
+# Offline: validate from a text file
+pvValidator -i pvlist.txt
+
+# Offline: validate from an EPICS database with macros
+pvValidator -e myioc.db P=Sys-Sub:,R=Dis-Dev-Idx:
+
+# Offline: validate from a substitution file
+pvValidator -m myioc.substitutions /path/to/templates
+
+# Format and rules only (skip Naming Service)
+pvValidator -i pvlist.txt --noapi
+
+# Write results to CSV
+pvValidator -i pvlist.txt -o results.csv
+```
+
+## Architecture
+
+```
+CLI (pvValidator.py)
+ └── Orchestrator (pvUtils.py)
+      ├── Parser (parser.py)               4 ESS format types, PVComponents dataclass
+      ├── Rules (rules.py)                 All validation rules, O(n) duplicate check
+      ├── Naming Client (naming_client.py) ESS Naming Service REST API, cached
+      ├── Rule Loader (rule_loader.py)     YAML rule configuration
+      ├── Reporter (reporter.py)           JSON and HTML output
+      └── C++/SWIG
+           ├── epicsUtils                  PVAccess RPC, IOC discovery
+           └── msiUtils                    Macro substitution (msi port)
+```
+
+## Testing
+
+147 tests, all runnable without ESS network access:
+
+```bash
+# Offline tests (default)
+pytest test/ -v -k "not backend and not pvepics and not test_all"
+
+# Include ESS Naming Service tests (needs network)
+pytest test/ -v --ess-network
+```
+
+Tests cover format parsing (40), validation rules (59), API mocking (28), rule loader (17), and the original pvValidator tests (4).
+
+## Rule Configuration
+
+Rules are defined in `pvValidatorUtils/data/rules/ess-0000757-rev10.yaml`. Each rule has an ID, severity, message, and reference to the corresponding ESS-0000757 section.
+
+When ESS-0000757 gets a new revision, edit the YAML. The validation engine reads it at startup. No code changes, no recompilation.
 
 ## Author
+
 Alfio Rizzo (alfio.rizzo@ess.eu)
 
-## Acknowledgment
-
-EPICS https://epics-controls.org
-
 ## License
-GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007
+
+GNU General Public License v3.0

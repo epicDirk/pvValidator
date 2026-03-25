@@ -1,0 +1,37 @@
+{
+  "parts_mnemonic": {
+    "DTL": [
+      {"status": "Approved", "type": "System Structure", "level": "2", "mnemonic": "DTL", "mnemonicPath": "Acc-DTL", "name": "Drift Tube Linac", "description": "DTL accelerating structure"}
+    ],
+    "010": [
+      {"status": "Approved", "type": "System Structure", "level": "3", "mnemonic": "010", "mnemonicPath": "Acc-DTL-010", "name": "DTL Section 010", "description": "First DTL section"}
+    ],
+    "EMR": [
+      {"status": "Approved", "type": "Device Structure", "level": "1", "mnemonic": "EMR", "mnemonicPath": "EMR", "name": "Electromagnetic Radiation", "description": "EMR discipline"}
+    ],
+    "TT": [
+      {"status": "Approved", "type": "Device Structure", "level": "3", "mnemonic": "TT", "mnemonicPath": "EMR-TT", "name": "Temperature Transmitter", "description": "Temperature sensor device"}
+    ],
+    "Ctrl": [
+      {"status": "Approved", "type": "Device Structure", "level": "1", "mnemonic": "Ctrl", "mnemonicPath": "Ctrl", "name": "Controller", "description": "Control system discipline"}
+    ],
+    "MTCA": [
+      {"status": "Approved", "type": "Device Structure", "level": "3", "mnemonic": "MTCA", "mnemonicPath": "Ctrl-MTCA", "name": "MicroTCA", "description": "MTCA controller"}
+    ],
+    "PBI": [
+      {"status": "Approved", "type": "System Structure", "level": "2", "mnemonic": "PBI", "mnemonicPath": "Acc-PBI", "name": "Proton Beam Instrumentation", "description": "PBI system"}
+    ],
+    "BCM01": [
+      {"status": "Approved", "type": "System Structure", "level": "3", "mnemonic": "BCM01", "mnemonicPath": "Acc-PBI-BCM01", "name": "BCM Control Group 01", "description": "BCM subsystem"}
+    ],
+    "NONEXIST": [],
+    "FAKESYS": []
+  },
+  "device_names": {
+    "DTL-010:EMR-TT-001": {"uuid": "a1b2c3", "system": "DTL", "subsystem": "010", "discipline": "EMR", "deviceType": "TT", "instanceIndex": "001", "name": "DTL-010:EMR-TT-001", "status": "ACTIVE", "description": "Temperature transmitter"},
+    "DTL-010": {"uuid": "d4e5f6", "system": "DTL", "subsystem": "010", "name": "DTL-010", "status": "ACTIVE", "description": "DTL section 010"},
+    "PBI-BCM01:Ctrl-MTCA-100": {"uuid": "g7h8i9", "system": "PBI", "subsystem": "BCM01", "discipline": "Ctrl", "deviceType": "MTCA", "instanceIndex": "100", "name": "PBI-BCM01:Ctrl-MTCA-100", "status": "ACTIVE", "description": "MTCA system"},
+    "OBSOLETE-TEST:EMR-TT-001": {"uuid": "j0k1l2", "name": "OBSOLETE-TEST:EMR-TT-001", "status": "OBSOLETE", "description": "Obsolete test device"},
+    "DELETED-TEST:EMR-TT-001": {"uuid": "m3n4o5", "name": "DELETED-TEST:EMR-TT-001", "status": "DELETED", "description": "Deleted test device"}
+  }
+}

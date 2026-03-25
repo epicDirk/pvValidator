@@ -1,0 +1,17 @@
+% Element length boundary tests (ESS-0000757: max 6 chars for Sys, Sub, Dis, Dev)
+% VALID: 6-char elements (at boundary)
+ABCDEF-010:EMR-TT-001:Temperature
+DTL-ABCDEF:EMR-TT-001:Temperature
+DTL-010:ABCDEF-TT-001:Temperature
+DTL-010:EMR-ABCDEF-001:Temperature
+% INVALID: 7-char elements (beyond boundary)
+ABCDEFG-010:EMR-TT-001:Temperature
+DTL-ABCDEFG:EMR-TT-001:Temperature
+DTL-010:ABCDEFG-TT-001:Temperature
+DTL-010:EMR-ABCDEFG-001:Temperature
+% VALID: 1-char elements (minimum)
+A-B:C-D-1:Temperature
+% Edge: very long but valid property (25 chars exactly)
+DTL-010:EMR-TT-001:TempMaximumValueReadback
+% Edge: property too long (26 chars)
+DTL-010:EMR-TT-001:TempMaximumValueReadbackX

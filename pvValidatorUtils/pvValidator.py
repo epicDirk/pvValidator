@@ -145,8 +145,22 @@ def main():
         default=False,
         help="write the validation table directly to STDOUT",
     )
+    output_parser_group.add_argument(
+        "--format",
+        dest="output_format",
+        choices=["json", "html"],
+        default=None,
+        metavar="FORMAT",
+        help="output format: json or html (writes to STDOUT)",
+    )
 
     args = parser.parse_args()
+
+    # Handle --format json/html separately (uses new reporter module)
+    if args.output_format:
+        pvepics = pvinput(args)
+        _run_with_reporter(args, pvepics)
+        return
 
     pvepics = pvinput(args)
 
@@ -161,3 +175,69 @@ def main():
         stdout=args.stdout,
     )
     pv.run()
+
+
+def _run_with_reporter(args, pvepics):
+    """Run validation and output via JSON or HTML reporter."""
+    from pvValidatorUtils.parser import parse_pv
+    from pvValidatorUtils.reporter import HTMLReporter, JSONReporter
+    from pvValidatorUtils.rules import (
+        Severity,
+        ValidationResult,
+        check_all_rules,
+        check_property_uniqueness,
+    )
+
+    # Build PV list (same logic as pvUtils)
+    pv_list = []
+    if args.pvfile:
+        with open(args.pvfile, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("%") and not line.startswith("#"):
+                    pv_list.append(line.split()[0])
+    else:
+        for pv in pvepics.pvstringlist:
+            pv_list.append(pv)
+
+    # Validate each PV
+    results = []
+    device_properties = {}  # device_key → [properties]
+
+    for pv_str in pv_list:
+        components = parse_pv(pv_str)
+        if components is None:
+            results.append(ValidationResult(pv=pv_str, format_valid=False))
+            continue
+
+        msgs = check_all_rules(components)
+        result = ValidationResult(
+            pv=pv_str,
+            format_valid=True,
+            components=components,
+            messages=msgs,
+        )
+        results.append(result)
+
+        # Collect properties per device for uniqueness check
+        ess_name = components.ess_name
+        device_properties.setdefault(ess_name, []).append(components.property)
+
+    # Uniqueness checks
+    for dev_key, props in device_properties.items():
+        if len(props) > 1:
+            uniqueness_msgs = check_property_uniqueness(dev_key, props)
+            for pv_str, msgs in uniqueness_msgs.items():
+                for result in results:
+                    if result.pv == pv_str:
+                        result.messages.extend(msgs)
+
+    # Generate output
+    metadata = {"version": version, "document": "ESS-0000757"}
+
+    if args.output_format == "json":
+        reporter = JSONReporter()
+        print(reporter.generate(results, metadata))
+    elif args.output_format == "html":
+        reporter = HTMLReporter()
+        print(reporter.generate(results, metadata))
