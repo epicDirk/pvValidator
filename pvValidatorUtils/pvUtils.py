@@ -13,6 +13,7 @@ is preserved for backwards compatibility with tabview.py and existing tests.
 
 import csv
 import logging
+import re
 import sys
 
 import requests
@@ -26,6 +27,8 @@ from pvValidatorUtils.naming_client import NamingServiceClient
 from pvValidatorUtils.parser import parse_pv
 from pvValidatorUtils.rule_loader import RuleConfig
 from pvValidatorUtils.rules import (
+    KNOWN_SHORT_PROPERTIES,
+    MAX_PROP_RECOMMENDED,
     Severity,
     check_all_rules,
     check_property_uniqueness,
@@ -37,6 +40,10 @@ from pvValidatorUtils.rules import (
 )
 
 logger = logging.getLogger("pvvalidator")
+
+# Regex to extract PV name from EPICS record() declarations
+# Matches: record(type, "PVname") — handles any whitespace
+RECORD_PATTERN = re.compile(r'record\s*\(\s*\w+\s*,\s*"([^"]+)"\s*\)')
 
 
 class pvUtils:
@@ -468,6 +475,8 @@ class pvUtils:
                     if (TempErr[0] in prop) or (TempErr[1] in prop):
                         errmsg += tmperrmsg
                     self._checkDataMsg(pv1=pv, err1=errmsg)
+                elif prop_eff_len > MAX_PROP_RECOMMENDED:
+                    self._checkDataMsg(pv1=pv, warn1=f"Warning: The PV Property exceeds recommended {MAX_PROP_RECOMMENDED} characters ({prop_eff_len})\n")
 
                 if prop.endswith("-S") or prop.endswith("_S"):
                     self._checkDataMsg(pv1=pv, err1="Error: The PV Property for a Setpoint value should end with -SP\n")
@@ -478,8 +487,10 @@ class pvUtils:
                 if prop.endswith("-RBV") or prop.endswith("_RBV"):
                     self._checkDataMsg(pv1=pv, err1="Error: The PV Property for a Readback value should end with -RB\n")
 
-                if 0 < len(prop) < min_prop_warn:
-                    self._checkDataMsg(pv1=pv, warn1=f"Warning: The PV Property is below {min_prop_warn} characters ({len(prop)})\n")
+                if 0 < prop_eff_len < min_prop_warn:
+                    clean = prop.lstrip("#")
+                    if clean not in KNOWN_SHORT_PROPERTIES:
+                        self._checkDataMsg(pv1=pv, warn1=f"Warning: The PV Property is below {min_prop_warn} characters ({prop_eff_len})\n")
 
                 if any(c in self.charnotallow for c in prop):
                     self._checkDataMsg(pv1=pv, err1="Error: The PV Property contains not allowed character(s)\n")
@@ -555,20 +566,20 @@ class pvUtils:
         epicsdbfile = self.epicsdb[0]
         with open(epicsdbfile, "r") as fdb:
             for r in fdb:
-                if (
-                    self.pattern in r
-                    and not r.lstrip().startswith("#")
-                    and not r.lstrip().startswith("f")
-                    and not r.lstrip().startswith("i")
-                ):
-                    listdb.append(
-                        ((r.split(",")[1]).rsplit(")", 1)[0].strip()).strip('"')
-                    )
+                if r.lstrip().startswith("#"):
+                    continue
+                m = RECORD_PATTERN.search(r)
+                if m:
+                    listdb.append(m.group(1))
         if len(self.epicsdb) == 2:
             macrovar = self.epicsdb[1]
             for m in macrovar.split(","):
-                k, v = m.split("=")
-                listdb = [ll.replace("$(" + k.split()[0] + ")", v.split()[0]) for ll in listdb]
+                if "=" not in m:
+                    raise MacroSubstitutionError(
+                        f"Invalid macro definition '{m.strip()}' — expected KEY=VALUE format"
+                    )
+                k, v = m.split("=", 1)
+                listdb = [ll.replace("$(" + k.strip() + ")", v.strip()) for ll in listdb]
         if any("$" in s for s in listdb):
             raise MacroSubstitutionError(
                 f"Missing macro definitions for {epicsdbfile}, please check!"
@@ -596,15 +607,11 @@ class pvUtils:
         msi = msiUtils.msiUtils(msisubsfile, msipath, msivar, True)
         msi.createDB()
         for r in msi.stringdb.splitlines():
-            if (
-                self.pattern in r
-                and not r.lstrip().startswith("#")
-                and not r.lstrip().startswith("f")
-                and not r.lstrip().startswith("i")
-            ):
-                listdb.append(
-                    ((r.split(",")[1]).rsplit(")", 1)[0].strip()).strip('"')
-                )
+            if r.lstrip().startswith("#"):
+                continue
+            m = RECORD_PATTERN.search(r)
+            if m:
+                listdb.append(m.group(1))
         if any("$" in s for s in listdb):
             raise MacroSubstitutionError(
                 f"Missing macro definitions for {msisubsfile}, please check!"

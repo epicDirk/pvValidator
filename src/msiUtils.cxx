@@ -30,42 +30,56 @@ msiUtils::msiUtils(std::string substitutionName, std::string templatePath,
 };
 
 int msiUtils::createDB() {
-  inputData *inputPvt;
-  MAC_HANDLE *macPvt;
+  inputData *inputPvt = 0;
+  MAC_HANDLE *macPvt = 0;
+  subInfo *substitutePvt = 0;
   inputConstruct(&inputPvt);
   macCreateHandle(&macPvt, 0);
   inputAddPath(inputPvt, m_templatePath.c_str());
   addMacroReplacements(macPvt, m_subsMacro.c_str());
-  subInfo *substitutePvt;
   char *filename = 0;
   bool isGlobal, isFile;
   macSuppressWarning(macPvt, 1);
-  substituteOpen(&substitutePvt, m_substitutionName);
-  do {
-    isGlobal = substituteGetGlobalSet(substitutePvt);
-    if (isGlobal) {
-      const char *macStr = substituteGetGlobalReplacements(substitutePvt);
-      if (macStr)
-        addMacroReplacements(macPvt, macStr);
-    } else if ((isFile = substituteGetNextSet(substitutePvt, &filename))) {
 
-      if (!filename) {
-        throw std::runtime_error("msi: No template file specified");
+  try {
+    substituteOpen(&substitutePvt, m_substitutionName);
+    do {
+      isGlobal = substituteGetGlobalSet(substitutePvt);
+      if (isGlobal) {
+        const char *macStr = substituteGetGlobalReplacements(substitutePvt);
+        if (macStr)
+          addMacroReplacements(macPvt, macStr);
+      } else if ((isFile = substituteGetNextSet(substitutePvt, &filename))) {
+
+        if (!filename) {
+          throw std::runtime_error("msi: No template file specified");
+        }
+
+        const char *macStr;
+        while ((macStr = substituteGetReplacements(substitutePvt))) {
+          if (m_localScope)
+            macPushScope(macPvt);
+
+          addMacroReplacements(macPvt, macStr);
+          makeSubstitutions(inputPvt, macPvt, filename);
+
+          if (m_localScope)
+            macPopScope(macPvt);
+        }
       }
+    } while (isGlobal || isFile);
+  } catch (...) {
+    // Cleanup on exception to prevent resource leaks
+    if (substitutePvt)
+      substituteDestruct(substitutePvt);
+    if (macPvt)
+      macDeleteHandle(macPvt);
+    errlogFlush();
+    if (inputPvt)
+      inputDestruct(inputPvt);
+    throw;
+  }
 
-      const char *macStr;
-      while ((macStr = substituteGetReplacements(substitutePvt))) {
-        if (m_localScope)
-          macPushScope(macPvt);
-
-        addMacroReplacements(macPvt, macStr);
-        makeSubstitutions(inputPvt, macPvt, filename);
-
-        if (m_localScope)
-          macPopScope(macPvt);
-      }
-    }
-  } while (isGlobal || isFile);
   substituteDestruct(substitutePvt);
   macDeleteHandle(macPvt);
   errlogFlush(); // macLib calls errlogPrintf()
@@ -180,7 +194,6 @@ void msiUtils::inputOpenFile(inputData *pinputData,
         depHashes[numDeps++] = hash;
       } else {
         fprintf(stderr, "msi: More than %d dependencies!\n", MAX_DEPS);
-        depHashes[0] = hash;
       }
     }
   }
@@ -262,7 +275,7 @@ void msiUtils::abortExit(const int status) {
     fclose(stdout);
     unlink(outFile);
   }
-  exit(status);
+  throw std::runtime_error("msi: fatal error (status " + std::to_string(status) + ")");
 }
 
 /*start of code that handles substitution file*/
@@ -328,6 +341,7 @@ tokenType msiUtils::subGetNextToken(subFile *psubFile) {
   }
   /*now handle quoted strings*/
   if (*p == '"') {
+    char *const pto_end = &psubFile->string[MAX_BUFFER_SIZE - 1];
     pto = &psubFile->string[0];
     *pto++ = *p++;
     while (*p != '"') {
@@ -335,9 +349,17 @@ tokenType msiUtils::subGetNextToken(subFile *psubFile) {
         subFileErrPrint(psubFile, "Strings must be on single line\n");
         abortExit(1);
       }
+      if (pto >= pto_end) {
+        subFileErrPrint(psubFile, "String token exceeds buffer size\n");
+        abortExit(1);
+      }
       /*allow  escape for embedded quote*/
       if ((p[0] == '\\') && p[1] == '"') {
         *pto++ = *p++;
+        if (pto >= pto_end) {
+          subFileErrPrint(psubFile, "String token exceeds buffer size\n");
+          abortExit(1);
+        }
         *pto++ = *p++;
         continue;
       }
@@ -351,11 +373,19 @@ tokenType msiUtils::subGetNextToken(subFile *psubFile) {
   }
 
   /*Now take anything up to next non String token and not space*/
-  pto = &psubFile->string[0];
+  {
+    char *const pto_end = &psubFile->string[MAX_BUFFER_SIZE - 1];
+    pto = &psubFile->string[0];
 
-  while (!isspace((int)*p) && (strspn(p, "\",{}") == 0))
-    *pto++ = *p++;
-  *pto = 0;
+    while (!isspace((int)*p) && (strspn(p, "\",{}") == 0)) {
+      if (pto >= pto_end) {
+        subFileErrPrint(psubFile, "Token exceeds buffer size\n");
+        abortExit(1);
+      }
+      *pto++ = *p++;
+    }
+    *pto = 0;
+  }
 
   psubFile->pnextChar = p;
   psubFile->token = tokenString;
@@ -438,6 +468,7 @@ bool msiUtils::substituteGetNextSet(subInfo *const psubInfo, char **filename) {
 
     freePattern(psubInfo);
     free(psubInfo->filename);
+    psubInfo->filename = 0;
 
     len = strlen(psubFile->string);
     if (psubFile->string[0] == '"' && psubFile->string[len - 1] == '"') {
@@ -684,7 +715,7 @@ void msiUtils::makeSubstitutions(inputData *const inputPvt,
                                  MAC_HANDLE *const macPvt,
                                  const char *const templateName) {
   char *input;
-  static char buffer[MAX_BUFFER_SIZE];
+  char buffer[MAX_BUFFER_SIZE];
   int n;
 
   inputBegin(inputPvt, templateName);

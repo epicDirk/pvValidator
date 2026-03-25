@@ -1,6 +1,10 @@
 import sys
 
-from .epicsUtils import epicsUtils  # noqa
+try:
+    from .epicsUtils import epicsUtils  # noqa
+except ImportError:
+    epicsUtils = None  # SWIG module not compiled
+
 from .pvUtils import pvUtils  # noqa
 
 if sys.version_info >= (3, 8, 0):

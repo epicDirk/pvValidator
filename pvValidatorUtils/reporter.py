@@ -7,6 +7,7 @@ Supports multiple output formats:
 """
 
 import csv
+import html as html_mod
 import io
 import json
 import logging
@@ -231,4 +232,4 @@ function filterTable(q) {{
 
     @staticmethod
     def _escape(s: str) -> str:
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return html_mod.escape(s, quote=True)

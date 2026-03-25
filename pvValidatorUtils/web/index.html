@@ -23,7 +23,7 @@
   --border-hover: #B0B6C4;
   --text: #1A1E2C;
   --text-2: #5A6070;
-  --text-3: #8C92A4;
+  --text-3: #6B7186;
 
   /* PV Segment Colors (bright on white) */
   --sys: #002855;
@@ -84,10 +84,11 @@ body { font-family: 'Titillium Web', sans-serif; background: var(--bg); color: v
 
 /* Toolbar */
 .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
-.btn { font-family: 'Titillium Web', sans-serif; font-size: 0.78rem; font-weight: 600; padding: 8px 16px;
+.btn { font-family: 'Titillium Web', sans-serif; font-size: 0.78rem; font-weight: 600; padding: 10px 16px;
   border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text-2);
-  cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
 .btn:hover { border-color: var(--border-hover); color: var(--text); background: var(--surface); }
+.btn:focus-visible { outline: 2px solid var(--ess-cyan); outline-offset: 2px; }
 .btn svg { width: 14px; height: 14px; }
 .btn-primary { background: var(--ess-navy); color: #fff; border-color: var(--ess-navy); }
 .btn-primary:hover { background: #003A75; color: #fff; }
@@ -156,6 +157,14 @@ footer .left a { color: var(--text-2); text-decoration: none; }
 footer .left a:hover { color: var(--ess-cyan); }
 footer .right { font-size: 0.68rem; color: var(--text-3); }
 
+/* Accessibility */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.skip-link { position: absolute; top: -100%; left: 16px; z-index: 100; padding: 8px 16px;
+  background: var(--ess-navy); color: #fff; border-radius: 0 0 6px 6px; font-size: 0.78rem;
+  font-weight: 600; text-decoration: none; transition: top 0.2s; }
+.skip-link:focus { top: 0; }
+
 @media (max-width: 640px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .pv-row { grid-template-columns: 1fr; }
@@ -167,6 +176,8 @@ footer .right { font-size: 0.68rem; color: var(--text-3); }
 </style>
 </head>
 <body>
+
+<a href="#pvInput" class="skip-link">Skip to input</a>
 
 <div class="header">
   <div class="header-inner">
@@ -180,7 +191,7 @@ footer .right { font-size: 0.68rem; color: var(--text-3); }
 </div>
 <div class="accent-bar"></div>
 
-<div class="app">
+<main class="app">
   <div class="stats">
     <div class="stat"><div class="stat-val" id="sTotal">0</div><div class="stat-lbl">Total PVs</div></div>
     <div class="stat stat-ok"><div class="stat-val" id="sValid">0</div><div class="stat-lbl">Valid</div></div>
@@ -189,25 +200,26 @@ footer .right { font-size: 0.68rem; color: var(--text-3); }
   </div>
 
   <div class="toolbar">
-    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()" aria-label="Load PV file for validation">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
       Load File
     </button>
     <input type="file" id="fileInput" accept=".txt,.db,.csv" onchange="loadFile(event)">
-    <button class="btn btn-accent" onclick="loadExample()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+    <button class="btn btn-accent" onclick="loadExample()" aria-label="Load example PV names">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
       Load Examples
     </button>
     <button class="btn" onclick="clearAll()">Clear</button>
     <div class="toolbar-right">
-      <button class="btn" onclick="exportJSON()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      <button class="btn" onclick="exportJSON()" aria-label="Export validation results as JSON">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         Export JSON
       </button>
     </div>
   </div>
 
   <div class="editor">
+    <label for="pvInput" class="sr-only">PV Names</label>
     <textarea id="pvInput" placeholder="Paste PV names here, one per line...&#10;&#10;Click 'Load Examples' to see pvValidator in action" spellcheck="false" oninput="validate()"></textarea>
   </div>
 
@@ -227,7 +239,7 @@ footer .right { font-size: 0.68rem; color: var(--text-3); }
       <div class="hint">Supports: Sys-Sub:Dis-Dev-Idx:Property &nbsp;|&nbsp; Sys::Property &nbsp;|&nbsp; file upload (.txt)</div>
     </div>
   </div>
-</div>
+</main>
 
 <footer>
   <div class="footer-inner">
@@ -300,6 +312,17 @@ function checkConf(devPVs){var extra={};for(var d in devPVs){var ps=devPVs[d],se
   var n=normConf(ps[i].p);if(seen[n]!==undefined){var k=d+':'+ps[i].p;if(!extra[k])extra[k]=[];
   extra[k].push({s:'error',m:'Confusable with '+d+':'+seen[n],r:'PROP-1'});}else{seen[n]=ps[i].p;}}}return extra;}
 
+// Rule references for ESS-0000757 traceability (Design-for-AI: trust signals)
+var RULE_REF = {
+  'PV-LEN':'ESS-0000757 \u00a76.2','PROP-2':'ESS-0000757 \u00a76.2 Rule 2','PROP-3':'ESS-0000757 \u00a76.2 Rule 3',
+  'PROP-SP':'ESS-0000757 \u00a76.2 Rule 9','PROP-R':'ESS-0000757 \u00a76.2 Rule 9','PROP-RB':'ESS-0000757 \u00a76.2 Rule 9',
+  'PROP-11':'ESS-0000757 \u00a76.2 Rule 11','PROP-INT':'ESS-0000757 \u00a76.2',
+  'PROP-1':'ESS-0000757 \u00a76.2 Rule 1','ELEM-6':'ESS-0000757 \u00a73 Rule 6',
+  'ELEM-1':'ESS-0000757 \u00a73 Rule 1','ELEM-2':'ESS-0000757 \u00a73 Rule 2',
+  'IDX-LEN':'ESS-0000757 \u00a75.2','IDX-STYLE':'ESS-0000757 \u00a75.2','LEGACY':'ESS-0000757 Annex C'
+};
+function ruleTitle(r){return RULE_REF[r]?' title="'+esc(RULE_REF[r])+'"':'';}
+
 // Main
 var lastResults=[];
 function validate(){
@@ -346,17 +369,17 @@ function validate(){
     html+='</div><div class="pv-msgs">';
     if(!c){html+='<span class="badge badge-err">Invalid Format</span>';}
     else if(hErr){for(var m=0;m<res.msgs.length;m++)if(res.msgs[m].s==='error')
-      html+='<span class="msg msg-err">['+res.msgs[m].r+'] '+esc(res.msgs[m].m)+'</span>';}
+      html+='<span class="msg msg-err"'+ruleTitle(res.msgs[m].r)+'>['+esc(res.msgs[m].r)+'] '+esc(res.msgs[m].m)+'</span>';}
     else if(hWrn){for(var m2=0;m2<res.msgs.length;m2++)if(res.msgs[m2].s==='warning')
-      html+='<span class="msg msg-warn">['+res.msgs[m2].r+'] '+esc(res.msgs[m2].m)+'</span>';}
+      html+='<span class="msg msg-warn"'+ruleTitle(res.msgs[m2].r)+'>['+esc(res.msgs[m2].r)+'] '+esc(res.msgs[m2].m)+'</span>';}
     else{html+='<span class="badge badge-ok">Valid</span>';}
     for(var m3=0;m3<res.msgs.length;m3++)if(res.msgs[m3].s==='info')
-      html+='<span class="msg msg-info">['+res.msgs[m3].r+'] '+esc(res.msgs[m3].m)+'</span>';
+      html+='<span class="msg msg-info"'+ruleTitle(res.msgs[m3].r)+'>['+esc(res.msgs[m3].r)+'] '+esc(res.msgs[m3].m)+'</span>';
     html+='</div></div>';}
   container.innerHTML=html;
 }
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-function loadFile(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();
+function loadFile(e){var f=e.target.files[0];if(!f)return;if(f.size>1048576){alert('File too large (max 1 MB)');return;}var r=new FileReader();
   r.onload=function(ev){document.getElementById('pvInput').value=ev.target.result;validate();};r.readAsText(f);}
 function loadExample(){document.getElementById('pvInput').value=
   'DTL-010:EMR-TT-001:Temperature\nPBI-BCM01:Ctrl-MTCA-100:Status\nCWM-CWS03:WtrC-PT-011:Pressure\n'+
