@@ -8,32 +8,125 @@ from pvValidatorUtils.parser import (
     FMT_HIGH_LEVEL_SYS,
     FMT_NO_SUBSYSTEM,
     PVComponents,
-    parse_pv,
     is_valid_format,
+    parse_pv,
 )
 
 
 class TestParseValidFormats:
     """Test parsing of all 4 valid ESS PV formats."""
 
-    @pytest.mark.parametrize("pv,sys,sub,dis,dev,idx,prop,fmt", [
-        # Format 1: Sys-Sub:Dis-Dev-Idx:Property (full)
-        ("DTL-010:EMR-TT-001:Temperature", "DTL", "010", "EMR", "TT", "001", "Temperature", FMT_FULL),
-        ("PBI-BCM01:Ctrl-MTCA-100:Status", "PBI", "BCM01", "Ctrl", "MTCA", "100", "Status", FMT_FULL),
-        ("CWM-CWS03:WtrC-PT-011:Pressure", "CWM", "CWS03", "WtrC", "PT", "011", "Pressure", FMT_FULL),
-        ("Tgt-HeC1010:Proc-TT-003:Temperature", "Tgt", "HeC1010", "Proc", "TT", "003", "Temperature", FMT_FULL),
-        ("ISrc-CS:ISS-Magtr-01:Current", "ISrc", "CS", "ISS", "Magtr", "01", "Current", FMT_FULL),
-        # Format 2: Sys:Dis-Dev-Idx:Property (no subsystem)
-        ("ISrc:ISS-Magtr-01:Current", "ISrc", "", "ISS", "Magtr", "01", "Current", FMT_NO_SUBSYSTEM),
-        # Format 3: Sys-Sub::Property (high-level with subsystem)
-        ("DTL-010::Temperature", "DTL", "010", "", "", "", "Temperature", FMT_HIGH_LEVEL_SUBSYS),
-        ("CWM-CWS03::RunMode", "CWM", "CWS03", "", "", "", "RunMode", FMT_HIGH_LEVEL_SUBSYS),
-        ("TD-M::OscillatorSyncStatus", "TD", "M", "", "", "", "OscillatorSyncStatus", FMT_HIGH_LEVEL_SUBSYS),
-        # Format 4: Sys::Property (high-level system only)
-        ("DTL::ReadyForBeam", "DTL", "", "", "", "", "ReadyForBeam", FMT_HIGH_LEVEL_SYS),
-        ("Tgt::Status", "Tgt", "", "", "", "", "Status", FMT_HIGH_LEVEL_SYS),
-        ("ISrc::Status", "ISrc", "", "", "", "", "Status", FMT_HIGH_LEVEL_SYS),
-    ])
+    @pytest.mark.parametrize(
+        "pv,sys,sub,dis,dev,idx,prop,fmt",
+        [
+            # Format 1: Sys-Sub:Dis-Dev-Idx:Property (full)
+            (
+                "DTL-010:EMR-TT-001:Temperature",
+                "DTL",
+                "010",
+                "EMR",
+                "TT",
+                "001",
+                "Temperature",
+                FMT_FULL,
+            ),
+            (
+                "PBI-BCM01:Ctrl-MTCA-100:Status",
+                "PBI",
+                "BCM01",
+                "Ctrl",
+                "MTCA",
+                "100",
+                "Status",
+                FMT_FULL,
+            ),
+            (
+                "CWM-CWS03:WtrC-PT-011:Pressure",
+                "CWM",
+                "CWS03",
+                "WtrC",
+                "PT",
+                "011",
+                "Pressure",
+                FMT_FULL,
+            ),
+            (
+                "Tgt-HeC1010:Proc-TT-003:Temperature",
+                "Tgt",
+                "HeC1010",
+                "Proc",
+                "TT",
+                "003",
+                "Temperature",
+                FMT_FULL,
+            ),
+            (
+                "ISrc-CS:ISS-Magtr-01:Current",
+                "ISrc",
+                "CS",
+                "ISS",
+                "Magtr",
+                "01",
+                "Current",
+                FMT_FULL,
+            ),
+            # Format 2: Sys:Dis-Dev-Idx:Property (no subsystem)
+            (
+                "ISrc:ISS-Magtr-01:Current",
+                "ISrc",
+                "",
+                "ISS",
+                "Magtr",
+                "01",
+                "Current",
+                FMT_NO_SUBSYSTEM,
+            ),
+            # Format 3: Sys-Sub::Property (high-level with subsystem)
+            (
+                "DTL-010::Temperature",
+                "DTL",
+                "010",
+                "",
+                "",
+                "",
+                "Temperature",
+                FMT_HIGH_LEVEL_SUBSYS,
+            ),
+            (
+                "CWM-CWS03::RunMode",
+                "CWM",
+                "CWS03",
+                "",
+                "",
+                "",
+                "RunMode",
+                FMT_HIGH_LEVEL_SUBSYS,
+            ),
+            (
+                "TD-M::OscillatorSyncStatus",
+                "TD",
+                "M",
+                "",
+                "",
+                "",
+                "OscillatorSyncStatus",
+                FMT_HIGH_LEVEL_SUBSYS,
+            ),
+            # Format 4: Sys::Property (high-level system only)
+            (
+                "DTL::ReadyForBeam",
+                "DTL",
+                "",
+                "",
+                "",
+                "",
+                "ReadyForBeam",
+                FMT_HIGH_LEVEL_SYS,
+            ),
+            ("Tgt::Status", "Tgt", "", "", "", "", "Status", FMT_HIGH_LEVEL_SYS),
+            ("ISrc::Status", "ISrc", "", "", "", "", "Status", FMT_HIGH_LEVEL_SYS),
+        ],
+    )
     def test_valid_formats(self, pv, sys, sub, dis, dev, idx, prop, fmt):
         result = parse_pv(pv)
         assert result is not None, f"Failed to parse valid PV: {pv}"
@@ -50,19 +143,22 @@ class TestParseValidFormats:
 class TestParseInvalidFormats:
     """Test that invalid PV formats return None."""
 
-    @pytest.mark.parametrize("pv", [
-        "",                                     # Empty string
-        "DTL010EMRTT001Temperature",            # No colons
-        "DTL-010:Temperature",                  # Only 1 colon (2 parts)
-        "DTL-010:EMR-TT-001:Temp:Extra",        # Too many colons (4 parts)
-        ":EMR-TT-001:Temperature",              # Empty system
-        "DTL-:EMR-TT-001:Temperature",          # Empty subsystem after dash
-        "DTL-010:EMR--001:Temperature",          # Empty device
-        "DTL-010:EMR-TT:Temperature",           # Missing index (only 2 segments in device)
-        "DTL-010:EMR-TT-001:",                  # Empty property
-        "::::",                                  # All empty with extra colon
-        "DTL-::Temperature",                    # Empty subsystem with device empty too (dash but nothing after)
-    ])
+    @pytest.mark.parametrize(
+        "pv",
+        [
+            "",  # Empty string
+            "DTL010EMRTT001Temperature",  # No colons
+            "DTL-010:Temperature",  # Only 1 colon (2 parts)
+            "DTL-010:EMR-TT-001:Temp:Extra",  # Too many colons (4 parts)
+            ":EMR-TT-001:Temperature",  # Empty system
+            "DTL-:EMR-TT-001:Temperature",  # Empty subsystem after dash
+            "DTL-010:EMR--001:Temperature",  # Empty device
+            "DTL-010:EMR-TT:Temperature",  # Missing index (only 2 segments in device)
+            "DTL-010:EMR-TT-001:",  # Empty property
+            "::::",  # All empty with extra colon
+            "DTL-::Temperature",  # Empty subsystem with device empty too (dash but nothing after)
+        ],
+    )
     def test_invalid_formats(self, pv):
         result = parse_pv(pv)
         assert result is None, f"Should have rejected invalid PV: {pv}"

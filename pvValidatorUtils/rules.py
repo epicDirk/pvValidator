@@ -12,9 +12,13 @@ from typing import Dict, List, Optional
 from .parser import PVComponents
 
 __all__ = [
-    "Severity", "ValidationMessage", "ValidationResult",
-    "check_all_rules", "check_property_uniqueness",
-    "effective_property_length", "normalize_for_confusion",
+    "Severity",
+    "ValidationMessage",
+    "ValidationResult",
+    "check_all_rules",
+    "check_property_uniqueness",
+    "effective_property_length",
+    "normalize_for_confusion",
 ]
 
 # ---------------------------------------------------------------------------
@@ -28,10 +32,20 @@ MIN_PROP_LENGTH_WARN = 4
 MAX_ELEMENT_LENGTH = 6
 
 # Known short property names from ESS-0000757 Tables 8-9 (valid despite <4 chars)
-KNOWN_SHORT_PROPERTIES = frozenset({
-    "On", "Off", "In", "Out", "Ok", "Set", "Get",
-    "Ack", "Low", "High",
-})
+KNOWN_SHORT_PROPERTIES = frozenset(
+    {
+        "On",
+        "Off",
+        "In",
+        "Out",
+        "Ok",
+        "Set",
+        "Get",
+        "Ack",
+        "Low",
+        "High",
+    }
+)
 
 ELEMENT_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
 LEADING_ZERO_REGEX = re.compile(r"0+(?![_A-Za-z-])(?!$)")
@@ -43,6 +57,7 @@ DISALLOWED_CHARS = set("!@$%^&*()+={}[]|\\:;'\"<>,.?/~`")
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------
+
 
 class Severity(Enum):
     ERROR = "Error"
@@ -59,6 +74,7 @@ class ValidationMessage:
         message: Human-readable description
         rule_id: Traceability to ESS-0000757 (e.g., 'PROP-2')
     """
+
     severity: Severity
     message: str
     rule_id: str = ""
@@ -78,6 +94,7 @@ class ValidationResult:
         components: Parsed PV components (None if format invalid)
         messages: List of validation findings
     """
+
     pv: str
     format_valid: bool
     components: Optional[PVComponents] = None
@@ -107,15 +124,18 @@ class ValidationResult:
 # Property rules
 # ---------------------------------------------------------------------------
 
+
 def check_pv_length(components: PVComponents) -> List[ValidationMessage]:
     """ESS-0000757: Total PV max 60 characters."""
     msgs = []
     if len(components.raw) > MAX_PV_LENGTH:
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            f"The PV is beyond {MAX_PV_LENGTH} characters ({len(components.raw)})",
-            "PV-LEN",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                f"The PV is beyond {MAX_PV_LENGTH} characters ({len(components.raw)})",
+                "PV-LEN",
+            )
+        )
     return msgs
 
 
@@ -130,37 +150,46 @@ def check_property_length(components: PVComponents) -> List[ValidationMessage]:
     msgs = []
     prop = components.property
     if not prop:
-        msgs.append(ValidationMessage(
-            Severity.ERROR, "The PV Property is missing", "PROP-EMPTY"))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR, "The PV Property is missing", "PROP-EMPTY"
+            )
+        )
         return msgs
 
     effective_len = effective_property_length(prop)
 
     # >25: SHALL violation (hard limit)
     if effective_len > MAX_PROP_LENGTH:
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            f"The PV Property exceeds {MAX_PROP_LENGTH} characters ({effective_len})",
-            "PROP-2",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                f"The PV Property exceeds {MAX_PROP_LENGTH} characters ({effective_len})",
+                "PROP-2",
+            )
+        )
     # >20 and ≤25: SHOULD violation (recommended limit)
     elif effective_len > MAX_PROP_RECOMMENDED:
-        msgs.append(ValidationMessage(
-            Severity.WARNING,
-            f"The PV Property exceeds recommended {MAX_PROP_RECOMMENDED} characters ({effective_len})",
-            "PROP-2-WARN",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.WARNING,
+                f"The PV Property exceeds recommended {MAX_PROP_RECOMMENDED} characters ({effective_len})",
+                "PROP-2-WARN",
+            )
+        )
 
     # <4 chars: check against known short property names
     if 0 < effective_len < MIN_PROP_LENGTH_WARN:
         # Strip prefix markers for comparison
         clean = prop.lstrip("#")
         if clean not in KNOWN_SHORT_PROPERTIES:
-            msgs.append(ValidationMessage(
-                Severity.WARNING,
-                f"The PV Property is below {MIN_PROP_LENGTH_WARN} characters ({effective_len})",
-                "PROP-3",
-            ))
+            msgs.append(
+                ValidationMessage(
+                    Severity.WARNING,
+                    f"The PV Property is below {MIN_PROP_LENGTH_WARN} characters ({effective_len})",
+                    "PROP-3",
+                )
+            )
 
     return msgs
 
@@ -179,25 +208,31 @@ def check_property_suffix(components: PVComponents) -> List[ValidationMessage]:
     prop = components.property
 
     if prop.endswith("-S") or prop.endswith("_S"):
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            "The PV Property for a Setpoint value should end with -SP",
-            "PROP-SP",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                "The PV Property for a Setpoint value should end with -SP",
+                "PROP-SP",
+            )
+        )
 
     if prop.endswith("-R") or prop.endswith("_R"):
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            "The PV Property for a Reading value should not contain any suffix",
-            "PROP-R",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                "The PV Property for a Reading value should not contain any suffix",
+                "PROP-R",
+            )
+        )
 
     if prop.endswith("-RBV") or prop.endswith("_RBV"):
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            "The PV Property for a Readback value should end with -RB",
-            "PROP-RB",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                "The PV Property for a Readback value should end with -RB",
+                "PROP-RB",
+            )
+        )
 
     return msgs
 
@@ -211,41 +246,50 @@ def check_property_characters(components: PVComponents) -> List[ValidationMessag
 
     # Internal PVs start with #
     if prop.startswith("#"):
-        msgs.append(ValidationMessage(
-            Severity.INFO, 'The PV is an "Internal PV"', "PROP-INT"))
+        msgs.append(
+            ValidationMessage(Severity.INFO, 'The PV is an "Internal PV"', "PROP-INT")
+        )
         return msgs
 
     # Must start with letter
     if prop[0].isdigit() or prop[0] in DISALLOWED_CHARS or prop[0] in ("_", "-"):
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            "The PV Property does not start alphabetical",
-            "PROP-11",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                "The PV Property does not start alphabetical",
+                "PROP-11",
+            )
+        )
 
     # Should start with uppercase
     if prop[0].islower():
-        msgs.append(ValidationMessage(
-            Severity.WARNING,
-            "The PV Property does not start in upper case",
-            "PROP-11-CASE",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.WARNING,
+                "The PV Property does not start in upper case",
+                "PROP-11-CASE",
+            )
+        )
 
     # No disallowed characters
     if any(c in DISALLOWED_CHARS for c in prop):
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            "The PV Property contains not allowed character(s)",
-            "PROP-11-CHAR",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                "The PV Property contains not allowed character(s)",
+                "PROP-11-CHAR",
+            )
+        )
 
     # Hash in wrong position
     if "#" in prop and not prop.startswith("#"):
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            "The PV Property contains the # character in not allowed position",
-            "PROP-11-HASH",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                "The PV Property contains the # character in not allowed position",
+                "PROP-11-HASH",
+            )
+        )
 
     return msgs
 
@@ -267,17 +311,21 @@ def check_element_lengths(components: PVComponents) -> List[ValidationMessage]:
         if value and len(value) > MAX_ELEMENT_LENGTH:
             # Target Station exception for subsystem (Annex B)
             if name == "Subsystem" and components.system == "Tgt":
-                msgs.append(ValidationMessage(
-                    Severity.INFO,
-                    f'Target Station subsystem "{value}" exceeds {MAX_ELEMENT_LENGTH} characters (allowed per Annex B)',
-                    "EXC-TGT",
-                ))
+                msgs.append(
+                    ValidationMessage(
+                        Severity.INFO,
+                        f'Target Station subsystem "{value}" exceeds {MAX_ELEMENT_LENGTH} characters (allowed per Annex B)',
+                        "EXC-TGT",
+                    )
+                )
             else:
-                msgs.append(ValidationMessage(
-                    Severity.ERROR,
-                    f'The {name} "{value}" exceeds {MAX_ELEMENT_LENGTH} characters ({len(value)})',
-                    "ELEM-6",
-                ))
+                msgs.append(
+                    ValidationMessage(
+                        Severity.ERROR,
+                        f'The {name} "{value}" exceeds {MAX_ELEMENT_LENGTH} characters ({len(value)})',
+                        "ELEM-6",
+                    )
+                )
     return msgs
 
 
@@ -290,8 +338,12 @@ def check_element_characters(components: PVComponents) -> List[ValidationMessage
     """
     msgs = []
     elements = [
-        ("System", components.system, True),       # must start with letter
-        ("Subsystem", components.subsystem, False), # may start with digit (section numbers)
+        ("System", components.system, True),  # must start with letter
+        (
+            "Subsystem",
+            components.subsystem,
+            False,
+        ),  # may start with digit (section numbers)
         ("Discipline", components.discipline, True),
         ("Device", components.device, True),
     ]
@@ -299,17 +351,21 @@ def check_element_characters(components: PVComponents) -> List[ValidationMessage
         if not value:
             continue
         if not value.isalnum():
-            msgs.append(ValidationMessage(
-                Severity.ERROR,
-                f'The {name} "{value}" contains non-alphanumeric characters',
-                "ELEM-1",
-            ))
+            msgs.append(
+                ValidationMessage(
+                    Severity.ERROR,
+                    f'The {name} "{value}" contains non-alphanumeric characters',
+                    "ELEM-1",
+                )
+            )
         elif require_alpha_start and not value[0].isalpha():
-            msgs.append(ValidationMessage(
-                Severity.ERROR,
-                f'The {name} "{value}" must start with a letter',
-                "ELEM-2",
-            ))
+            msgs.append(
+                ValidationMessage(
+                    Severity.ERROR,
+                    f'The {name} "{value}" must start with a letter',
+                    "ELEM-2",
+                )
+            )
     return msgs
 
 
@@ -322,11 +378,13 @@ def check_device_index(components: PVComponents) -> List[ValidationMessage]:
         return msgs  # No index for high-level PVs
 
     if not idx:
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            "Device index is missing",
-            "IDX-MANDATORY",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                "Device index is missing",
+                "IDX-MANDATORY",
+            )
+        )
         return msgs
 
     # Scientific style: purely numeric, 1-4 digits
@@ -337,18 +395,22 @@ def check_device_index(components: PVComponents) -> List[ValidationMessage]:
     extended = re.compile(r"^\d{1,6}$")
 
     if not (scientific.match(idx) or pid.match(idx) or extended.match(idx)):
-        msgs.append(ValidationMessage(
-            Severity.WARNING,
-            f'Index "{idx}" does not follow Scientific or P&ID style',
-            "IDX-STYLE",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.WARNING,
+                f'Index "{idx}" does not follow Scientific or P&ID style',
+                "IDX-STYLE",
+            )
+        )
 
     if len(idx) > 6:
-        msgs.append(ValidationMessage(
-            Severity.ERROR,
-            f'Index "{idx}" exceeds 6 characters',
-            "IDX-LEN",
-        ))
+        msgs.append(
+            ValidationMessage(
+                Severity.ERROR,
+                f'Index "{idx}" exceeds 6 characters',
+                "IDX-LEN",
+            )
+        )
 
     return msgs
 
@@ -358,11 +420,13 @@ def check_legacy_prefix(components: PVComponents) -> List[ValidationMessage]:
     msgs = []
     for prefix in LEGACY_PREFIXES:
         if components.property.startswith(prefix):
-            msgs.append(ValidationMessage(
-                Severity.WARNING,
-                f'Property uses legacy prefix "{prefix}" (accepted but discouraged)',
-                "LEGACY",
-            ))
+            msgs.append(
+                ValidationMessage(
+                    Severity.WARNING,
+                    f'Property uses legacy prefix "{prefix}" (accepted but discouraged)',
+                    "LEGACY",
+                )
+            )
             break
     return msgs
 
@@ -372,11 +436,13 @@ def check_legacy_index(components: PVComponents) -> List[ValidationMessage]:
     if components.is_high_level or not components.index:
         return []
     if components.discipline in ("Cryo", "Vac") and len(components.index) > 4:
-        return [ValidationMessage(
-            Severity.WARNING,
-            f'5-digit index is legacy for {components.discipline} (use max 4 digits)',
-            "LEGACY-5DIGIT",
-        )]
+        return [
+            ValidationMessage(
+                Severity.WARNING,
+                f"5-digit index is legacy for {components.discipline} (use max 4 digits)",
+                "LEGACY-5DIGIT",
+            )
+        ]
     return []
 
 
@@ -389,16 +455,18 @@ def check_pascal_case(components: PVComponents) -> List[ValidationMessage]:
     clean = prop
     for suffix in ("-SP", "-RB"):
         if clean.endswith(suffix):
-            clean = clean[:-len(suffix)]
+            clean = clean[: -len(suffix)]
             break
     if len(clean) <= 4 or clean in KNOWN_SHORT_PROPERTIES:
         return []
     if clean.isupper() or clean.islower():
-        return [ValidationMessage(
-            Severity.WARNING,
-            "Property should use PascalCase for multi-word names",
-            "PROP-5",
-        )]
+        return [
+            ValidationMessage(
+                Severity.WARNING,
+                "Property should use PascalCase for multi-word names",
+                "PROP-5",
+            )
+        ]
     return []
 
 
@@ -410,17 +478,20 @@ def check_mtca_naming(components: PVComponents) -> List[ValidationMessage]:
     if components.discipline != "Ctrl" or components.device not in MTCA_DEVICES:
         return []
     if components.index and not re.match(r"^\d{3}$", components.index):
-        return [ValidationMessage(
-            Severity.WARNING,
-            "MTCA index should be 3 digits (system + counter)",
-            "EXC-MTCA",
-        )]
+        return [
+            ValidationMessage(
+                Severity.WARNING,
+                "MTCA index should be 3 digits (system + counter)",
+                "EXC-MTCA",
+            )
+        ]
     return []
 
 
 # ---------------------------------------------------------------------------
 # Confusable character detection (O(n) via normalization)
 # ---------------------------------------------------------------------------
+
 
 def normalize_for_confusion(prop: str) -> str:
     """Normalize a property name for confusable character detection.
@@ -467,22 +538,35 @@ def check_property_uniqueness(
                 issue = "duplication issue"
             elif prop.lower() == existing_prop.lower():
                 issue = f"case issue, check {existing_pv}"
-            elif prop.replace("O", "0") == existing_prop or prop.replace("0", "O") == existing_prop:
+            elif (
+                prop.replace("O", "0") == existing_prop
+                or prop.replace("0", "O") == existing_prop
+            ):
                 issue = f"0 O issue, check {existing_pv}"
-            elif prop.replace("VV", "W") == existing_prop or prop.replace("W", "VV") == existing_prop:
+            elif (
+                prop.replace("VV", "W") == existing_prop
+                or prop.replace("W", "VV") == existing_prop
+            ):
                 issue = f"VV W issue, check {existing_pv}"
-            elif (prop.replace("1", "I") == existing_prop or prop.replace("I", "1") == existing_prop
-                  or prop.replace("1", "l") == existing_prop or prop.replace("l", "1") == existing_prop
-                  or prop.replace("I", "l") == existing_prop or prop.replace("l", "I") == existing_prop):
+            elif (
+                prop.replace("1", "I") == existing_prop
+                or prop.replace("I", "1") == existing_prop
+                or prop.replace("1", "l") == existing_prop
+                or prop.replace("l", "1") == existing_prop
+                or prop.replace("I", "l") == existing_prop
+                or prop.replace("l", "I") == existing_prop
+            ):
                 issue = f"1 I l issue, check {existing_pv}"
             else:
                 issue = f"leading zero or combined issue, check {existing_pv}"
 
-            msgs[pv].append(ValidationMessage(
-                Severity.ERROR,
-                f"{errs} ({issue})",
-                "PROP-1",
-            ))
+            msgs[pv].append(
+                ValidationMessage(
+                    Severity.ERROR,
+                    f"{errs} ({issue})",
+                    "PROP-1",
+                )
+            )
             # Also flag the first occurrence
             if existing_pv not in msgs:
                 msgs[existing_pv] = []
@@ -491,7 +575,9 @@ def check_property_uniqueness(
                 f"{errs} ({issue.replace(existing_pv, pv)})",
                 "PROP-1",
             )
-            if not any(m.rule_id == "PROP-1" and pv in m.message for m in msgs[existing_pv]):
+            if not any(
+                m.rule_id == "PROP-1" and pv in m.message for m in msgs[existing_pv]
+            ):
                 msgs[existing_pv].append(conflict_msg)
         else:
             seen[normalized] = prop

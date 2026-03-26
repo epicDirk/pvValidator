@@ -60,6 +60,7 @@ def register_all_mocks(api_data):
 
 try:
     from pvValidatorUtils import epicsUtils, pvUtils
+
     HAS_EPICS = True
 except ImportError:
     HAS_EPICS = False
@@ -67,6 +68,7 @@ except ImportError:
 # Use conftest MockEpicsUtils if SWIG modules not available
 if not HAS_EPICS:
     import sys
+
     sys.path.insert(0, str(pathlib.Path(__file__).parent))
     from conftest import MockEpicsUtils
 
@@ -90,6 +92,7 @@ def make_pvutils(pv_list, checkonlyfmt=False):
 # Tests: Naming Service connectivity
 # ---------------------------------------------------------------------------
 
+
 class TestNamingServiceConnectivity:
     """Test Naming Service connection handling."""
 
@@ -106,7 +109,8 @@ class TestNamingServiceConnectivity:
     def test_service_unreachable_exits(self):
         """When service is unreachable, validator should exit."""
         responses.add(
-            responses.HEAD, PROD_BASE,
+            responses.HEAD,
+            PROD_BASE,
             body=ConnectionError("Network unreachable"),
         )
         if not HAS_EPICS:
@@ -127,6 +131,7 @@ class TestNamingServiceConnectivity:
 # ---------------------------------------------------------------------------
 # Tests: System/Subsystem validation
 # ---------------------------------------------------------------------------
+
 
 class TestSystemValidation:
     """Test validation of System and Subsystem against Naming Service."""
@@ -151,8 +156,12 @@ class TestSystemValidation:
         register_all_mocks(api_data)
         # Add mock for unregistered system
         responses.add(responses.GET, PARTS_URL + "QQQQQQ", json=[], status=200)
-        responses.add(responses.GET, NAMES_URL + "QQQQQQ-010:EMR-TT-001",
-                       json={"error": "not found"}, status=404)
+        responses.add(
+            responses.GET,
+            NAMES_URL + "QQQQQQ-010:EMR-TT-001",
+            json={"error": "not found"},
+            status=404,
+        )
         if not HAS_EPICS:
             pytest.skip("Requires compiled SWIG modules")
         pvu = make_pvutils(["QQQQQQ-010:EMR-TT-001:Temperature"])
@@ -165,6 +174,7 @@ class TestSystemValidation:
 # ---------------------------------------------------------------------------
 # Tests: Device name status handling
 # ---------------------------------------------------------------------------
+
 
 class TestDeviceNameStatus:
     """Test handling of ACTIVE, OBSOLETE, DELETED status."""
@@ -190,12 +200,34 @@ class TestDeviceNameStatus:
         api_data = load_api_responses()
         register_all_mocks(api_data)
         # Register mocks for OBSOLETE-TEST system parts
-        responses.add(responses.GET, PARTS_URL + "OBSOLETE", json=[
-            {"status": "Approved", "type": "System Structure", "level": "2", "mnemonic": "OBSOLETE", "mnemonicPath": "OBSOLETE"}
-        ], status=200)
-        responses.add(responses.GET, PARTS_URL + "TEST", json=[
-            {"status": "Approved", "type": "System Structure", "level": "3", "mnemonic": "TEST", "mnemonicPath": "OBSOLETE-TEST"}
-        ], status=200)
+        responses.add(
+            responses.GET,
+            PARTS_URL + "OBSOLETE",
+            json=[
+                {
+                    "status": "Approved",
+                    "type": "System Structure",
+                    "level": "2",
+                    "mnemonic": "OBSOLETE",
+                    "mnemonicPath": "OBSOLETE",
+                }
+            ],
+            status=200,
+        )
+        responses.add(
+            responses.GET,
+            PARTS_URL + "TEST",
+            json=[
+                {
+                    "status": "Approved",
+                    "type": "System Structure",
+                    "level": "3",
+                    "mnemonic": "TEST",
+                    "mnemonicPath": "OBSOLETE-TEST",
+                }
+            ],
+            status=200,
+        )
         if not HAS_EPICS:
             pytest.skip("Requires compiled SWIG modules")
         pvu = make_pvutils(["OBSOLETE-TEST:EMR-TT-001:Temperature"])
@@ -211,6 +243,7 @@ class TestDeviceNameStatus:
 # Tests: API response edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestAPIEdgeCases:
     """Test handling of unusual API responses."""
 
@@ -220,11 +253,26 @@ class TestAPIEdgeCases:
         api_data = load_api_responses()
         register_all_mocks(api_data)
         responses.add(responses.GET, PARTS_URL + "FAKESYS", json=[], status=200)
-        responses.add(responses.GET, NAMES_URL + "FAKESYS-010:EMR-TT-001",
-                       json={"error": "not found"}, status=404)
-        responses.add(responses.GET, PARTS_URL + "010", json=[
-            {"status": "Approved", "type": "System Structure", "level": "3", "mnemonic": "010", "mnemonicPath": "FAKESYS-010"}
-        ], status=200)
+        responses.add(
+            responses.GET,
+            NAMES_URL + "FAKESYS-010:EMR-TT-001",
+            json={"error": "not found"},
+            status=404,
+        )
+        responses.add(
+            responses.GET,
+            PARTS_URL + "010",
+            json=[
+                {
+                    "status": "Approved",
+                    "type": "System Structure",
+                    "level": "3",
+                    "mnemonic": "010",
+                    "mnemonicPath": "FAKESYS-010",
+                }
+            ],
+            status=200,
+        )
         if not HAS_EPICS:
             pytest.skip("Requires compiled SWIG modules")
         pvu = make_pvutils(["FAKESYS-010:EMR-TT-001:Temperature"])
@@ -238,7 +286,8 @@ class TestAPIEdgeCases:
         """API timeout should not crash the validator."""
         responses.add(responses.HEAD, PROD_BASE, status=200)
         responses.add(
-            responses.GET, PARTS_URL + "DTL",
+            responses.GET,
+            PARTS_URL + "DTL",
             body=ConnectionError("Read timed out"),
         )
         if not HAS_EPICS:
@@ -257,6 +306,7 @@ class TestAPIEdgeCases:
 # Tests: Format + Rules (offline, no API needed)
 # ---------------------------------------------------------------------------
 
+
 class TestOfflineValidation:
     """Tests that work completely offline — format and property rules only."""
 
@@ -273,7 +323,9 @@ class TestOfflineValidation:
         pvu = make_pvutils(valid_pvs, checkonlyfmt=True)
         pvu._checkValidFormat()
         for pv in valid_pvs:
-            assert pvu.VFormD.get(pv, False), f"Valid PV '{pv}' rejected by format check"
+            assert pvu.VFormD.get(
+                pv, False
+            ), f"Valid PV '{pv}' rejected by format check"
 
     def test_format_validation_invalid_pvs(self):
         """All invalid-format PVs should fail format check."""
@@ -288,18 +340,23 @@ class TestOfflineValidation:
         pvu = make_pvutils(invalid_pvs, checkonlyfmt=True)
         pvu._checkValidFormat()
         for pv in invalid_pvs:
-            assert not pvu.VFormD.get(pv, True), f"Invalid PV '{pv}' passed format check"
+            assert not pvu.VFormD.get(
+                pv, True
+            ), f"Invalid PV '{pv}' passed format check"
 
-    @pytest.mark.parametrize("pv,expected_error_fragment", [
-        ("DTL-010:EMR-TT-001:Temperature-S", "should end with -SP"),
-        ("DTL-010:EMR-TT-001:Temperature_S", "should end with -SP"),
-        ("DTL-010:EMR-TT-001:Temperature-RBV", "should end with -RB"),
-        ("DTL-010:EMR-TT-001:Temperature_RBV", "should end with -RB"),
-        ("DTL-010:EMR-TT-001:Temperature-R", "should not contain any suffix"),
-        ("DTL-010:EMR-TT-001:Temperature_R", "should not contain any suffix"),
-        ("DTL-010:EMR-TT-001:2Temperature", "does not start alphabetical"),
-        ("DTL-010:EMR-TT-001:Temp!Min", "not allowed character"),
-    ])
+    @pytest.mark.parametrize(
+        "pv,expected_error_fragment",
+        [
+            ("DTL-010:EMR-TT-001:Temperature-S", "should end with -SP"),
+            ("DTL-010:EMR-TT-001:Temperature_S", "should end with -SP"),
+            ("DTL-010:EMR-TT-001:Temperature-RBV", "should end with -RB"),
+            ("DTL-010:EMR-TT-001:Temperature_RBV", "should end with -RB"),
+            ("DTL-010:EMR-TT-001:Temperature-R", "should not contain any suffix"),
+            ("DTL-010:EMR-TT-001:Temperature_R", "should not contain any suffix"),
+            ("DTL-010:EMR-TT-001:2Temperature", "does not start alphabetical"),
+            ("DTL-010:EMR-TT-001:Temp!Min", "not allowed character"),
+        ],
+    )
     def test_property_rule_violations(self, pv, expected_error_fragment):
         """Each property rule violation should be detected."""
         if not HAS_EPICS:
@@ -308,16 +365,20 @@ class TestOfflineValidation:
         pvu._checkValidFormat()
         pvu._checkPropRules()
         assert not pvu.VRuleD.get(pv, True), f"Rule violation not detected for '{pv}'"
-        assert expected_error_fragment.lower() in pvu.datainfo.get(pv, "").lower(), \
-            f"Expected '{expected_error_fragment}' in error for '{pv}', got: {pvu.datainfo.get(pv, '')}"
+        assert (
+            expected_error_fragment.lower() in pvu.datainfo.get(pv, "").lower()
+        ), f"Expected '{expected_error_fragment}' in error for '{pv}', got: {pvu.datainfo.get(pv, '')}"
 
-    @pytest.mark.parametrize("pv", [
-        "DTL-010:EMR-TT-001:Temperature",
-        "DTL-010:EMR-TT-001:Pressure",
-        "DTL-010:EMR-TT-001:Voltage-SP",
-        "DTL-010:EMR-TT-001:Current-RB",
-        "DTL-010:EMR-TT-001:#InternalDebug",
-    ])
+    @pytest.mark.parametrize(
+        "pv",
+        [
+            "DTL-010:EMR-TT-001:Temperature",
+            "DTL-010:EMR-TT-001:Pressure",
+            "DTL-010:EMR-TT-001:Voltage-SP",
+            "DTL-010:EMR-TT-001:Current-RB",
+            "DTL-010:EMR-TT-001:#InternalDebug",
+        ],
+    )
     def test_valid_properties_pass(self, pv):
         """Valid properties should pass all rule checks."""
         if not HAS_EPICS:
@@ -325,23 +386,28 @@ class TestOfflineValidation:
         pvu = make_pvutils([pv], checkonlyfmt=True)
         pvu._checkValidFormat()
         pvu._checkPropRules()
-        assert pvu.VRuleD.get(pv, False) or pvu.VWarnD.get(pv, False), \
-            f"Valid PV '{pv}' failed rules: {pvu.datainfo.get(pv, '')}"
+        assert pvu.VRuleD.get(pv, False) or pvu.VWarnD.get(
+            pv, False
+        ), f"Valid PV '{pv}' failed rules: {pvu.datainfo.get(pv, '')}"
 
 
 # ---------------------------------------------------------------------------
 # Tests: Confusable character detection
 # ---------------------------------------------------------------------------
 
+
 class TestConfusableDetection:
     """Test detection of visually confusable property names."""
 
-    @pytest.mark.parametrize("pv1,pv2,issue_type", [
-        ("DTL-010:EMR-TT-010:TempO", "DTL-010:EMR-TT-010:Temp0", "0 O"),
-        ("DTL-010:EMR-TT-011:TempI", "DTL-010:EMR-TT-011:Temp1", "1 I"),
-        ("DTL-010:EMR-TT-012:Templ", "DTL-010:EMR-TT-012:Temp1", "1 l"),
-        ("DTL-010:EMR-TT-013:TempVV", "DTL-010:EMR-TT-013:TempW", "VV W"),
-    ])
+    @pytest.mark.parametrize(
+        "pv1,pv2,issue_type",
+        [
+            ("DTL-010:EMR-TT-010:TempO", "DTL-010:EMR-TT-010:Temp0", "0 O"),
+            ("DTL-010:EMR-TT-011:TempI", "DTL-010:EMR-TT-011:Temp1", "1 I"),
+            ("DTL-010:EMR-TT-012:Templ", "DTL-010:EMR-TT-012:Temp1", "1 l"),
+            ("DTL-010:EMR-TT-013:TempVV", "DTL-010:EMR-TT-013:TempW", "VV W"),
+        ],
+    )
     def test_confusable_pairs_detected(self, pv1, pv2, issue_type):
         """Confusable property pairs should be flagged as errors."""
         if not HAS_EPICS:

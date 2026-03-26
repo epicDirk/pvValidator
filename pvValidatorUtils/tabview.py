@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-""" tabview.py -- View a tab-delimited file in a spreadsheet-like display.
-  Scott Hansen <firecat four one five three at gmail dot com>
-  Based on code contributed by A.M. Kuchling <amk at amk dot ca>
-  Modified by Alfio Rizzo (alfio.rizzo@ess.eu) for pvValidator.py
+"""tabview.py -- View a tab-delimited file in a spreadsheet-like display.
+Scott Hansen <firecat four one five three at gmail dot com>
+Based on code contributed by A.M. Kuchling <amk at amk dot ca>
+Modified by Alfio Rizzo (alfio.rizzo@ess.eu) for pvValidator.py
 """
+
 import csv
 import curses
 import curses.ascii
-import locale
 import os
 import re
 import sys
@@ -846,18 +846,31 @@ class Viewer:
 
         strhelp = "Press F1 for Help"
         cl = "(\u2184) ESS "
-        self.addstr(self.scr, 1, int(self.max_x / 2), self.Title,
-                    curses.A_UNDERLINE + curses.A_BOLD)
+        self.addstr(
+            self.scr,
+            1,
+            int(self.max_x / 2),
+            self.Title,
+            curses.A_UNDERLINE + curses.A_BOLD,
+        )
         self.addstr(self.scr, 2, int(self.max_x / 2) + 1, cl, curses.A_BOLD)
-        self.addstr(self.scr, 1, self.max_x - len(strhelp) - 1, strhelp, curses.A_REVERSE)
+        self.addstr(
+            self.scr, 1, self.max_x - len(strhelp) - 1, strhelp, curses.A_REVERSE
+        )
 
         self.addstr(self.scr, 2, 0, "Legend:", curses.A_UNDERLINE)
-        self.addstr(self.scr, 3, 0, "******: Skip Naming API Validation Check", curses.A_NORMAL)
-        self.addstr(self.scr, 4, 0, "------: Not Registered/Wrong Format", curses.A_NORMAL)
+        self.addstr(
+            self.scr, 3, 0, "******: Skip Naming API Validation Check", curses.A_NORMAL
+        )
+        self.addstr(
+            self.scr, 4, 0, "------: Not Registered/Wrong Format", curses.A_NORMAL
+        )
 
         totrow = "Tot Rows/Cols: " + str((len(self.data), self.num_data_columns))
         currpos = "Curr Row/Col: (%s,%s)    " % (yp + 1, xp + 1)
-        self.addstr(self.scr, 4, self.max_x - len(totrow) - 30, currpos, curses.A_NORMAL)
+        self.addstr(
+            self.scr, 4, self.max_x - len(totrow) - 30, currpos, curses.A_NORMAL
+        )
         self.addstr(self.scr, 4, self.max_x - len(totrow) - 1, totrow, curses.A_NORMAL)
 
         self.scr.hline(5, 0, curses.ACS_HLINE, self.max_x)

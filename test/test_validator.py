@@ -97,8 +97,11 @@ def get_lines(file):
     """Count PV lines in an input text file (skips comments and blank lines)."""
     with pathlib.Path(file).open() as f:
         return sum(
-            1 for line in f
-            if not line.isspace() and not line.startswith("%") and not line.startswith("#")
+            1
+            for line in f
+            if not line.isspace()
+            and not line.startswith("%")
+            and not line.startswith("#")
         )
 
 

@@ -23,7 +23,6 @@ What it records:
 """
 
 import json
-import os
 import pathlib
 import sys
 
@@ -42,21 +41,81 @@ HEADERS = {"accept": "application/json"}
 TIMEOUT = 10
 
 # Systems to record (common ESS systems from ESS-0000757)
-SYSTEMS = ["DTL", "PBI", "ISrc", "Tgt", "CWM", "YMIR", "LOKI", "DREAM",
-           "RFQ", "MEBT", "MBL", "HBL", "TD", "MO", "TRef", "Acc",
-           "CrS", "ACF", "TS2", "G02", "LoKI"]
+SYSTEMS = [
+    "DTL",
+    "PBI",
+    "ISrc",
+    "Tgt",
+    "CWM",
+    "YMIR",
+    "LOKI",
+    "DREAM",
+    "RFQ",
+    "MEBT",
+    "MBL",
+    "HBL",
+    "TD",
+    "MO",
+    "TRef",
+    "Acc",
+    "CrS",
+    "ACF",
+    "TS2",
+    "G02",
+    "LoKI",
+]
 
 # Subsystems to record
-SUBSYSTEMS = ["010", "BCM01", "CS", "CWS03", "SpScn", "HeC1010",
-              "ChpSy1", "M", "D1", "TWDS1000"]
+SUBSYSTEMS = [
+    "010",
+    "BCM01",
+    "CS",
+    "CWS03",
+    "SpScn",
+    "HeC1010",
+    "ChpSy1",
+    "M",
+    "D1",
+    "TWDS1000",
+]
 
 # Disciplines to record
-DISCIPLINES = ["EMR", "Ctrl", "WtrC", "Proc", "MC", "ISS", "SC",
-               "PBI", "RFS", "BMD", "Cryo", "Vac", "CnPw"]
+DISCIPLINES = [
+    "EMR",
+    "Ctrl",
+    "WtrC",
+    "Proc",
+    "MC",
+    "ISS",
+    "SC",
+    "PBI",
+    "RFS",
+    "BMD",
+    "Cryo",
+    "Vac",
+    "CnPw",
+]
 
 # Devices to record
-DEVICES = ["TT", "PT", "MTCA", "IOC", "MCU", "Magtr", "CPU", "EVR",
-           "ACCT", "BCM", "PCV", "YSV", "EH", "CT", "AMC", "FSM", "PID"]
+DEVICES = [
+    "TT",
+    "PT",
+    "MTCA",
+    "IOC",
+    "MCU",
+    "Magtr",
+    "CPU",
+    "EVR",
+    "ACCT",
+    "BCM",
+    "PCV",
+    "YSV",
+    "EH",
+    "CT",
+    "AMC",
+    "FSM",
+    "PID",
+]
 
 # Full device names to record (mix of registered and likely-unregistered)
 DEVICE_NAMES = [
@@ -75,6 +134,7 @@ DEVICE_NAMES = [
 # ---------------------------------------------------------------------------
 # Recording
 # ---------------------------------------------------------------------------
+
 
 def record_endpoint(url, label):
     """Fetch a URL and return the JSON response."""
@@ -159,11 +219,11 @@ def main():
     print(f"Done! Recorded {total} API responses.")
     print(f"Saved to: {output_file}")
     print(f"File size: {output_file.stat().st_size / 1024:.1f} KB")
-    print(f"\nNext steps:")
-    print(f"  1. git add test/cassettes/")
-    print(f"  2. git commit -m 'Add VCR cassettes from ESS Naming Service'")
-    print(f"  3. All API tests now work offline!")
-    print(f"{'=' * 60}")
+    print("\nNext steps:")
+    print("  1. git add test/cassettes/")
+    print("  2. git commit -m 'Add VCR cassettes from ESS Naming Service'")
+    print("  3. All API tests now work offline!")
+    print("=" * 60)
 
 
 if __name__ == "__main__":

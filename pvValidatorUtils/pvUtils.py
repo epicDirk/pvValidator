@@ -14,9 +14,6 @@ is preserved for backwards compatibility with tabview.py and existing tests.
 import csv
 import logging
 import re
-import sys
-
-import requests
 
 from pvValidatorUtils import epicsUtils, msiUtils, tabview
 from pvValidatorUtils.exceptions import (
@@ -30,12 +27,11 @@ from pvValidatorUtils.rules import (
     KNOWN_SHORT_PROPERTIES,
     MAX_PROP_RECOMMENDED,
     Severity,
-    check_all_rules,
-    check_property_uniqueness,
+    check_device_index,
     check_element_characters,
     check_element_lengths,
-    check_device_index,
     check_legacy_prefix,
+    check_property_uniqueness,
     effective_property_length,
 )
 
@@ -95,8 +91,14 @@ class pvUtils:
         self.pvlist = self.pvepics.pvstringlist
         self.address = self.pvepics.getAddress
         self.header = [
-            "System", "Subsystem", "Discipline", "Device",
-            "Index", "Property", "PV Name", "Validation Comment",
+            "System",
+            "Subsystem",
+            "Discipline",
+            "Device",
+            "Index",
+            "Property",
+            "PV Name",
+            "Validation Comment",
         ]
         self.sumtitle = "PV Summary"
         self.ioctitle = "Validation Summary"
@@ -216,16 +218,26 @@ class pvUtils:
     def _buildSummary(self):
         """Build the validation summary text."""
         if self.address:
-            self._info_parts.append(f"The PV list is taken from the server {self.address} to perform online validation\n")
+            self._info_parts.append(
+                f"The PV list is taken from the server {self.address} to perform online validation\n"
+            )
 
         self._info_parts.append(f"The Total PVs are = {self.PVTot}\n")
         if self.checkonlyfmt:
             self._info_parts.append("The Total Not Valid PVs are = **Not Evaluated**\n")
-            self._info_parts.append("The PVs with NOT Registered Name are = **Not Evaluated**\n")
+            self._info_parts.append(
+                "The PVs with NOT Registered Name are = **Not Evaluated**\n"
+            )
         else:
-            self._info_parts.append(f"The Total Not Valid PVs are = {self.PVNotValid}\n")
-            self._info_parts.append(f"The PVs with NOT Registered Name are = {self.PVNotRegistered}\n")
-        self._info_parts.append(f"The PVs with Wrong Format are = {self.PVWrongFormat}\n")
+            self._info_parts.append(
+                f"The Total Not Valid PVs are = {self.PVNotValid}\n"
+            )
+            self._info_parts.append(
+                f"The PVs with NOT Registered Name are = {self.PVNotRegistered}\n"
+            )
+        self._info_parts.append(
+            f"The PVs with Wrong Format are = {self.PVWrongFormat}\n"
+        )
         self._info_parts.append(f"The PVs with Rule Failure are = {self.PVRuleFail}\n")
         self._info_parts.append(f"The PVs with Rule Warning are = {self.PVRuleWarn}\n")
         self._info_parts.append(f"The PVs Internal are = {self.PVInternal}\n")
@@ -288,14 +300,18 @@ class pvUtils:
         if not self.checkonlyfmt:
             try:
                 self.api_client.check_connectivity()
-                self._info_parts.append(f"The Validation is done through {self.NameService} Naming Service\n")
+                self._info_parts.append(
+                    f"The Validation is done through {self.NameService} Naming Service\n"
+                )
             except NamingServiceConnectionError as e:
                 logger.error(str(e))
                 raise NamingServiceConnectionError(
                     f"Fail to connect to Naming Service {url}"
                 ) from e
         else:
-            self._info_parts.append("The Validation through Naming Service was skipped\n")
+            self._info_parts.append(
+                "The Validation through Naming Service was skipped\n"
+            )
 
     def _checkValidName(self):
         """Validate PV names against the Naming Service (delegates to NamingServiceClient)."""
@@ -313,10 +329,10 @@ class pvUtils:
 
             # System check
             if sys_name not in self.SysStructCheckList:
-                self.SysStructCheckList[sys_name] = (
-                    self.api_client.validate_system(sys_name)
+                self.SysStructCheckList[sys_name] = self.api_client.validate_system(
+                    sys_name
                 )
-            if self.SysStructCheckList[sys_name] == False:
+            if self.SysStructCheckList[sys_name] is False:
                 scheck += f'Error: The System "{sys_name}" is not active in the Naming Service\n'
                 checkname = False
 
@@ -327,7 +343,7 @@ class pvUtils:
                     self.SysStructCheckList[cache_key] = (
                         self.api_client.validate_subsystem(sys_name, subsys)
                     )
-                if self.SysStructCheckList[cache_key] == False:
+                if self.SysStructCheckList[cache_key] is False:
                     scheck += f'Error: The Subsystem "{subsys}" of the System "{sys_name}" is not active in the Naming Service\n'
                     checkname = False
 
@@ -347,15 +363,15 @@ class pvUtils:
                         self.DevStructCheckList[dis] = (
                             self.api_client.validate_discipline(dis)
                         )
-                    if self.DevStructCheckList[dis] == False:
+                    if self.DevStructCheckList[dis] is False:
                         scheck += f'Error: The Discipline "{dis}" is not active in the Naming Service\n'
                         checkname = False
 
                     if d not in self.DevStructCheckList:
-                        self.DevStructCheckList[d] = (
-                            self.api_client.validate_device(dis, dev)
+                        self.DevStructCheckList[d] = self.api_client.validate_device(
+                            dis, dev
                         )
-                    if self.DevStructCheckList[d] == False:
+                    if self.DevStructCheckList[d] is False:
                         scheck += f'Error: The Device "{dev}" of the Discipline "{dis}" is not active in the Naming Service\n'
                         checkname = False
 
@@ -405,7 +421,12 @@ class pvUtils:
 
     def _checkStructuralRules(self, pv, components):
         """Run element length, character, index, and legacy checks."""
-        for check_fn in [check_element_lengths, check_element_characters, check_device_index, check_legacy_prefix]:
+        for check_fn in [
+            check_element_lengths,
+            check_element_characters,
+            check_device_index,
+            check_legacy_prefix,
+        ]:
             for msg in check_fn(components):
                 text = f"{msg.severity.value}: {msg.message}\n"
                 if text not in self.datainfo.get(pv, ""):
@@ -460,10 +481,14 @@ class pvUtils:
                 pv = dev + ":" + prop
 
                 if len(pv) > max_pv:
-                    self._checkDataMsg(pv1=pv, err1=f"Error: The PV is beyond {max_pv} characters\n")
+                    self._checkDataMsg(
+                        pv1=pv, err1=f"Error: The PV is beyond {max_pv} characters\n"
+                    )
 
                 if len(prop) == 0:
-                    self._checkDataMsg(pv1=pv, err1="Error: The PV Property is missing\n")
+                    self._checkDataMsg(
+                        pv1=pv, err1="Error: The PV Property is missing\n"
+                    )
 
                 prop_eff_len = effective_property_length(prop)
                 if prop_eff_len > max_prop:
@@ -472,37 +497,68 @@ class pvUtils:
                         errmsg += tmperrmsg
                     self._checkDataMsg(pv1=pv, err1=errmsg)
                 elif prop_eff_len > MAX_PROP_RECOMMENDED:
-                    self._checkDataMsg(pv1=pv, warn1=f"Warning: The PV Property exceeds recommended {MAX_PROP_RECOMMENDED} characters ({prop_eff_len})\n")
+                    self._checkDataMsg(
+                        pv1=pv,
+                        warn1=f"Warning: The PV Property exceeds recommended {MAX_PROP_RECOMMENDED} characters ({prop_eff_len})\n",
+                    )
 
                 if prop.endswith("-S") or prop.endswith("_S"):
-                    self._checkDataMsg(pv1=pv, err1="Error: The PV Property for a Setpoint value should end with -SP\n")
+                    self._checkDataMsg(
+                        pv1=pv,
+                        err1="Error: The PV Property for a Setpoint value should end with -SP\n",
+                    )
 
                 if prop.endswith("-R") or prop.endswith("_R"):
-                    self._checkDataMsg(pv1=pv, err1="Error: The PV Property for a Reading value should not contain any suffix\n")
+                    self._checkDataMsg(
+                        pv1=pv,
+                        err1="Error: The PV Property for a Reading value should not contain any suffix\n",
+                    )
 
                 if prop.endswith("-RBV") or prop.endswith("_RBV"):
-                    self._checkDataMsg(pv1=pv, err1="Error: The PV Property for a Readback value should end with -RB\n")
+                    self._checkDataMsg(
+                        pv1=pv,
+                        err1="Error: The PV Property for a Readback value should end with -RB\n",
+                    )
 
                 if 0 < prop_eff_len < min_prop_warn:
                     clean = prop.lstrip("#")
                     if clean not in KNOWN_SHORT_PROPERTIES:
-                        self._checkDataMsg(pv1=pv, warn1=f"Warning: The PV Property is below {min_prop_warn} characters ({prop_eff_len})\n")
+                        self._checkDataMsg(
+                            pv1=pv,
+                            warn1=f"Warning: The PV Property is below {min_prop_warn} characters ({prop_eff_len})\n",
+                        )
 
                 if any(c in self.charnotallow for c in prop):
-                    self._checkDataMsg(pv1=pv, err1="Error: The PV Property contains not allowed character(s)\n")
+                    self._checkDataMsg(
+                        pv1=pv,
+                        err1="Error: The PV Property contains not allowed character(s)\n",
+                    )
 
                 if "#" in prop:
                     if prop.startswith("#"):
-                        self._checkDataMsg(pv1=pv, info1='Info: The PV is an "Internal PV"\n')
+                        self._checkDataMsg(
+                            pv1=pv, info1='Info: The PV is an "Internal PV"\n'
+                        )
                     else:
-                        self._checkDataMsg(pv1=pv, err1="Error: The PV Property contains the # character in not allowed position\n")
+                        self._checkDataMsg(
+                            pv1=pv,
+                            err1="Error: The PV Property contains the # character in not allowed position\n",
+                        )
 
                 if len(prop) > 0 and (
-                    prop[0].isdigit() or prop[0] in self.charnotallow or prop[0] in ("_", "-")
+                    prop[0].isdigit()
+                    or prop[0] in self.charnotallow
+                    or prop[0] in ("_", "-")
                 ):
-                    self._checkDataMsg(pv1=pv, err1="Error: The PV Property does not start alphabetical\n")
+                    self._checkDataMsg(
+                        pv1=pv,
+                        err1="Error: The PV Property does not start alphabetical\n",
+                    )
                 if len(prop) > 0 and prop[0].islower():
-                    self._checkDataMsg(pv1=pv, warn1="Warning: The PV Property does not start in upper case\n")
+                    self._checkDataMsg(
+                        pv1=pv,
+                        warn1="Warning: The PV Property does not start in upper case\n",
+                    )
 
         # Finalize rule/warn status
         for dev, plist in self.PVDict.items():
@@ -547,7 +603,9 @@ class pvUtils:
             for lin in pvf:
                 if not lin.startswith("%") and not lin.startswith("#") and lin.strip():
                     self.pvepics.pvstringlist.push_back(lin.strip().split()[0])
-        self._info_parts.append(f"The PV list is taken from the file {self.pvfile} to perform offline validation\n")
+        self._info_parts.append(
+            f"The PV list is taken from the file {self.pvfile} to perform offline validation\n"
+        )
 
     def _checkEPICSDBFile(self):
         """Load PVs from an EPICS database file with optional macros."""
@@ -570,14 +628,18 @@ class pvUtils:
                         f"Invalid macro definition '{m.strip()}' — expected KEY=VALUE format"
                     )
                 k, v = m.split("=", 1)
-                listdb = [ll.replace("$(" + k.strip() + ")", v.strip()) for ll in listdb]
+                listdb = [
+                    ll.replace("$(" + k.strip() + ")", v.strip()) for ll in listdb
+                ]
         if any("$" in s for s in listdb):
             raise MacroSubstitutionError(
                 f"Missing macro definitions for {epicsdbfile}, please check!"
             )
         for ldb in listdb:
             self.pvepics.pvstringlist.push_back(ldb)
-        self._info_parts.append(f"The PV list is taken from the EPICS DB {epicsdbfile} file to perform offline validation\n")
+        self._info_parts.append(
+            f"The PV list is taken from the EPICS DB {epicsdbfile} file to perform offline validation\n"
+        )
 
     def _checkSUBSFile(self):
         """Load PVs from an EPICS substitutions file via MSI."""
@@ -609,7 +671,9 @@ class pvUtils:
             )
         for ldb in listdb:
             self.pvepics.pvstringlist.push_back(ldb)
-        self._info_parts.append(f"The PV list is taken expanding the substitution file {msisubsfile} to perform offline validation\n")
+        self._info_parts.append(
+            f"The PV list is taken expanding the substitution file {msisubsfile} to perform offline validation\n"
+        )
 
     # =================================================================
     # Metadata
@@ -618,6 +682,7 @@ class pvUtils:
     def _getMeta(self):
         """Load package metadata."""
         from importlib.metadata import metadata
+
         pkg = "pvValidatorUtils"
         meta = metadata(pkg)
         self.author = meta.get("Author-email").split(" <")[0]

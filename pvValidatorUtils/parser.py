@@ -8,7 +8,6 @@ Supports all 4 valid ESS PV formats:
   4. Sys::Property                  (high-level system PV)
 """
 
-import re
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -16,8 +15,8 @@ __all__ = ["PVComponents", "parse_pv", "is_valid_format"]
 
 
 # Format type constants
-FMT_FULL = "full"                      # Sys-Sub:Dis-Dev-Idx:Property
-FMT_NO_SUBSYSTEM = "no-subsystem"      # Sys:Dis-Dev-Idx:Property
+FMT_FULL = "full"  # Sys-Sub:Dis-Dev-Idx:Property
+FMT_NO_SUBSYSTEM = "no-subsystem"  # Sys:Dis-Dev-Idx:Property
 FMT_HIGH_LEVEL_SUBSYS = "high-level-subsys"  # Sys-Sub::Property
 FMT_HIGH_LEVEL_SYS = "high-level-sys"  # Sys::Property
 
@@ -36,6 +35,7 @@ class PVComponents:
         raw: Original PV string
         format_type: One of FMT_FULL, FMT_NO_SUBSYSTEM, FMT_HIGH_LEVEL_SUBSYS, FMT_HIGH_LEVEL_SYS
     """
+
     system: str
     subsystem: str
     discipline: str
@@ -72,8 +72,14 @@ class PVComponents:
 
     def to_list(self) -> List[str]:
         """Return [sys, sub, dis, dev, idx, prop] for backwards compatibility."""
-        return [self.system, self.subsystem, self.discipline,
-                self.device, self.index, self.property]
+        return [
+            self.system,
+            self.subsystem,
+            self.discipline,
+            self.device,
+            self.index,
+            self.property,
+        ]
 
 
 def parse_pv(pv: str) -> Optional[PVComponents]:
@@ -150,7 +156,7 @@ def _parse_system_part(sys_part: str) -> tuple:
     if "-" in sys_part:
         idx = sys_part.index("-")
         system = sys_part[:idx]
-        subsystem = sys_part[idx + 1:]
+        subsystem = sys_part[idx + 1 :]
         if not system or not subsystem:
             return None, None
         return system, subsystem

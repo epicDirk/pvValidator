@@ -14,6 +14,7 @@ logger = logging.getLogger("pvvalidator")
 
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
@@ -72,10 +73,13 @@ class RuleConfig:
 
     @property
     def naming_service_url(self) -> Dict[str, str]:
-        return self._config.get("metadata", {}).get("naming_service", {
-            "prod": "https://naming.esss.lu.se/",
-            "test": "https://naming-test-01.cslab.esss.lu.se/",
-        })
+        return self._config.get("metadata", {}).get(
+            "naming_service",
+            {
+                "prod": "https://naming.esss.lu.se/",
+                "test": "https://naming-test-01.cslab.esss.lu.se/",
+            },
+        )
 
     # -----------------------------------------------------------------
     # Rule accessors
@@ -218,16 +222,41 @@ class RuleConfig:
                 },
             },
             "elements": [
-                {"id": "ELEM-6", "check": "max_length", "value": 6, "severity": "error"},
+                {
+                    "id": "ELEM-6",
+                    "check": "max_length",
+                    "value": 6,
+                    "severity": "error",
+                },
             ],
             "index": [],
             "property": [
-                {"id": "PV-LEN", "check": "pv_max_length", "value": 60, "severity": "error"},
-                {"id": "PROP-2", "check": "max_length", "value": 25, "exclude_suffixes": ["-SP", "-RB"], "severity": "error"},
-                {"id": "PROP-3", "check": "min_length", "value": 4, "severity": "warning"},
+                {
+                    "id": "PV-LEN",
+                    "check": "pv_max_length",
+                    "value": 60,
+                    "severity": "error",
+                },
+                {
+                    "id": "PROP-2",
+                    "check": "max_length",
+                    "value": 25,
+                    "exclude_suffixes": ["-SP", "-RB"],
+                    "severity": "error",
+                },
+                {
+                    "id": "PROP-3",
+                    "check": "min_length",
+                    "value": 4,
+                    "severity": "warning",
+                },
             ],
             "legacy": [
-                {"id": "LEGACY-PREFIX", "prefixes": ["Cmd_", "P_", "FB_", "SP_"], "severity": "warning"},
+                {
+                    "id": "LEGACY-PREFIX",
+                    "prefixes": ["Cmd_", "P_", "FB_", "SP_"],
+                    "severity": "warning",
+                },
             ],
             "exceptions": [],
         }

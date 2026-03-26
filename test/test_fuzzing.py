@@ -12,13 +12,14 @@ import string
 import pytest
 
 try:
-    from hypothesis import given, settings, assume
+    from hypothesis import given, settings
     from hypothesis import strategies as st
+
     HAS_HYPOTHESIS = True
 except ImportError:
     HAS_HYPOTHESIS = False
 
-from pvValidatorUtils.parser import parse_pv, PVComponents
+from pvValidatorUtils.parser import PVComponents, parse_pv
 from pvValidatorUtils.rules import (
     check_all_rules,
     normalize_for_confusion,
@@ -27,11 +28,20 @@ from pvValidatorUtils.rules import (
 skipno = pytest.mark.skipif(not HAS_HYPOTHESIS, reason="hypothesis not installed")
 
 if HAS_HYPOTHESIS:
-    element = st.text(alphabet=string.ascii_letters + string.digits, min_size=1, max_size=8)
+    element = st.text(
+        alphabet=string.ascii_letters + string.digits, min_size=1, max_size=8
+    )
     property_chars = string.ascii_letters + string.digits + "-_#"
     prop = st.text(alphabet=property_chars, min_size=1, max_size=30)
-    full_pv = st.builds(lambda s, sub, dis, dev, idx, p: f"{s}-{sub}:{dis}-{dev}-{idx}:{p}",
-                        element, element, element, element, element, prop)
+    full_pv = st.builds(
+        lambda s, sub, dis, dev, idx, p: f"{s}-{sub}:{dis}-{dev}-{idx}:{p}",
+        element,
+        element,
+        element,
+        element,
+        element,
+        prop,
+    )
     high_level_pv = st.builds(lambda s, p: f"{s}::{p}", element, prop)
     any_pv = st.one_of(full_pv, high_level_pv)
     random_string = st.text(min_size=0, max_size=100)
@@ -40,6 +50,7 @@ if HAS_HYPOTHESIS:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @skipno
 class TestParserNeverCrashes:
@@ -81,7 +92,11 @@ class TestRulesNeverCrash:
 class TestNormalizationProperties:
     """Normalization for confusable detection has specific properties."""
 
-    @given(s=st.text(alphabet=string.ascii_letters + string.digits, min_size=1, max_size=20))
+    @given(
+        s=st.text(
+            alphabet=string.ascii_letters + string.digits, min_size=1, max_size=20
+        )
+    )
     @settings(max_examples=300)
     def test_normalization_idempotent(self, s):
         """Normalizing twice gives the same result as normalizing once."""
@@ -89,7 +104,11 @@ class TestNormalizationProperties:
         twice = normalize_for_confusion(once)
         assert once == twice
 
-    @given(s=st.text(alphabet=string.ascii_letters + string.digits, min_size=1, max_size=20))
+    @given(
+        s=st.text(
+            alphabet=string.ascii_letters + string.digits, min_size=1, max_size=20
+        )
+    )
     def test_normalization_lowercase(self, s):
         """Normalized output is always lowercase."""
         result = normalize_for_confusion(s)

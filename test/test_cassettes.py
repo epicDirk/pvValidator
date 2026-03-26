@@ -44,10 +44,15 @@ def mock_naming_service(cassettes):
             rsps.add(responses.GET, NAMES_URL + name, json=data, status=200)
 
         # Catch-all for any parts/names URL not in cassettes
-        rsps.add(responses.GET, re.compile(r".*/rest/parts/mnemonic/.*"),
-                 json=[], status=200)
-        rsps.add(responses.GET, re.compile(r".*/rest/deviceNames/.*"),
-                 json={"status": "NOT_FOUND"}, status=200)
+        rsps.add(
+            responses.GET, re.compile(r".*/rest/parts/mnemonic/.*"), json=[], status=200
+        )
+        rsps.add(
+            responses.GET,
+            re.compile(r".*/rest/deviceNames/.*"),
+            json={"status": "NOT_FOUND"},
+            status=200,
+        )
 
         yield rsps
 
@@ -58,6 +63,7 @@ def mock_naming_service(cassettes):
 
 try:
     from pvValidatorUtils import epicsUtils, pvUtils
+
     HAS_EPICS = True
 except ImportError:
     HAS_EPICS = False
@@ -76,11 +82,15 @@ def make_pvutils(pv_list, checkonlyfmt=False):
 # Tests: Real ESS system validation (from cassettes)
 # ---------------------------------------------------------------------------
 
+
 class TestRealSystems:
     """Validate real ESS systems against cassette data."""
 
     @skipno
-    @pytest.mark.parametrize("system", ["DTL", "PBI", "ISrc", "Tgt", "CWM", "YMIR", "LOKI", "DREAM", "RFQ", "TD"])
+    @pytest.mark.parametrize(
+        "system",
+        ["DTL", "PBI", "ISrc", "Tgt", "CWM", "YMIR", "LOKI", "DREAM", "RFQ", "TD"],
+    )
     def test_known_systems_valid(self, system):
         """Known ESS systems should be recognized."""
         pvu = make_pvutils([f"{system}-010:EMR-TT-001:Temperature"], checkonlyfmt=True)
@@ -117,7 +127,10 @@ class TestRealSystems:
         pvu._checkValidName()
         pv = "QQQQQQ-010:EMR-TT-001:Temperature"
         assert pvu.VNameD[pv] is False
-        assert "not active" in pvu.datainfo[pv].lower() or "not registered" in pvu.datainfo[pv].lower()
+        assert (
+            "not active" in pvu.datainfo[pv].lower()
+            or "not registered" in pvu.datainfo[pv].lower()
+        )
 
 
 class TestRealSubsystems:
@@ -147,11 +160,14 @@ class TestRealDisciplines:
     """Validate real ESS disciplines against cassette data."""
 
     @skipno
-    @pytest.mark.parametrize("pv,should_pass", [
-        ("DTL-010:EMR-TT-001:Temperature", True),   # EMR is real
-        ("CWM-CWS03:WtrC-PT-011:Pressure", True),   # WtrC is real
-        ("PBI-BCM01:Ctrl-MTCA-100:Status", True),    # Ctrl is real
-    ])
+    @pytest.mark.parametrize(
+        "pv,should_pass",
+        [
+            ("DTL-010:EMR-TT-001:Temperature", True),  # EMR is real
+            ("CWM-CWS03:WtrC-PT-011:Pressure", True),  # WtrC is real
+            ("PBI-BCM01:Ctrl-MTCA-100:Status", True),  # Ctrl is real
+        ],
+    )
     def test_known_disciplines(self, pv, should_pass):
         pvu = make_pvutils([pv])
         pvu._checkValidFormat()
@@ -175,12 +191,15 @@ class TestRealDeviceNames:
         pvu._checkValidName()
         for pv in good_pvs:
             assert pvu.VFormD[pv] is True, f"Format check failed for {pv}"
-            assert pvu.VNameD[pv] is True, f"Name check failed for {pv}: {pvu.datainfo.get(pv, '')}"
+            assert (
+                pvu.VNameD[pv] is True
+            ), f"Name check failed for {pv}: {pvu.datainfo.get(pv, '')}"
 
 
 # ---------------------------------------------------------------------------
 # Tests: Cassette data integrity
 # ---------------------------------------------------------------------------
+
 
 class TestCassetteData:
     """Verify the cassette file itself is well-formed."""
@@ -202,8 +221,12 @@ class TestCassetteData:
     def test_device_name_has_status(self, cassettes):
         for name, data in cassettes["device_names"].items():
             if isinstance(data, dict) and "status" in data:
-                assert data["status"] in ("ACTIVE", "OBSOLETE", "DELETED", ""), \
-                    f"Unexpected status '{data['status']}' for {name}"
+                assert data["status"] in (
+                    "ACTIVE",
+                    "OBSOLETE",
+                    "DELETED",
+                    "",
+                ), f"Unexpected status '{data['status']}' for {name}"
 
     def test_metadata_present(self, cassettes):
         assert "_metadata" in cassettes

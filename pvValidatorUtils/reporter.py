@@ -6,16 +6,13 @@ Supports multiple output formats:
 - CSV: Backwards-compatible with original pvValidator output
 """
 
-import csv
 import html as html_mod
-import io
 import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from .parser import PVComponents, parse_pv
-from .rules import Severity, ValidationMessage, ValidationResult
+from .rules import ValidationResult
 
 logger = logging.getLogger("pvvalidator")
 
@@ -31,7 +28,9 @@ class JSONReporter:
         report = {
             "generated": datetime.now().isoformat(),
             "pvvalidator_version": metadata.get("version", "") if metadata else "",
-            "rule_document": metadata.get("document", "ESS-0000757") if metadata else "ESS-0000757",
+            "rule_document": (
+                metadata.get("document", "ESS-0000757") if metadata else "ESS-0000757"
+            ),
             "summary": self._summary(results),
             "results": [self._result_to_dict(r) for r in results],
         }
@@ -111,7 +110,9 @@ class HTMLReporter:
         summary = self._summary(results)
         rows_html = "\n".join(self._result_row(r) for r in results)
         version = metadata.get("version", "") if metadata else ""
-        document = metadata.get("document", "ESS-0000757") if metadata else "ESS-0000757"
+        document = (
+            metadata.get("document", "ESS-0000757") if metadata else "ESS-0000757"
+        )
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -197,7 +198,12 @@ function filterTable(q) {{
         valid = sum(1 for r in results if r.format_valid and not r.has_errors)
         errors = sum(1 for r in results if r.has_errors)
         warnings = sum(1 for r in results if r.has_warnings and not r.has_errors)
-        return {"total_pvs": total, "valid": valid, "errors": errors, "warnings": warnings}
+        return {
+            "total_pvs": total,
+            "valid": valid,
+            "errors": errors,
+            "warnings": warnings,
+        }
 
     def _result_row(self, result: ValidationResult) -> str:
         # PV name
@@ -208,17 +214,29 @@ function filterTable(q) {{
             c = result.components
             parts = []
             if c.system:
-                parts.append(f'<span class="seg seg-sys">{self._escape(c.system)}</span>')
+                parts.append(
+                    f'<span class="seg seg-sys">{self._escape(c.system)}</span>'
+                )
             if c.subsystem:
-                parts.append(f'<span class="seg seg-sub">{self._escape(c.subsystem)}</span>')
+                parts.append(
+                    f'<span class="seg seg-sub">{self._escape(c.subsystem)}</span>'
+                )
             if c.discipline:
-                parts.append(f'<span class="seg seg-dis">{self._escape(c.discipline)}</span>')
+                parts.append(
+                    f'<span class="seg seg-dis">{self._escape(c.discipline)}</span>'
+                )
             if c.device:
-                parts.append(f'<span class="seg seg-dev">{self._escape(c.device)}</span>')
+                parts.append(
+                    f'<span class="seg seg-dev">{self._escape(c.device)}</span>'
+                )
             if c.index:
-                parts.append(f'<span class="seg seg-idx">{self._escape(c.index)}</span>')
+                parts.append(
+                    f'<span class="seg seg-idx">{self._escape(c.index)}</span>'
+                )
             if c.property:
-                parts.append(f'<span class="seg seg-prop">{self._escape(c.property)}</span>')
+                parts.append(
+                    f'<span class="seg seg-prop">{self._escape(c.property)}</span>'
+                )
             comp_html = " ".join(parts)
         else:
             comp_html = '<span style="color:#555">—</span>'
@@ -238,7 +256,9 @@ function filterTable(q) {{
         for m in result.messages:
             cls = f"msg-{m.severity.value.lower()}"
             msg_parts.append(f'<div class="{cls}">{self._escape(str(m))}</div>')
-        msg_html = f'<div class="messages">{"".join(msg_parts)}</div>' if msg_parts else ""
+        msg_html = (
+            f'<div class="messages">{"".join(msg_parts)}</div>' if msg_parts else ""
+        )
 
         return f"    <tr><td>{pv_html}</td><td>{comp_html}</td><td>{status_html}</td><td>{msg_html}</td></tr>"
 
