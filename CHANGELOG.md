@@ -36,6 +36,14 @@ All notable changes to pvValidator are documented here.
 - Dead `location_string` branches and `lc_all` in tabview.py
 - Hardcoded year "2021" in tabview.py TUI footer
 
+### Known Gaps (ESS-0000757 rules not yet implemented)
+- **PROP-5**: Pascal Case check for multi-word properties (SHOULD) — needs heuristic
+- **PROP-7**: No units in property names (SHALL NOT) — cannot be checked statically
+- **LEGACY-5DIGIT**: 5-digit index warning for Cryo/Vacuum disciplines — trivial to add
+- **EXC-TGT**: Target Station 4-digit subsystem exception — needs Tgt-specific logic
+- **EXC-MTCA**: MTCA controller naming pattern (Ctrl-MTCA-XXX) — needs Dis-specific logic
+- **ELEM-3/4**: Subsystem/Device uniqueness across project — checked via Naming Service API only
+
 ## [Round 2] — 2026-03-25
 
 ### Added
