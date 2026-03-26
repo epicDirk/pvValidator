@@ -4,7 +4,7 @@
 
 #----------------------------------------------------------------------------
 # Setup the project
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 project(pvValidator)
 
 #----------------------------------------------------------------------------
@@ -71,6 +71,11 @@ set(MSI msiUtils)
 
 set(EPICS $ENV{EPICS_BASE})
 set(ARCH $ENV{EPICS_HOST_ARCH})
+if (NOT ARCH)
+    message(FATAL_ERROR "$EPICS_HOST_ARCH not defined! Source your EPICS Environment. Exit.")
+endif()
+
+set(CMAKE_CXX_STANDARD 11)
 
 set(EPICSLIB -L${EPICS}/lib/${ARCH} -lpvAccessCA -lpvAccess -lpvData -lca -lCom)
 set(CMAKE_INSTALL_RPATH ${EPICS}/lib/${ARCH})
@@ -88,6 +93,7 @@ add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/src/${MSI}_wrap.cxx ${CMAKE_CURR
     )
 
 
+# NOTE: compiler/gcc and os/Linux paths are EPICS conventions for the e3 Docker environment
 include_directories(${PROJECT_SOURCE_DIR}/src/pv ${PROJECT_SOURCE_DIR}/src ${EPICS}/include
     ${EPICS}/include/compiler/gcc ${EPICS}/include/pv ${EPICS}/include/os/Linux
     ${Python_INCLUDE_DIRS}
