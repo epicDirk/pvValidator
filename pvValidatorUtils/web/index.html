@@ -292,13 +292,15 @@ function parsePV(pv) {
 var DISALLOWED = new Set('!@$%^&*()+={}[]|\\:;\'"<>,.?/~`'.split(''));
 var MAX_PV=60, MAX_PROP=25, MIN_PROP=4, MAX_ELEM=6;
 var LEGACY = ['Cmd_','P_','FB_','SP_'];
+var KNOWN_SHORT = new Set(['On','Off','In','Out','Ok','Set','Get','Ack','Low','High']);
 function epLen(p) { return p.endsWith('-SP') ? p.length-3 : p.endsWith('-RB') ? p.length-3 : p.length; }
 function checkRules(c) {
   var m=[], p=c.property, pv=c.raw, el=epLen(p);
   if (pv.length>MAX_PV) m.push({s:'error',m:'PV exceeds '+MAX_PV+' chars ('+pv.length+')',r:'PV-LEN'});
+  if (!p||p.length===0) { m.push({s:'error',m:'Property is missing',r:'PROP-EMPTY'}); return m; }
   if (el>MAX_PROP) m.push({s:'error',m:'Property exceeds '+MAX_PROP+' chars ('+el+')',r:'PROP-2'});
   else if (el>20) m.push({s:'warning',m:'Property exceeds recommended 20 chars ('+el+')',r:'PROP-2-WARN'});
-  if (el>0&&el<MIN_PROP) m.push({s:'warning',m:'Property below '+MIN_PROP+' chars',r:'PROP-3'});
+  if (el>0&&el<MIN_PROP&&!KNOWN_SHORT.has(p.replace(/^#/,''))) m.push({s:'warning',m:'Property below '+MIN_PROP+' chars',r:'PROP-3'});
   if (p.endsWith('-S')||p.endsWith('_S')) m.push({s:'error',m:'Setpoint must use -SP',r:'PROP-SP'});
   if (p.endsWith('-R')||p.endsWith('_R')) m.push({s:'error',m:'Reading should not have -R',r:'PROP-R'});
   if (p.endsWith('-RBV')||p.endsWith('_RBV')) m.push({s:'error',m:'Readback must use -RB',r:'PROP-RB'});
@@ -311,12 +313,17 @@ function checkRules(c) {
   for (var i=0;i<p.length;i++) if (DISALLOWED.has(p[i])){m.push({s:'error',m:'Disallowed character',r:'PROP-11'});break;}
   var elems=[['System',c.system,true],['Subsystem',c.subsystem,false],['Discipline',c.discipline,true],['Device',c.device,true]];
   for (var e=0;e<elems.length;e++){var v=elems[e][1];if(!v)continue;
-    if(v.length>MAX_ELEM)m.push({s:'error',m:elems[e][0]+' exceeds '+MAX_ELEM+' chars',r:'ELEM-6'});
+    if(v.length>MAX_ELEM){
+      // Target Station exception (Annex B)
+      if(elems[e][0]==='Subsystem'&&c.system==='Tgt')m.push({s:'info',m:'Target Station subsystem exceeds '+MAX_ELEM+' chars (allowed)',r:'EXC-TGT'});
+      else m.push({s:'error',m:elems[e][0]+' exceeds '+MAX_ELEM+' chars',r:'ELEM-6'});
+    }
     if(!/^[A-Za-z0-9]+$/.test(v))m.push({s:'error',m:elems[e][0]+' non-alphanumeric',r:'ELEM-1'});
     else if(elems[e][2]&&!/^[A-Za-z]/.test(v))m.push({s:'error',m:elems[e][0]+' must start with letter',r:'ELEM-2'});}
-  if(!c.formatType.startsWith('high-level')&&c.index){
-    if(c.index.length>6)m.push({s:'error',m:'Index exceeds 6 chars',r:'IDX-LEN'});
-    if(!/^\d{1,4}$/.test(c.index)&&!/^\d{3}[a-z]{0,3}$/.test(c.index)&&!/^\d{1,6}$/.test(c.index))
+  if(!c.formatType.startsWith('high-level')){
+    if(!c.index)m.push({s:'error',m:'Device index is missing',r:'IDX-MANDATORY'});
+    else if(c.index.length>6)m.push({s:'error',m:'Index exceeds 6 chars',r:'IDX-LEN'});
+    else if(!/^\d{1,4}$/.test(c.index)&&!/^\d{3}[a-z]{0,3}$/.test(c.index)&&!/^\d{1,6}$/.test(c.index))
       m.push({s:'warning',m:'Non-standard index',r:'IDX-STYLE'});}
   for(var l=0;l<LEGACY.length;l++)if(p.startsWith(LEGACY[l])){m.push({s:'warning',m:'Legacy prefix '+LEGACY[l],r:'LEGACY'});break;}
   // PROP-5: PascalCase check
@@ -353,7 +360,15 @@ var RULE_INFO = {
   'ELEM-2':{ref:'ESS-0000757 \u00a73 Rule 2',why:'Digit-start is reserved for subsystem section numbers (e.g., DTL-010).',fix:'Start with a letter.'},
   'IDX-LEN':{ref:'ESS-0000757 \u00a75.2',why:'Same 6-character limit as other name elements.',fix:'Shorten the index. Standard: 1-4 digits.'},
   'IDX-STYLE':{ref:'ESS-0000757 \u00a75.2',why:'Should follow Scientific (1-4 digits) or P&ID (3 digits + lowercase) style.',fix:'Adjust to match your discipline style.'},
-  'LEGACY':{ref:'ESS-0000757 Annex C',why:'Cmd_, P_, FB_, SP_ prefixes are from older naming schemes.',fix:'Remove the prefix for new PVs.',suggestion:function(pv,p){for(var i=0;i<LEGACY.length;i++)if(p.startsWith(LEGACY[i]))return pv.replace(/:([^:]+)$/,':'+p.slice(LEGACY[i].length));return null;}}
+  'LEGACY':{ref:'ESS-0000757 Annex C',why:'Cmd_, P_, FB_, SP_ prefixes are from older naming schemes.',fix:'Remove the prefix for new PVs.',suggestion:function(pv,p){for(var i=0;i<LEGACY.length;i++)if(p.startsWith(LEGACY[i]))return pv.replace(/:([^:]+)$/,':'+p.slice(LEGACY[i].length));return null;}},
+  'PROP-2-WARN':{ref:'ESS-0000757 \u00a76.2 Rule 2',why:'Recommended limit is 20 chars. You can go to 25 with justification.',fix:'Consider abbreviating.'},
+  'PROP-EMPTY':{ref:'ESS-0000757 \u00a76.2',why:'Every PV needs a property name after the last colon.',fix:'Add a property name (e.g., Temperature, Status, Pressure).'},
+  'IDX-MANDATORY':{ref:'ESS-0000757 \u00a75.2',why:'Every device needs an index to distinguish multiple instances.',fix:'Add a numeric index (e.g., 001).'},
+  'IDX-LEN':{ref:'ESS-0000757 \u00a75.2',why:'Same 6-character limit as other name elements.',fix:'Shorten the index.'},
+  'IDX-STYLE':{ref:'ESS-0000757 \u00a75.2',why:'Should follow Scientific (1-4 digits) or P&ID (3 digits + lowercase).',fix:'Adjust format.'},
+  'LEGACY-5DIGIT':{ref:'ESS-0000757 Annex C',why:'5-digit indexes in Cryo/Vac are legacy.',fix:'Use max 4 digits for new equipment.'},
+  'EXC-MTCA':{ref:'ESS-0000757 Annex A',why:'MTCA controllers use 3-digit index (system + counter).',fix:'Zero-pad to 3 digits.'},
+  'EXC-TGT':{ref:'ESS-0000757 Annex B',why:'Target Station subsystems may exceed 6 chars.',fix:'No action needed for Tgt PVs.'}
 };
 function ruleTitle(r){return RULE_INFO[r]?' title="'+esc(RULE_INFO[r].ref)+'"':'';}
 
