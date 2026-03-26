@@ -63,7 +63,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=f"EPICS PV Validation Tool ({version})",
         formatter_class=lambda prog: argparse.HelpFormatter(prog, width=150),
-        epilog="Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)",
+        epilog="Exit codes: 0 = valid, 1 = validation errors found, 10 = EPICS/system error. Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)",
     )
 
     parser.add_argument(
@@ -186,6 +186,13 @@ def main():
         default=False,
         help="also apply suggested (uncertain) fixes (use with --fix)",
     )
+    parser.add_argument(
+        "--interactive",
+        dest="interactive",
+        action="store_true",
+        default=False,
+        help="prompt for each fix individually (use with --fix)",
+    )
 
     # Verbose/explain options
     parser.add_argument(
@@ -220,6 +227,10 @@ def main():
     # Require input source for all other operations
     if not (args.iocserver or args.pvfile or args.epicsdb or args.msi):
         parser.error("one of the arguments -s -i -e -m is required")
+
+    # --verbose implies --suggest (show fix suggestions alongside validation)
+    if args.verbose and not args.suggest and not args.fix:
+        args.suggest = True
 
     # Handle --suggest or --fix (uses autofix module)
     if args.suggest or args.fix:
@@ -258,6 +269,25 @@ def main():
         sys.exit(10)
 
 
+def _load_pv_list(args, pvepics):
+    """Load PV names from file or epicsUtils object.
+
+    Shared by _run_with_reporter() and _run_with_autofix() to avoid
+    duplicating the file-reading logic.
+    """
+    pv_list = []
+    if args.pvfile:
+        with open(args.pvfile, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("%") and not line.startswith("#"):
+                    pv_list.append(line.split()[0])
+    elif pvepics:
+        for pv in pvepics.pvstringlist:
+            pv_list.append(pv)
+    return pv_list
+
+
 def _run_with_reporter(args, pvepics):
     """Run validation and output via JSON or HTML reporter."""
     from pvValidatorUtils.parser import parse_pv
@@ -269,17 +299,7 @@ def _run_with_reporter(args, pvepics):
         check_property_uniqueness,
     )
 
-    # Build PV list (same logic as pvUtils)
-    pv_list = []
-    if args.pvfile:
-        with open(args.pvfile, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("%") and not line.startswith("#"):
-                    pv_list.append(line.split()[0])
-    else:
-        for pv in pvepics.pvstringlist:
-            pv_list.append(pv)
+    pv_list = _load_pv_list(args, pvepics)
 
     # Validate each PV
     results = []
@@ -312,6 +332,11 @@ def _run_with_reporter(args, pvepics):
                 for result in results:
                     if result.pv == pv_str:
                         result.messages.extend(msgs)
+
+    # Add autofix suggestions to each result
+    from pvValidatorUtils.autofix import suggest_fixes
+    for result in results:
+        result.suggestions = suggest_fixes(result.pv)
 
     # Generate output
     metadata = {"version": version, "document": "ESS-0000757"}
@@ -361,18 +386,7 @@ def _run_with_autofix(args, pvepics):
     """Run validation with auto-fix suggestions or automatic fixing."""
     from pvValidatorUtils.autofix import Applicability, apply_fixes, suggest_fixes
 
-    # Build PV list
-    pv_list = []
-    if args.pvfile:
-        with open(args.pvfile, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("%") and not line.startswith("#"):
-                    pv_list.append(line.split()[0])
-    elif pvepics:
-        for pv in pvepics.pvstringlist:
-            pv_list.append(pv)
-
+    pv_list = _load_pv_list(args, pvepics)
     if not pv_list:
         print("No PV names to process.")
         return
@@ -393,14 +407,34 @@ def _run_with_autofix(args, pvepics):
             continue
 
         if args.fix and auto_suggestions:
-            # Apply safe fixes
             result = apply_fixes(pv, include_suggested=getattr(args, 'unsafe', False))
             if result != pv:
-                print(f"  {pv}")
-                print(f"    → {result}")
-                for s in auto_suggestions:
-                    print(f"      [{s.rule_id}] {s.description}")
-                fixed_count += 1
+                if getattr(args, 'interactive', False):
+                    # Interactive mode: prompt for each fix
+                    print(f"\n  {pv}")
+                    print(f"    → {result}")
+                    for s in auto_suggestions:
+                        print(f"      [{s.rule_id}] {s.description}  [{s.applicability.value.upper()}]")
+                    try:
+                        choice = input("    Apply? [Y]es / [N]o / [A]ll / [Q]uit > ").strip().lower()
+                    except EOFError:
+                        choice = "n"
+                    if choice in ("q", "quit"):
+                        break
+                    elif choice in ("a", "all"):
+                        args.interactive = False  # disable interactive for remaining
+                        fixed_count += 1
+                    elif choice in ("y", "yes", ""):
+                        fixed_count += 1
+                    else:
+                        valid_count += 1
+                        continue
+                else:
+                    print(f"  {pv}")
+                    print(f"    → {result}")
+                    for s in auto_suggestions:
+                        print(f"      [{s.rule_id}] {s.description}")
+                    fixed_count += 1
             else:
                 valid_count += 1
         else:

@@ -82,6 +82,7 @@ class ValidationResult:
     format_valid: bool
     components: Optional[PVComponents] = None
     messages: List[ValidationMessage] = field(default_factory=list)
+    suggestions: list = field(default_factory=list)  # List[FixSuggestion] from autofix
 
     @property
     def has_errors(self) -> bool:

@@ -467,13 +467,37 @@ function esc(s){var d=document.createElement('div');d.textContent=s;return d.inn
 function loadFile(e){var f=e.target.files[0];if(!f)return;if(f.size>1048576){alert('File too large (max 1 MB)');return;}var r=new FileReader();
   r.onload=function(ev){document.getElementById('pvInput').value=ev.target.result;validate();};r.readAsText(f);}
 function loadExample(){document.getElementById('pvInput').value=
-  'DTL-010:EMR-TT-001:Temperature\nPBI-BCM01:Ctrl-MTCA-100:Status\nCWM-CWS03:WtrC-PT-011:Pressure\n'+
-  'YMIR-SpScn:MC-MCU-001:Position\nTgt-HeC1010:Proc-TT-003:Temperature\nTgt::PowerConsumption\n'+
-  'DTL-010::Temperature\nISrc::Status\nLoKI-SC::ReadyForBeam\n'+
-  'DTL-010:EMR-TT-001:#InternalDebug\nDTL-010:EMR-TT-001:Temperature-SP\nDTL-010:EMR-TT-001:Current-RB\n'+
-  '% Comment lines are skipped\n'+
-  'DTL-010:EMR-TT-001:Temperature-S\nDTL-010:EMR-TT-001:Temperature-RBV\nDTL-010:EMR-TT-001:2BadStart\n'+
-  'ABCDEFG-010:EMR-TT-001:Temperature\nDTL-010:EMR-TT-002:TempO\nDTL-010:EMR-TT-002:Temp0\nINVALID::FORMAT::HERE';
+  '% === VALID EXAMPLES ===\n'+
+  '% Full format: System-Subsystem:Discipline-Device-Index:Property\n'+
+  'DTL-010:EMR-TT-001:Temperature\n'+
+  'PBI-BCM01:Ctrl-MTCA-100:Status\n'+
+  'CWM-CWS03:WtrC-PT-011:Pressure\n'+
+  '% Without subsystem:\n'+
+  'ISrc:Vac-VG-001:Pressure\n'+
+  '% High-level system PVs (no device section):\n'+
+  'Tgt::PowerConsumption\n'+
+  'DTL-010::Temperature\n'+
+  'ISrc::Status\n'+
+  '% Internal PV (# prefix = debug only, not for OPI screens):\n'+
+  'DTL-010:EMR-TT-001:#InternalDebug\n'+
+  '% Setpoint (-SP) and Readback (-RB) suffixes:\n'+
+  'DTL-010:EMR-TT-001:Temperature-SP\n'+
+  'DTL-010:EMR-TT-001:Current-RB\n'+
+  '%\n'+
+  '% === COMMON MISTAKES (click errors for explanations) ===\n'+
+  '% Wrong: -S suffix. Should be -SP (Rule 9a):\n'+
+  'DTL-010:EMR-TT-001:Temperature-S\n'+
+  '% Wrong: -RBV suffix. Should be -RB (Rule 9b):\n'+
+  'DTL-010:EMR-TT-001:Temperature-RBV\n'+
+  '% Wrong: starts with digit (Rule 11):\n'+
+  'DTL-010:EMR-TT-001:2BadStart\n'+
+  '% Wrong: System name too long (>6 chars, Rule 6):\n'+
+  'ABCDEFG-010:EMR-TT-001:Temperature\n'+
+  '% Wrong: confusable properties O vs 0 (Rule 1):\n'+
+  'DTL-010:EMR-TT-002:TempO\n'+
+  'DTL-010:EMR-TT-002:Temp0\n'+
+  '% Wrong: too many colons:\n'+
+  'INVALID::FORMAT::HERE';
   validate();}
 function clearAll(){document.getElementById('pvInput').value='';validate();}
 function toggleDetail(uid){var el=document.getElementById('detail-'+uid);if(el)el.classList.toggle('open');}
