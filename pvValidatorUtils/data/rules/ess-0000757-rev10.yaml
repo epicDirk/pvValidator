@@ -9,6 +9,12 @@
 #   error   = SHALL (mandatory, violation = invalid PV)
 #   warning = SHOULD (recommended, violation = warning only)
 #   info    = informational (no action required)
+#
+# Educational fields (for --explain, Web-UI tooltips, reference page):
+#   why:          Plain-English reason this rule exists
+#   fix:          Actionable guidance for the user
+#   example_good: A correct PV that passes this rule
+#   example_bad:  An incorrect PV that triggers this rule
 
 metadata:
   document: "ESS-0000757"
@@ -56,6 +62,12 @@ elements:
     severity: "error"
     message: "Name element must be alphanumeric (a-z, A-Z, 0-9)"
     reference: "Section 3, Rule 1"
+    why: >
+      Special characters in name elements break EPICS channel access parsing
+      and make names harder to use in scripts and OPI screens.
+    fix: "Remove any non-alphanumeric characters. Use only letters and digits."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR_TT-001:Temperature"
 
   - id: "ELEM-2"
     check: "starts_with_letter"
@@ -64,6 +76,13 @@ elements:
     message: "Name element must start with a letter"
     note: "Subsystem exempted — ESS uses numeric subsystems (e.g., DTL-010)"
     reference: "Section 3, Rule 2"
+    why: >
+      Elements starting with digits are reserved for subsystem section numbers
+      (e.g., DTL-010). System, Discipline, and Device names must start with a
+      letter to avoid ambiguity with numeric indexes.
+    fix: "Start the element with a descriptive letter. Check the Naming Service for approved mnemonics."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:2MR-TT-001:Temperature"
 
   - id: "ELEM-5"
     check: "min_length"
@@ -80,6 +99,13 @@ elements:
     severity: "error"
     message: "Name element exceeds 6 characters"
     reference: "Section 3, Rule 6"
+    why: >
+      Short mnemonics keep PV names readable on OPI screens, alarm displays,
+      and in log files. The 6-character limit ensures the total PV stays within
+      60 characters even with long properties.
+    fix: "Abbreviate the element. Check the Naming Service for the approved short form."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "LINAC04-010:EMR-TT-001:Temperature"
 
 # ============================================================
 # Device Index Rules
@@ -91,6 +117,13 @@ index:
     severity: "error"
     message: "Device index is mandatory"
     reference: "Section 5.2"
+    why: >
+      Every device needs an index to distinguish multiple instances of the same
+      type within a system. Without an index, two identical devices cannot be
+      told apart.
+    fix: "Add a numeric index after the device type: Dis-Dev-001."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT:Temperature"
 
   - id: "IDX-SCIENTIFIC"
     check: "scientific_style"
@@ -98,6 +131,12 @@ index:
     severity: "warning"
     message: "Index should follow Scientific style (1-4 digits)"
     reference: "Section 5.2.1"
+    why: >
+      Scientific-facility style uses pure numeric indexes (1-4 digits).
+      This is the default for accelerator and instrument systems.
+    fix: "Use 1-4 digits. For P&ID style, use 3 digits + optional lowercase (e.g., 002a)."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-A01:Temperature"
 
   - id: "IDX-PID"
     check: "pid_style"
@@ -105,6 +144,12 @@ index:
     severity: "warning"
     message: "Index should follow P&ID style (3 digits + optional lowercase)"
     reference: "Section 5.2.2"
+    why: >
+      P&ID (Piping and Instrumentation Diagram) style uses 3-digit indexes
+      with optional lowercase suffixes for redundant devices (e.g., 002a, 002b).
+    fix: "Use exactly 3 digits, optionally followed by 1-3 lowercase letters."
+    example_good: "CWM-CWS03:WtrC-PT-011:Pressure"
+    example_bad: "CWM-CWS03:WtrC-PT-11:Pressure"
 
   - id: "IDX-SC"
     check: "sc_style"
@@ -120,6 +165,12 @@ index:
     severity: "error"
     message: "Index exceeds 6 characters"
     reference: "Section 5.2"
+    why: >
+      The index follows the same 6-character limit as other name elements
+      to keep total PV length within bounds.
+    fix: "Shorten the index. Standard indexes use 1-4 digits."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-0000001:Temperature"
 
 # ============================================================
 # PV Property Rules
@@ -132,6 +183,12 @@ property:
     severity: "error"
     message: "Total PV length exceeds 60 characters"
     reference: "Section 3"
+    why: >
+      EPICS Channel Access has a 60-character limit for PV names.
+      Longer names get truncated by some EPICS tools, causing silent failures.
+    fix: "Abbreviate the property name. See Tables 6-7 in ESS-0000757 for standard abbreviations (e.g., Temperature → Temp, Pressure → Pres)."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-001:VeryLongPropertyNameThatExceedsTheSixtyCharacterLimit"
 
   - id: "PROP-1"
     check: "unique_per_device"
@@ -144,6 +201,13 @@ property:
     severity: "error"
     message: "Property is not unique within device"
     reference: "Section 6.2, Rule 1"
+    why: >
+      Two properties that look similar cause confusion on OPI screens, in alarm
+      lists, and during troubleshooting. Characters like I/l/1, O/0, and VV/W
+      are easily confused. Case differences (Temp vs temp) also cause collisions.
+    fix: "Rename one of the conflicting properties to be visually distinct. Avoid I/l/1, O/0, and VV/W near each other."
+    example_good: "Temperature and Pressure on the same device"
+    example_bad: "TempO and Temp0 on the same device (O vs 0 confusion)"
 
   - id: "PROP-2"
     check: "max_length"
@@ -152,6 +216,25 @@ property:
     severity: "error"
     message: "Property exceeds 25 characters (suffixes excluded)"
     reference: "Section 6.2, Rule 2"
+    why: >
+      Long property names get truncated on OPI screens and alarm displays.
+      The 25-character hard limit (SHALL) ensures readability. The recommended
+      limit is 20 characters (SHOULD). -SP and -RB suffixes don't count.
+    fix: "Abbreviate using standard forms: Temperature → Temp, Pressure → Pres, Voltage → Volt. See Tables 6-7."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-001:VeryLongTemperatureReading"
+
+  - id: "PROP-2-WARN"
+    check: "recommended_length"
+    value: 20
+    severity: "warning"
+    message: "Property exceeds recommended 20 characters"
+    reference: "Section 6.2, Rule 2"
+    why: >
+      The recommended limit is 20 characters. You can go up to 25 with
+      justification, but shorter names are easier to read and fit better
+      on control screens.
+    fix: "Consider abbreviating. This is a recommendation, not a hard requirement."
 
   - id: "PROP-3"
     check: "min_length"
@@ -159,6 +242,25 @@ property:
     severity: "warning"
     message: "Property is below 4 characters"
     reference: "Section 6.2, Rule 3"
+    why: >
+      Very short property names are ambiguous. "T" could mean Temperature,
+      Time, or Torque. Known short forms (On, Off, In, Out, Ok) from
+      ESS-0000757 Tables 8-9 are exempt.
+    fix: "Expand to at least 4 characters unless it's a standard short form (On, Off, Ok, etc.)."
+    example_good: "DTL-010:EMR-TT-001:Temp"
+    example_bad: "DTL-010:EMR-TT-001:T"
+
+  - id: "PROP-5"
+    check: "pascal_case"
+    severity: "warning"
+    message: "Property should use PascalCase for multi-word names"
+    reference: "Section 6.2, Rule 5"
+    why: >
+      PascalCase (e.g., MassFlow, not massflow or MASSFLOW) makes multi-word
+      property names readable without separators.
+    fix: "Capitalize the first letter of each word: temperature → Temperature, massflow → MassFlow."
+    example_good: "DTL-010:EMR-TT-001:MassFlow"
+    example_bad: "DTL-010:EMR-TT-001:MASSFLOW"
 
   - id: "PROP-SP"
     check: "suffix"
@@ -167,6 +269,14 @@ property:
     severity: "error"
     message: "Setpoint suffix must be -SP (not -S or _S)"
     reference: "Section 6.2, Rule 9a"
+    why: >
+      ESS uses -SP for setpoint values and -RB for readback values.
+      Using -S is ambiguous — it could mean setpoint, status, or something
+      else. Consistent suffixes help operators distinguish setpoints from
+      readbacks on OPI screens.
+    fix: "Replace -S with -SP. If this is not a setpoint, remove the suffix entirely."
+    example_good: "DTL-010:EMR-TT-001:Temperature-SP"
+    example_bad: "DTL-010:EMR-TT-001:Temperature-S"
 
   - id: "PROP-RB"
     check: "suffix"
@@ -175,6 +285,12 @@ property:
     severity: "error"
     message: "Readback suffix must be -RB (not -RBV or _RBV)"
     reference: "Section 6.2, Rule 9b"
+    why: >
+      -RBV is an EPICS record field convention (.RBV), not an ESS PV naming
+      convention. ESS standardized on -RB for readback values.
+    fix: "Replace -RBV with -RB."
+    example_good: "DTL-010:EMR-TT-001:Temperature-RB"
+    example_bad: "DTL-010:EMR-TT-001:Temperature-RBV"
 
   - id: "PROP-R"
     check: "suffix"
@@ -182,6 +298,12 @@ property:
     severity: "error"
     message: "Reading value should not have -R or _R suffix"
     reference: "Section 6.2"
+    why: >
+      Reading values (as opposed to setpoints) should have no suffix at all
+      in the ESS convention. The readback suffix is -RB, not -R.
+    fix: "Remove the -R suffix. If this is a readback, use -RB instead."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-001:Temperature-R"
 
   - id: "PROP-INT"
     check: "internal_pv"
@@ -189,18 +311,37 @@ property:
     severity: "info"
     message: "Internal PV (debugging/intermediate)"
     reference: "Section 6.8"
+    why: >
+      PVs starting with # are internal — used for debugging, intermediate
+      calculations, or IOC-internal communication. They must not appear on
+      OPI screens, in the archiver, or in alarm configurations.
+    fix: "No action needed if this is intentionally internal. Remove # if it should be visible."
+    example_good: "DTL-010:EMR-TT-001:#DebugCalcResult"
 
   - id: "PROP-11"
     check: "starts_alphabetical"
     severity: "error"
     message: "Property must start with a letter"
     reference: "Section 6.2, Rule 11"
+    why: >
+      Properties starting with digits or special characters break EPICS
+      tools and are hard to search for. The # prefix is reserved for
+      internal PVs.
+    fix: "Start the property with a descriptive letter (uppercase recommended)."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-001:2ndSensor"
 
   - id: "PROP-11-CASE"
     check: "starts_uppercase"
     severity: "warning"
     message: "Property should start with uppercase letter"
     reference: "Section 6.2, Rule 11"
+    why: >
+      ESS convention recommends PascalCase starting with an uppercase letter.
+      This improves readability on OPI screens and alarm lists.
+    fix: "Capitalize the first letter."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-001:temperature"
 
   - id: "PROP-11-CHAR"
     check: "no_special_chars"
@@ -208,12 +349,25 @@ property:
     severity: "error"
     message: "Property contains disallowed characters"
     reference: "Section 6.2, Rule 11"
+    why: >
+      Special characters break EPICS channel access, scripting, and database
+      queries. Only alphanumeric characters, hyphens (-), and underscores (_)
+      are allowed.
+    fix: "Remove the special character. Use hyphens or underscores for readability."
+    example_good: "DTL-010:EMR-TT-001:Temperature-SP"
+    example_bad: "DTL-010:EMR-TT-001:Temperature(SP)"
 
   - id: "PROP-11-HASH"
     check: "hash_position"
     severity: "error"
     message: "# character only allowed as first character (internal PV)"
     reference: "Section 6.2, Rule 10"
+    why: >
+      The # character marks internal PVs when used as the first character.
+      Elsewhere in the property name it has no defined meaning and breaks parsing.
+    fix: "Move # to the first position or remove it entirely."
+    example_good: "DTL-010:EMR-TT-001:#InternalDebug"
+    example_bad: "DTL-010:EMR-TT-001:Temperature#2"
 
 # ============================================================
 # Legacy Rules (Annex C)
@@ -226,6 +380,13 @@ legacy:
     severity: "warning"
     message: "Property uses legacy prefix (accepted but discouraged)"
     reference: "Annex C"
+    why: >
+      Prefixes like Cmd_, P_, FB_, SP_ were used in older ESS naming schemes.
+      They are still accepted for backward compatibility but should not be used
+      for new PVs.
+    fix: "Remove the prefix for new PVs. Use pvValidator --fix to strip it automatically."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-001:Cmd_Temperature"
 
   - id: "LEGACY-5DIGIT"
     check: "legacy_index"
@@ -234,6 +395,12 @@ legacy:
     severity: "warning"
     message: "5-digit index is legacy (Cryo/Vacuum only)"
     reference: "Annex C, Section 10.1"
+    why: >
+      5-digit indexes in Cryogenics and Vacuum disciplines are a legacy pattern.
+      New equipment should use 1-4 digit Scientific style or 3-digit P&ID style.
+    fix: "Use max 4 digits for new equipment. Existing 5-digit indexes are accepted."
+    example_good: "CWM-CWS03:Cryo-PT-1234:Temperature"
+    example_bad: "CWM-CWS03:Cryo-PT-12345:Temperature"
 
 # ============================================================
 # Exception Rules (Annex B)
@@ -245,9 +412,20 @@ exceptions:
     applies_to_systems: ["Tgt"]
     description: "Target Station may use 4-digit subsystem index"
     reference: "Annex B, Section 9.2"
+    why: >
+      The Target Station uses subsystem codes like HeC1010 that exceed the
+      normal 6-character limit. This is an approved exception for Tgt only.
+    fix: "No action needed for Target Station PVs. This exception does not apply to other systems."
 
   - id: "EXC-MTCA"
     check: "mtca_naming"
     device_prefix: "Ctrl-MTCA"
     index_format: "3-digit (1st=system, 2nd-3rd=counter)"
     reference: "Annex A, Section 8.1"
+    why: >
+      MTCA controllers (Ctrl-MTCA, Ctrl-CPU, Ctrl-EVR) use a specific 3-digit
+      index format where the first digit identifies the MTCA system and the
+      remaining digits count devices.
+    fix: "Use exactly 3 digits: first digit = MTCA system number, next 2 = device counter. Use pvValidator --fix to zero-pad automatically."
+    example_good: "PBI-BCM01:Ctrl-MTCA-100:Status"
+    example_bad: "PBI-BCM01:Ctrl-MTCA-10:Status"
