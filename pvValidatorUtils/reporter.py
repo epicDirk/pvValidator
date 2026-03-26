@@ -120,10 +120,10 @@ class HTMLReporter:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>pvValidator Report</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Fonts: system fallback stack (no external requests, offline-compatible) -->
 <style>
 * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-body {{ font-family: 'Inter', sans-serif; background: #0A0A0A; color: #EDEDED; padding: 32px; line-height: 1.6; }}
+body {{ font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; background: #0A0A0A; color: #EDEDED; padding: 32px; line-height: 1.6; }}
 .container {{ max-width: 1200px; margin: 0 auto; }}
 h1 {{ font-size: 2rem; font-weight: 700; margin-bottom: 8px; }}
 .meta {{ color: #8A8A8A; font-size: 14px; margin-bottom: 32px; }}
@@ -139,7 +139,7 @@ th {{ text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; t
      letter-spacing: 0.05em; color: #8A8A8A; border-bottom: 2px solid #2A2A2A; position: sticky; top: 0; background: #0A0A0A; }}
 td {{ padding: 10px 16px; border-bottom: 1px solid #1E1E1E; font-size: 14px; }}
 tr:hover td {{ background: #141414; }}
-.pv {{ font-family: 'JetBrains Mono', monospace; font-size: 13px; }}
+.pv {{ font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; }}
 .seg {{ padding: 2px 6px; border-radius: 4px; font-size: 12px; }}
 .seg-sys {{ background: rgba(76,158,235,0.15); color: #4C9EEB; }}
 .seg-sub {{ background: rgba(45,212,191,0.15); color: #2DD4BF; }}
@@ -156,7 +156,7 @@ tr:hover td {{ background: #141414; }}
 .msg-info {{ color: #8A8A8A; }}
 .filter {{ margin-bottom: 16px; }}
 .filter input {{ padding: 10px 16px; background: #141414; border: 1px solid #2A2A2A; border-radius: 8px;
-               color: #EDEDED; font-size: 14px; width: 300px; font-family: 'JetBrains Mono', monospace; }}
+               color: #EDEDED; font-size: 14px; width: 300px; font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace; }}
 .filter input::placeholder {{ color: #555; }}
 @media print {{ body {{ background: #fff; color: #000; }} th {{ background: #fff; }} .filter {{ display: none; }} }}
 </style>
@@ -256,6 +256,17 @@ function filterTable(q) {{
         for m in result.messages:
             cls = f"msg-{m.severity.value.lower()}"
             msg_parts.append(f'<div class="{cls}">{self._escape(str(m))}</div>')
+
+        # Suggestions
+        for s in getattr(result, "suggestions", []):
+            if s.suggested:
+                tier = s.applicability.value.upper()
+                msg_parts.append(
+                    f'<div style="color:#0E7A4A;font-size:11px">'
+                    f"[{self._escape(s.rule_id)}] Fix: {self._escape(s.suggested)} "
+                    f"<span style='color:#888'>[{tier}]</span></div>"
+                )
+
         msg_html = (
             f'<div class="messages">{"".join(msg_parts)}</div>' if msg_parts else ""
         )
