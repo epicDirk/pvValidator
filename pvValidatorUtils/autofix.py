@@ -9,12 +9,30 @@ Design decisions (based on ESS-0000757):
 - -R/_R removal: Auto-fixable only if result is non-empty and -R is a suffix
 - Case fix: Auto-fixable but marked as SHOULD (recommendation, not mandatory)
 - Element length: NOT auto-fixable (abbreviation needs domain knowledge)
+- Legacy prefix: Auto-fixable (deterministic removal of Cmd_, P_, FB_, SP_)
+- MTCA index: Auto-fixable (zero-pad to 3 digits)
+
+Self-verification (Semgrep pattern): Every auto-fixable suggestion is validated
+before being shown. If the fix would introduce a new ERROR, it is downgraded
+to a manual suggestion. This prevents silent severity downgrades.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from typing import List, Optional
 
 from .parser import PVComponents, parse_pv
+
+
+class Applicability(Enum):
+    """How safe it is to apply this fix automatically.
+
+    Modeled after Ruff (Safe/Unsafe) and Clippy (MachineApplicable/MaybeIncorrect).
+    """
+    SAFE = "safe"            # Deterministic, zero semantic risk. Applied with --fix.
+    SUGGESTED = "suggested"  # Probably correct, verify. Applied with --fix --unsafe.
+    TEMPLATE = "template"    # Has placeholders. Display only.
+    MANUAL = "manual"        # Cannot auto-fix. Needs human decision.
 
 
 @dataclass
@@ -26,13 +44,20 @@ class FixSuggestion:
         suggested: Suggested corrected PV name (empty if no suggestion possible)
         rule_id: Which rule triggered the fix
         description: What was changed and why
-        auto_fixable: True if the fix is deterministic (no human judgment needed)
+        applicability: How safe the fix is to apply automatically
+        auto_fixable: True if applicability is SAFE (convenience property)
+        verified: True if the suggestion was self-verified against validation rules
     """
     original: str
     suggested: str
     rule_id: str
     description: str
-    auto_fixable: bool = True
+    applicability: Applicability = Applicability.SAFE
+    verified: bool = False
+
+    @property
+    def auto_fixable(self) -> bool:
+        return self.applicability == Applicability.SAFE
 
 
 def suggest_fixes(pv: str) -> List[FixSuggestion]:
@@ -54,7 +79,7 @@ def suggest_fixes(pv: str) -> List[FixSuggestion]:
             suggested="",
             rule_id="FMT",
             description="Invalid PV format — cannot auto-fix (check colons and separators)",
-            auto_fixable=False,
+            applicability=Applicability.MANUAL,
         )]
 
     suggestions = []
@@ -67,8 +92,19 @@ def suggest_fixes(pv: str) -> List[FixSuggestion]:
     if fix:
         suggestions.append(fix)
 
+    fix = _fix_legacy_prefix(components)
+    if fix:
+        suggestions.append(fix)
+
+    fix = _fix_mtca_index(components)
+    if fix:
+        suggestions.append(fix)
+
     for fix in _check_element_length(components):
         suggestions.append(fix)
+
+    # Self-verification: validate every auto-fixable suggestion
+    _verify_suggestions(suggestions)
 
     return suggestions
 
@@ -88,7 +124,7 @@ def _fix_suffix(components: PVComponents) -> Optional[FixSuggestion]:
             suggested=f"{prefix}:{prop[:-2]}-SP",
             rule_id="PROP-SP",
             description='Suffix "-S" resembles incomplete setpoint → "-SP"? (verify intent)',
-            auto_fixable=False,
+            applicability=Applicability.SUGGESTED,
         )
     if prop.endswith("_S") and not prop.endswith("_SP"):
         return FixSuggestion(
@@ -96,7 +132,7 @@ def _fix_suffix(components: PVComponents) -> Optional[FixSuggestion]:
             suggested=f"{prefix}:{prop[:-2]}-SP",
             rule_id="PROP-SP",
             description='Suffix "_S" resembles incomplete setpoint → "-SP"? (verify intent)',
-            auto_fixable=False,
+            applicability=Applicability.SUGGESTED,
         )
 
     # -RBV or _RBV → -RB (auto-fixable — always means readback)
@@ -177,9 +213,79 @@ def _check_element_length(components: PVComponents) -> List[FixSuggestion]:
                 suggested="",
                 rule_id="ELEM-6",
                 description=f'{name} "{value}" exceeds 6 chars — needs human decision',
-                auto_fixable=False,
+                applicability=Applicability.MANUAL,
             ))
     return suggestions
+
+
+LEGACY_PREFIXES = ["Cmd_", "P_", "FB_", "SP_"]
+
+
+def _fix_legacy_prefix(components: PVComponents) -> Optional[FixSuggestion]:
+    """Strip legacy property prefixes per ESS-0000757 Annex C."""
+    prop = components.property
+    pv = components.raw
+    prefix_part = pv.rsplit(":", 1)[0]
+
+    for legacy in LEGACY_PREFIXES:
+        if prop.startswith(legacy):
+            new_prop = prop[len(legacy):]
+            if new_prop:
+                return FixSuggestion(
+                    original=pv,
+                    suggested=f"{prefix_part}:{new_prop}",
+                    rule_id="LEGACY",
+                    description=f'Removed legacy prefix "{legacy}" (accepted but discouraged)',
+                    applicability=Applicability.SAFE,
+                )
+    return None
+
+
+def _fix_mtca_index(components: PVComponents) -> Optional[FixSuggestion]:
+    """Zero-pad MTCA controller index to 3 digits per ESS-0000757 Annex A."""
+    import re as _re
+    if components.discipline != "Ctrl" or components.device not in ("MTCA", "CPU", "EVR"):
+        return None
+    idx = components.index
+    if not idx or _re.match(r"^\d{3}$", idx):
+        return None  # already correct or missing
+    if idx.isdigit() and len(idx) < 3:
+        new_idx = idx.zfill(3)
+        pv = components.raw
+        return FixSuggestion(
+            original=pv,
+            suggested=pv.replace(f"-{idx}:", f"-{new_idx}:"),
+            rule_id="EXC-MTCA",
+            description=f'Zero-padded MTCA index "{idx}" → "{new_idx}" (3-digit format)',
+            applicability=Applicability.SAFE,
+        )
+    return None
+
+
+def _verify_suggestions(suggestions: List[FixSuggestion]) -> None:
+    """Self-verify: check that auto-fixable suggestions don't introduce new errors.
+
+    Inspired by Semgrep's fix verification pattern. If a suggested fix would
+    fail validation, downgrade it from SAFE/SUGGESTED to MANUAL.
+    """
+    from .rules import Severity, check_all_rules  # late import to avoid circular
+
+    for s in suggestions:
+        if s.applicability in (Applicability.SAFE, Applicability.SUGGESTED) and s.suggested:
+            components = parse_pv(s.suggested)
+            if components is None:
+                # Fix produces unparseable PV — definitely broken
+                s.applicability = Applicability.MANUAL
+                s.description += " (fix produces invalid format — manual review needed)"
+                s.verified = True
+                continue
+            msgs = check_all_rules(components)
+            errors = [m for m in msgs if m.severity == Severity.ERROR]
+            if errors:
+                # Fix introduces new errors — downgrade
+                s.applicability = Applicability.MANUAL
+                s.description += f" (fix introduces {len(errors)} new issue(s) — manual review needed)"
+            s.verified = True
 
 
 def apply_fixes(pv: str) -> str:
