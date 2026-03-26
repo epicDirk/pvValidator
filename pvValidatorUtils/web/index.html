@@ -157,6 +157,18 @@ footer .left a { color: var(--text-2); text-decoration: none; }
 footer .left a:hover { color: var(--ess-cyan); }
 footer .right { font-size: 0.68rem; color: var(--text-3); }
 
+/* Expandable error details */
+.msg { cursor: pointer; }
+.msg-detail { display: none; font-size: 0.66rem; font-weight: 400; color: var(--text-2); padding: 6px 10px;
+  margin-top: 3px; background: var(--surface); border-radius: 4px; line-height: 1.5; }
+.msg-detail.open { display: block; }
+.msg-detail .why { margin-bottom: 3px; }
+.msg-detail .fix { color: var(--ok); }
+.btn-fix { font-size: 0.6rem; font-weight: 700; padding: 2px 8px; border-radius: 3px; border: 1px solid var(--ess-cyan);
+  background: rgba(0,176,202,0.06); color: var(--ess-navy); cursor: pointer; margin-left: 4px; }
+.btn-fix:hover { background: rgba(0,176,202,0.15); }
+.btn-fix-all { font-size: 0.68rem; }
+
 /* Accessibility */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -210,6 +222,7 @@ footer .right { font-size: 0.68rem; color: var(--text-3); }
       Load Examples
     </button>
     <button class="btn" onclick="clearAll()">Clear</button>
+    <button class="btn btn-fix-all btn-accent" onclick="fixAll()" aria-label="Apply all safe auto-fixes">Fix All</button>
     <div class="toolbar-right">
       <button class="btn" onclick="exportJSON()" aria-label="Export validation results as JSON">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -284,6 +297,7 @@ function checkRules(c) {
   var m=[], p=c.property, pv=c.raw, el=epLen(p);
   if (pv.length>MAX_PV) m.push({s:'error',m:'PV exceeds '+MAX_PV+' chars ('+pv.length+')',r:'PV-LEN'});
   if (el>MAX_PROP) m.push({s:'error',m:'Property exceeds '+MAX_PROP+' chars ('+el+')',r:'PROP-2'});
+  else if (el>20) m.push({s:'warning',m:'Property exceeds recommended 20 chars ('+el+')',r:'PROP-2-WARN'});
   if (el>0&&el<MIN_PROP) m.push({s:'warning',m:'Property below '+MIN_PROP+' chars',r:'PROP-3'});
   if (p.endsWith('-S')||p.endsWith('_S')) m.push({s:'error',m:'Setpoint must use -SP',r:'PROP-SP'});
   if (p.endsWith('-R')||p.endsWith('_R')) m.push({s:'error',m:'Reading should not have -R',r:'PROP-R'});
@@ -305,6 +319,15 @@ function checkRules(c) {
     if(!/^\d{1,4}$/.test(c.index)&&!/^\d{3}[a-z]{0,3}$/.test(c.index)&&!/^\d{1,6}$/.test(c.index))
       m.push({s:'warning',m:'Non-standard index',r:'IDX-STYLE'});}
   for(var l=0;l<LEGACY.length;l++)if(p.startsWith(LEGACY[l])){m.push({s:'warning',m:'Legacy prefix '+LEGACY[l],r:'LEGACY'});break;}
+  // PROP-5: PascalCase check
+  if(p&&!p.startsWith('#')){var clean=p;if(clean.endsWith('-SP'))clean=clean.slice(0,-3);else if(clean.endsWith('-RB'))clean=clean.slice(0,-3);
+    if(clean.length>4&&(clean===clean.toUpperCase()||clean===clean.toLowerCase()))m.push({s:'warning',m:'Should use PascalCase',r:'PROP-5'});}
+  // LEGACY-5DIGIT: 5-digit index in Cryo/Vac
+  if(c.discipline&&(c.discipline==='Cryo'||c.discipline==='Vac')&&c.index&&c.index.length>4)
+    m.push({s:'warning',m:'5-digit index is legacy for '+c.discipline,r:'LEGACY-5DIGIT'});
+  // EXC-MTCA: MTCA 3-digit index
+  if(c.discipline==='Ctrl'&&(c.device==='MTCA'||c.device==='CPU'||c.device==='EVR')&&c.index&&!/^\d{3}$/.test(c.index))
+    m.push({s:'warning',m:'MTCA index should be 3 digits',r:'EXC-MTCA'});
   return m;
 }
 function normConf(p){return p.toLowerCase().replace(/[il]/g,'1').replace(/o/g,'0').replace(/vv/g,'w').replace(/0+(?![_a-z\-])(?!$)/g,'@');}
@@ -312,16 +335,55 @@ function checkConf(devPVs){var extra={};for(var d in devPVs){var ps=devPVs[d],se
   var n=normConf(ps[i].p);if(seen[n]!==undefined){var k=d+':'+ps[i].p;if(!extra[k])extra[k]=[];
   extra[k].push({s:'error',m:'Confusable with '+d+':'+seen[n],r:'PROP-1'});}else{seen[n]=ps[i].p;}}}return extra;}
 
-// Rule references for ESS-0000757 traceability (Design-for-AI: trust signals)
-var RULE_REF = {
-  'PV-LEN':'ESS-0000757 \u00a76.2','PROP-2':'ESS-0000757 \u00a76.2 Rule 2','PROP-3':'ESS-0000757 \u00a76.2 Rule 3',
-  'PROP-SP':'ESS-0000757 \u00a76.2 Rule 9','PROP-R':'ESS-0000757 \u00a76.2 Rule 9','PROP-RB':'ESS-0000757 \u00a76.2 Rule 9',
-  'PROP-11':'ESS-0000757 \u00a76.2 Rule 11','PROP-INT':'ESS-0000757 \u00a76.2',
-  'PROP-1':'ESS-0000757 \u00a76.2 Rule 1','ELEM-6':'ESS-0000757 \u00a73 Rule 6',
-  'ELEM-1':'ESS-0000757 \u00a73 Rule 1','ELEM-2':'ESS-0000757 \u00a73 Rule 2',
-  'IDX-LEN':'ESS-0000757 \u00a75.2','IDX-STYLE':'ESS-0000757 \u00a75.2','LEGACY':'ESS-0000757 Annex C'
+// Rule educational content (from ess-0000757-rev10.yaml)
+var RULE_INFO = {
+  'PV-LEN':{ref:'ESS-0000757 \u00a76.2',why:'EPICS Channel Access has a 60-character limit. Longer names get truncated by some tools.',fix:'Abbreviate the property. See Tables 6-7 for standard forms (Temperature \u2192 Temp).'},
+  'PROP-1':{ref:'ESS-0000757 \u00a76.2 Rule 1',why:'Similar-looking properties (I/l/1, O/0, VV/W) cause confusion on OPI screens and alarm lists.',fix:'Rename one property to be visually distinct.'},
+  'PROP-2':{ref:'ESS-0000757 \u00a76.2 Rule 2',why:'Long property names get truncated on OPI screens. 25 chars is the hard limit (SHALL).',fix:'Use standard abbreviations: Temperature \u2192 Temp, Pressure \u2192 Pres.'},
+  'PROP-2-WARN':{ref:'ESS-0000757 \u00a76.2 Rule 2',why:'Recommended limit is 20 chars. You can go to 25 with justification.',fix:'Consider abbreviating. This is a recommendation, not mandatory.'},
+  'PROP-3':{ref:'ESS-0000757 \u00a76.2 Rule 3',why:'Very short names are ambiguous. "T" could mean Temperature, Time, or Torque.',fix:'Expand to 4+ chars unless it is a known short form (On, Off, Ok).'},
+  'PROP-5':{ref:'ESS-0000757 \u00a76.2 Rule 5',why:'PascalCase makes multi-word names readable without separators.',fix:'Capitalize word boundaries: massflow \u2192 MassFlow.'},
+  'PROP-SP':{ref:'ESS-0000757 \u00a76.2 Rule 9',why:'-S is ambiguous \u2014 could mean setpoint, status, or something else. ESS uses -SP for setpoints.',fix:'Replace -S with -SP. If not a setpoint, remove the suffix.',suggestion:function(pv,p){return pv.replace(/:([^:]+)$/,':'+p.replace(/-S$/,'-SP').replace(/_S$/,'-SP'));}},
+  'PROP-R':{ref:'ESS-0000757 \u00a76.2 Rule 9',why:'Reading values have no suffix in ESS convention. The readback suffix is -RB, not -R.',fix:'Remove the -R suffix.',suggestion:function(pv,p){return pv.replace(/:([^:]+)$/,':'+p.replace(/-R$/,'').replace(/_R$/,''));}},
+  'PROP-RB':{ref:'ESS-0000757 \u00a76.2 Rule 9',why:'-RBV is an EPICS record field convention (.RBV), not ESS PV naming. ESS uses -RB.',fix:'Replace -RBV with -RB.',suggestion:function(pv,p){return pv.replace(/:([^:]+)$/,':'+p.replace(/-RBV$/,'-RB').replace(/_RBV$/,'-RB'));}},
+  'PROP-11':{ref:'ESS-0000757 \u00a76.2 Rule 11',why:'Properties starting with digits or special chars break EPICS tools.',fix:'Start with a descriptive letter (uppercase recommended).', suggestion:function(pv,p){if(p[0]&&p[0].match(/[a-z]/))return pv.replace(/:([^:]+)$/,':'+p[0].toUpperCase()+p.slice(1));return null;}},
+  'PROP-INT':{ref:'ESS-0000757 \u00a76.8',why:'# prefix marks internal PVs for debugging. Must not appear on OPI screens or in the archiver.',fix:'No action needed if intentionally internal.'},
+  'ELEM-6':{ref:'ESS-0000757 \u00a73 Rule 6',why:'Short mnemonics keep PVs readable. The 6-char limit ensures the total stays within 60.',fix:'Abbreviate. Check the Naming Service for the approved short form.'},
+  'ELEM-1':{ref:'ESS-0000757 \u00a73 Rule 1',why:'Special characters break EPICS channel access parsing.',fix:'Use only letters and digits (a-z, A-Z, 0-9).'},
+  'ELEM-2':{ref:'ESS-0000757 \u00a73 Rule 2',why:'Digit-start is reserved for subsystem section numbers (e.g., DTL-010).',fix:'Start with a letter.'},
+  'IDX-LEN':{ref:'ESS-0000757 \u00a75.2',why:'Same 6-character limit as other name elements.',fix:'Shorten the index. Standard: 1-4 digits.'},
+  'IDX-STYLE':{ref:'ESS-0000757 \u00a75.2',why:'Should follow Scientific (1-4 digits) or P&ID (3 digits + lowercase) style.',fix:'Adjust to match your discipline style.'},
+  'LEGACY':{ref:'ESS-0000757 Annex C',why:'Cmd_, P_, FB_, SP_ prefixes are from older naming schemes.',fix:'Remove the prefix for new PVs.',suggestion:function(pv,p){for(var i=0;i<LEGACY.length;i++)if(p.startsWith(LEGACY[i]))return pv.replace(/:([^:]+)$/,':'+p.slice(LEGACY[i].length));return null;}}
 };
-function ruleTitle(r){return RULE_REF[r]?' title="'+esc(RULE_REF[r])+'"':'';}
+function ruleTitle(r){return RULE_INFO[r]?' title="'+esc(RULE_INFO[r].ref)+'"':'';}
+
+// Format diagnosis (replaces generic "Invalid Format")
+function diagnosePV(pv) {
+  if (!pv || typeof pv !== 'string') return 'Empty input';
+  var colons = (pv.match(/:/g)||[]).length;
+  if (colons === 0) return 'No colons found \u2014 ESS format uses exactly 2 colons (Sys:Dev:Prop)';
+  if (colons === 1) return 'Only 1 colon \u2014 use Sys::Prop for high-level or Sys:Dis-Dev-Idx:Prop for device PVs';
+  if (colons > 2) return 'Too many colons ('+colons+') \u2014 ESS format uses exactly 2';
+  var parts = pv.split(':');
+  if (!parts[0]) return 'System name is empty \u2014 must be 1-6 alphanumeric characters';
+  if (!parts[2]) return 'Property is empty \u2014 every PV needs a property name after the last colon';
+  if (parts[1] !== '') {
+    var segs = parts[1].split('-');
+    if (segs.length < 3) return 'Device section needs 3 dash-separated parts: Discipline-Device-Index (got '+segs.length+')';
+    if (!segs[0]) return 'Discipline is empty in device section';
+    if (!segs[1]) return 'Device type is empty in device section';
+  }
+  return 'Format not recognized \u2014 check colons and hyphens';
+}
+
+// Autofix suggestions (JavaScript mirror of Python autofix.py)
+function suggestFix(pv, comp, ruleId) {
+  var info = RULE_INFO[ruleId];
+  if (info && info.suggestion && comp) {
+    return info.suggestion(pv, comp.property);
+  }
+  return null;
+}
 
 // Main
 var lastResults=[];
@@ -367,14 +429,37 @@ function validate(){
       if(c.property)html+='<span class="sep">:</span><span class="seg seg-prop">'+esc(c.property)+'</span>';
       html+='</div>';}else{html+='<div class="pv-raw">'+esc(res.pv)+'</div>';}
     html+='</div><div class="pv-msgs">';
-    if(!c){html+='<span class="badge badge-err">Invalid Format</span>';}
-    else if(hErr){for(var m=0;m<res.msgs.length;m++)if(res.msgs[m].s==='error')
-      html+='<span class="msg msg-err"'+ruleTitle(res.msgs[m].r)+'>['+esc(res.msgs[m].r)+'] '+esc(res.msgs[m].m)+'</span>';}
-    else if(hWrn){for(var m2=0;m2<res.msgs.length;m2++)if(res.msgs[m2].s==='warning')
-      html+='<span class="msg msg-warn"'+ruleTitle(res.msgs[m2].r)+'>['+esc(res.msgs[m2].r)+'] '+esc(res.msgs[m2].m)+'</span>';}
+    if(!c){
+      var diag=diagnosePV(res.pv);
+      html+='<span class="badge badge-err">Invalid Format</span>';
+      html+='<div class="msg-detail open"><div class="why">'+esc(diag)+'</div></div>';
+    }
+    else if(hErr){for(var m=0;m<res.msgs.length;m++)if(res.msgs[m].s==='error'){
+      var rid=res.msgs[m].r,inf=RULE_INFO[rid]||{},sg=suggestFix(res.pv,c,rid),uid=r+'_'+m;
+      html+='<span class="msg msg-err" onclick="toggleDetail(\''+uid+'\')"'+ruleTitle(rid)+'>['+esc(rid)+'] '+esc(res.msgs[m].m);
+      if(sg)html+='<button class="btn-fix" onclick="event.stopPropagation();applyFix('+r+',\''+esc(sg)+'\')">Fix</button>';
+      html+='</span>';
+      html+='<div class="msg-detail" id="detail-'+uid+'">';
+      if(inf.why)html+='<div class="why"><strong>Why:</strong> '+esc(inf.why)+'</div>';
+      if(inf.fix)html+='<div class="fix"><strong>Fix:</strong> '+esc(inf.fix)+'</div>';
+      html+='</div>';
+    }}
+    else if(hWrn){for(var m2=0;m2<res.msgs.length;m2++)if(res.msgs[m2].s==='warning'){
+      var rid2=res.msgs[m2].r,inf2=RULE_INFO[rid2]||{},sg2=suggestFix(res.pv,c,rid2),uid2=r+'_w'+m2;
+      html+='<span class="msg msg-warn" onclick="toggleDetail(\''+uid2+'\')"'+ruleTitle(rid2)+'>['+esc(rid2)+'] '+esc(res.msgs[m2].m);
+      if(sg2)html+='<button class="btn-fix" onclick="event.stopPropagation();applyFix('+r+',\''+esc(sg2)+'\')">Fix</button>';
+      html+='</span>';
+      html+='<div class="msg-detail" id="detail-'+uid2+'">';
+      if(inf2.why)html+='<div class="why"><strong>Why:</strong> '+esc(inf2.why)+'</div>';
+      if(inf2.fix)html+='<div class="fix"><strong>Fix:</strong> '+esc(inf2.fix)+'</div>';
+      html+='</div>';
+    }}
     else{html+='<span class="badge badge-ok">Valid</span>';}
-    for(var m3=0;m3<res.msgs.length;m3++)if(res.msgs[m3].s==='info')
-      html+='<span class="msg msg-info"'+ruleTitle(res.msgs[m3].r)+'>['+esc(res.msgs[m3].r)+'] '+esc(res.msgs[m3].m)+'</span>';
+    for(var m3=0;m3<res.msgs.length;m3++)if(res.msgs[m3].s==='info'){
+      var rid3=res.msgs[m3].r,inf3=RULE_INFO[rid3]||{};
+      html+='<span class="msg msg-info"'+ruleTitle(rid3)+'>['+esc(rid3)+'] '+esc(res.msgs[m3].m)+'</span>';
+      if(inf3.why)html+='<div class="msg-detail open" style="color:var(--info)"><div class="why">'+esc(inf3.why)+'</div></div>';
+    }
     html+='</div></div>';}
   container.innerHTML=html;
 }
@@ -391,6 +476,33 @@ function loadExample(){document.getElementById('pvInput').value=
   'ABCDEFG-010:EMR-TT-001:Temperature\nDTL-010:EMR-TT-002:TempO\nDTL-010:EMR-TT-002:Temp0\nINVALID::FORMAT::HERE';
   validate();}
 function clearAll(){document.getElementById('pvInput').value='';validate();}
+function toggleDetail(uid){var el=document.getElementById('detail-'+uid);if(el)el.classList.toggle('open');}
+function applyFix(idx,suggested){
+  var ta=document.getElementById('pvInput');var lines=ta.value.split('\n');
+  var pvLines=[];var lineIdx=0;
+  for(var i=0;i<lines.length;i++){
+    var t=lines[i].trim();
+    if(t&&!t.startsWith('%')&&!t.startsWith('#')){
+      if(lineIdx===idx){lines[i]=suggested;}
+      lineIdx++;
+    }
+  }
+  ta.value=lines.join('\n');validate();
+}
+function fixAll(){
+  var ta=document.getElementById('pvInput');var lines=ta.value.split('\n');var changed=0;
+  for(var i=0;i<lines.length;i++){
+    var t=lines[i].trim();if(!t||t.startsWith('%')||t.startsWith('#'))continue;
+    var pv=t.split(/\s+/)[0];var comp=parsePV(pv);if(!comp)continue;
+    var msgs=checkRules(comp);
+    for(var j=0;j<msgs.length;j++){
+      var sg=suggestFix(pv,comp,msgs[j].r);
+      if(sg&&sg!==pv){lines[i]=sg;changed++;break;}
+    }
+  }
+  ta.value=lines.join('\n');validate();
+  if(changed)document.getElementById('sValid').style.animation='none';
+}
 function exportJSON(){if(!lastResults.length)return;var out={generated:new Date().toISOString(),
   rule_document:'ESS-0000757',summary:{total:lastResults.length,
   valid:lastResults.filter(function(r){return r.comp&&!r.msgs.some(function(m){return m.s==='error';});}).length,
