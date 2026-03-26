@@ -63,7 +63,29 @@ pvValidator -i pvlist.txt --noapi
 
 # Write results to CSV
 pvValidator -i pvlist.txt -o results.csv
+
+# Auto-fix: show suggestions for all violations
+pvValidator -i pvlist.txt --suggest --noapi
+
+# Auto-fix: apply safe fixes automatically
+pvValidator -i pvlist.txt --fix --noapi
+
+# Explain a specific rule
+pvValidator --explain PROP-SP
+
+# JSON output with fix suggestions
+pvValidator -i pvlist.txt --format json --noapi
 ```
+
+**Exit codes:** 0 = all valid, 1 = validation errors found, 10 = EPICS/system error.
+
+## Documentation
+
+Three standalone HTML documents are included in `pvValidatorUtils/web/`:
+
+- **[guide.html](pvValidatorUtils/web/guide.html)** &mdash; Tutorial for new users. Explains ESS-0000757, PV name anatomy, formats, property rules, common mistakes, and ESS tools.
+- **[reference.html](pvValidatorUtils/web/reference.html)** &mdash; Quick reference cheat sheet. All rules in one page.
+- **[index.html](pvValidatorUtils/web/index.html)** &mdash; Interactive Web-UI with live validation, expandable error explanations, and one-click auto-fix.
 
 ## Architecture
 
@@ -82,7 +104,7 @@ CLI (pvValidator.py)
 
 ## Testing
 
-322 tests, all runnable without ESS network access:
+370 tests, all runnable without ESS network access:
 
 ```bash
 # Offline tests (default)
