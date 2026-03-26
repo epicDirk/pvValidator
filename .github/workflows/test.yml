@@ -28,8 +28,11 @@ jobs:
           pip install pytest-cov hypothesis
 
       - name: Run pure Python tests
+        # Tests that don't need SWIG/EPICS compilation.
+        # SWIG-dependent tests (test_validator, test_naming_api, test_cassettes)
+        # run in GitLab CI Docker with the full e3 environment.
         run: |
-          pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py -v --tb=short --junitxml=test-results.xml
+          pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py test/test_autofix.py test/test_pict.py test/test_db_parser.py test/test_fuzzing.py -v --tb=short --junitxml=test-results.xml
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

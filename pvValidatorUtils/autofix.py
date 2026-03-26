@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
 
+__all__ = ["Applicability", "FixSuggestion", "suggest_fixes", "apply_fixes"]
+
 from .parser import PVComponents, parse_pv
 
 
@@ -288,20 +290,28 @@ def _verify_suggestions(suggestions: List[FixSuggestion]) -> None:
             s.verified = True
 
 
-def apply_fixes(pv: str) -> str:
-    """Apply all auto-fixable suggestions iteratively.
+def apply_fixes(pv: str, include_suggested: bool = False) -> str:
+    """Apply auto-fixable suggestions iteratively.
 
     Re-evaluates after each applied fix to handle interactions correctly
     (e.g., RBV→RB first, then case fix on the result).
 
-    Returns the original PV if no auto-fixes are applicable.
+    Args:
+        pv: Original PV name string
+        include_suggested: If True, also apply SUGGESTED tier (--unsafe mode)
+
+    Returns the original PV if no applicable fixes found.
     """
+    applicable_tiers = {Applicability.SAFE}
+    if include_suggested:
+        applicable_tiers.add(Applicability.SUGGESTED)
+
     current = pv
     for _ in range(5):  # Max iterations to prevent infinite loops
         fixes = suggest_fixes(current)
         applied = False
         for fix in fixes:
-            if fix.auto_fixable and fix.suggested and fix.suggested != current:
+            if fix.applicability in applicable_tiers and fix.suggested and fix.suggested != current:
                 current = fix.suggested
                 applied = True
                 break  # Re-evaluate from scratch after each change

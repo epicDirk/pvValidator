@@ -1,18 +1,20 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pvValidatorUtils"
-version = "1.8.0"
+version = "2.0.0"
 authors = [
     {name = "Alfio Rizzo", email = "alfio.rizzo@ess.eu"},
+    {name = "Dirk Nordt", email = "dirk.nordt@esss.se"},
 ]
-description = "pvValidator.py is a tool to validate EPICS PVs based on CHESS document [ESS-0000757]"
+description = "Validates EPICS PV names against ESS Naming Convention (ESS-0000757)"
 readme = "README.md"
-license = {text = "GPL"}
+license = {text = "GPL-3.0-only"}
 classifiers = [
     "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
 dependencies = [
     "requests",

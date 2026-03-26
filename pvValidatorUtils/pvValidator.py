@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import argparse
+import logging
 import os
 import sys
 
@@ -63,6 +64,14 @@ def main():
         description=f"EPICS PV Validation Tool ({version})",
         formatter_class=lambda prog: argparse.HelpFormatter(prog, width=150),
         epilog="Copyright 2021 - Alfio Rizzo (alfio.rizzo@ess.eu)",
+    )
+
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        action="store_true",
+        default=False,
+        help="enable debug logging (shows detailed internal messages)",
     )
 
     parser.add_argument(
@@ -170,6 +179,13 @@ def main():
         default=False,
         help="apply safe auto-fixes and show results (use with -i or -e)",
     )
+    parser.add_argument(
+        "--unsafe",
+        dest="unsafe",
+        action="store_true",
+        default=False,
+        help="also apply suggested (uncertain) fixes (use with --fix)",
+    )
 
     # Verbose/explain options
     parser.add_argument(
@@ -188,6 +204,13 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # Configure logging
+    log_level = logging.DEBUG if args.debug else logging.WARNING
+    logging.basicConfig(
+        level=log_level,
+        format="%(name)s: %(levelname)s: %(message)s",
+    )
 
     # Handle --explain (no input needed, just show rule info and exit)
     if args.explain:
@@ -249,7 +272,7 @@ def _run_with_reporter(args, pvepics):
     # Build PV list (same logic as pvUtils)
     pv_list = []
     if args.pvfile:
-        with open(args.pvfile, "r") as f:
+        with open(args.pvfile, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("%") and not line.startswith("#"):
@@ -341,7 +364,7 @@ def _run_with_autofix(args, pvepics):
     # Build PV list
     pv_list = []
     if args.pvfile:
-        with open(args.pvfile, "r") as f:
+        with open(args.pvfile, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("%") and not line.startswith("#"):
@@ -371,7 +394,7 @@ def _run_with_autofix(args, pvepics):
 
         if args.fix and auto_suggestions:
             # Apply safe fixes
-            result = apply_fixes(pv)
+            result = apply_fixes(pv, include_suggested=getattr(args, 'unsafe', False))
             if result != pv:
                 print(f"  {pv}")
                 print(f"    → {result}")
