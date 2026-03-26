@@ -75,6 +75,18 @@ class JSONReporter:
             }
             for m in result.messages
         ]
+        if result.suggestions:
+            d["suggestions"] = [
+                {
+                    "rule_id": s.rule_id,
+                    "suggested": s.suggested,
+                    "description": s.description,
+                    "applicability": s.applicability.value,
+                    "verified": s.verified,
+                }
+                for s in result.suggestions
+                if s.suggested  # only include suggestions with actual content
+            ]
         return d
 
 

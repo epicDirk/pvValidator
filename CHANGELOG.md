@@ -120,3 +120,38 @@ All notable changes to pvValidator are documented here.
 
 ### Fixed
 - 6 bug fixes: typos (LENGHT), copy-paste bug (errmsgpv2), docstring typos, dead code (HasAlias), duplicate function (inputAddPath), missing timeout
+
+---
+
+## Pre-Fork History (by Alfio Rizzo)
+
+### [1.8.0] — 2024-11-18
+- Removed .py extension from CLI entry point
+- Added msiUtils C++ code (msi modification for substitution files)
+- Added input substitution file support
+- Added related tests, improved code readability
+
+### [1.7.0] — 2024-02-08
+- Updated for ESS Naming Convention Rev. 9
+- Optimized code, removed Makefile built-in, changed packaging tool
+- Added unit tests, removed staging/development naming service endpoints
+
+### [1.6.0] — 2023-03-03
+- Added error verbosity when a Name is canceled or modified in the Naming Service
+
+### [1.5.0] — 2022-06-23
+- Added --stdout option, added exit code
+
+### [1.4.0] — 2022-02-03
+- Improved code speed (caching API check for System and Device Structure)
+- Fixed multiple leading-zero regex bugs (1.4.1, 1.4.2, 1.4.3)
+
+### [1.3.0] — 2021-04-09
+- Added option to read EPICS DB files
+- Added CMakeLists.txt, skip comments when parsing .db files
+
+### [1.2.0] — 2021-03-26
+- Added comment option on input PV file, added documentation
+
+### [1.1.0] — 2021-03-03
+- Added Naming Server option endpoint (Production, Development, Staging)
