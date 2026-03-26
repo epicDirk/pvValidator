@@ -26,9 +26,57 @@
 - ✅ ESS Artifactory is reachable → conda packages install without issues
 - ⚠️ **Docker may or may NOT be installed on this machine** — see section below
 
+### e3 — The EPICS Environment at ESS
+
+**e3** is ESS's standard EPICS environment, based on conda (Miniforge). It provides `epics-base`, `require`, and all ESS-specific packages via ESS Artifactory. Documentation: https://e3.pages.ess.eu/ (also mirrored offline in `input/e3-offline/`).
+
+pvValidator needs e3 because:
+- The C++ modules (`epicsUtils.cxx`, `msiUtils.cxx`) link against EPICS libraries (`pvAccess`, `pvData`, `ca`, `Com`)
+- SWIG generates Python wrappers for these C++ modules
+- The `run-iocsh` package (for IOC testing) comes from ESS Artifactory
+
+**On ESS machines, e3 may already be installed.** Check:
+```bash
+conda activate e3
+which epics-base      # or: echo $EPICS_BASE
+```
+
+### How The Docker Container Was Built (and why)
+
+The `Dockerfile` is at `C:\Users\dirkn\Documents\pvValidator\Dockerfile` — **OUTSIDE the git repo** (one level up from `pvvalidator/`). This is because Docker needs to `COPY pvvalidator/` into the container.
+
+**Key decisions in the Dockerfile:**
+
+1. **Base image: `condaforge/miniforge3:latest`** — provides conda for e3 package installation
+2. **ESS Artifactory channel added via direct URL** (`https://artifactory.esss.lu.se/...`), NOT via `channel_alias`. Reason: `channel_alias` redirects ALL channels (including conda-forge) through ESS Artifactory, which only works on the ESS internal network. The direct URL approach works from anywhere.
+3. **Python pinned to 3.10** — SWIG must compile against the same Python version that runs the code. ESS e3 uses 3.10.
+4. **cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5** — newer CMake versions require this flag for backward compatibility with the CMakeLists.txt.
+5. **`.so` files manually copied** from `build/pvValidatorUtils/` to `pvValidatorUtils/` — because `make install` puts them in the build directory, not the source directory. The Python package needs them next to the `.py` files.
+6. **SWIG generates `epicsUtils.py` and `msiUtils.py`** — these are NOT hand-written. They get overwritten on every build. That's why they fail flake8 (and why we exclude them).
+7. **`run-iocsh`** installed from ESS Artifactory PyPI (`|| true` because it may fail outside ESS network).
+
+**If you need to rebuild SWIG modules natively (without Docker):**
+```bash
+# Prerequisites: conda with e3, or system EPICS 7 + SWIG + cmake + C++ compiler
+conda activate e3
+cd pvvalidator
+mkdir -p build && cd build
+cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DMY_PYTHON_VERSION=3.10 ..
+make install
+# Copy .so files to the right place:
+cp pvValidatorUtils/_epicsUtils.so ../pvValidatorUtils/
+cp pvValidatorUtils/_msiUtils.so ../pvValidatorUtils/
+cp pvValidatorUtils/epicsUtils.py ../pvValidatorUtils/
+cp pvValidatorUtils/msiUtils.py ../pvValidatorUtils/
+cd ..
+pip install -e ".[test]"
+```
+
+**Important:** After SWIG compilation, `epicsUtils.py` and `msiUtils.py` in `pvValidatorUtils/` are GENERATED files. Do NOT commit them — they are `.gitignore`d and machine-specific.
+
 ### Docker Situation
 
-On the external PC, Docker Desktop was installed and all testing happened inside Docker containers (the `Dockerfile` at the project root builds a full e3/EPICS environment with SWIG compilation).
+On the external PC, Docker Desktop was installed and all testing happened inside Docker containers.
 
 **On this ESS machine, Docker may not be available.** Check first:
 ```bash

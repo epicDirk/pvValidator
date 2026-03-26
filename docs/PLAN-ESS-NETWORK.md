@@ -7,7 +7,20 @@
 
 ## Context
 
-This project was developed on an external Windows PC WITHOUT ESS network access. Everything was tested in Docker containers. The following things have NEVER been tested with the real ESS infrastructure:
+This project was developed on an external Windows PC WITHOUT ESS network access. Everything was tested in Docker containers. **You are now on the ESS network with Docker available.** This is the first time we can use real ESS infrastructure.
+
+### What the ESS network gives you that we NEVER had:
+
+| Capability | What it enables | Priority |
+|-----------|----------------|----------|
+| **ESS Naming Service** (naming.esss.lu.se) | Validate that PV names are actually registered. Run `test_all` and `test_backend` for the first time. Test retry logic with the real API. | **CRITICAL** |
+| **Real IOCs** on the ESS network | Test `pvValidator -s <IOC_IP>` — live PV fetching via PVAccess RPC. Test `pvValidator -d` — IOC discovery broadcast. | **HIGH** |
+| **ESS GitLab** (gitlab.esss.lu.se) | Run the GitLab CI pipeline with the `ess-network` runner tag. Verify `test:api` stage passes. Test the PreCommit lint stage (black/isort/flake8). | **HIGH** |
+| **ESS Artifactory** (direct, not via internet) | Faster conda/pip installs. Can test the `channel_alias` method from ONLINE_MODE_SETUP.md. | MEDIUM |
+| **Real .db and .substitutions files** | Find real ESS IOC database files and validate them with `pvValidator -e` / `pvValidator -m`. | MEDIUM |
+| **Fresh VCR cassettes** | Record current Naming Service state for offline testing on other machines. | MEDIUM |
+
+### What was NEVER tested:
 
 - ❌ Full test suite with `--ess-network` flag (test_all, test_backend always failed)
 - ❌ Live Naming Service validation (naming.esss.lu.se was unreachable)
@@ -17,6 +30,9 @@ This project was developed on an external Windows PC WITHOUT ESS network access.
 - ❌ ESS GitLab CI pipeline (needs `ess-network` runner tag)
 - ❌ Fresh VCR cassette recording from current Naming Service state
 - ❌ Correct behavior of retry logic with the real Naming Service
+- ❌ Whether `--format html` and `--format json` include correct Naming Service data
+- ❌ Whether the autofix `--fix` works correctly when the Naming Service is involved
+- ❌ Whether the Web-UI guide.html ESS links (CHESS, Naming Service, e3) actually resolve
 
 **Your job:** Run everything that couldn't be run before, fix anything that breaks, and prepare the v2.0.0 release.
 
