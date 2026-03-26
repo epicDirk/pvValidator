@@ -36,12 +36,23 @@ All notable changes to pvValidator are documented here.
 - Dead `location_string` branches and `lc_all` in tabview.py
 - Hardcoded year "2021" in tabview.py TUI footer
 
+## [Round 5] — 2026-03-26
+
+### Added
+- **LEGACY-5DIGIT**: Warn on 5-digit index in Cryo/Vacuum disciplines (Annex C)
+- **PROP-5**: Warn on ALL_CAPS/all_lowercase properties (PascalCase recommended, §6.2 Rule 5)
+- **EXC-MTCA**: Validate MTCA controller 3-digit index pattern (Annex A)
+- **EXC-TGT**: Target Station subsystem length exception — INFO instead of ERROR (Annex B)
+- 25 new tests for all new rules (347 total)
+
+### Changed
+- Web-UI: Removed Google Fonts external dependency (privacy + true offline mode)
+- epicsUtils.cxx: Modernized 4 C++03 iterator loops to range-for
+- tabview.py: `string.printable` → `str.isprintable()`
+- pvUtils.py: Removed unused pv2/err2 parameters from `_checkDataMsg`
+
 ### Known Gaps (ESS-0000757 rules not yet implemented)
-- **PROP-5**: Pascal Case check for multi-word properties (SHOULD) — needs heuristic
 - **PROP-7**: No units in property names (SHALL NOT) — cannot be checked statically
-- **LEGACY-5DIGIT**: 5-digit index warning for Cryo/Vacuum disciplines — trivial to add
-- **EXC-TGT**: Target Station 4-digit subsystem exception — needs Tgt-specific logic
-- **EXC-MTCA**: MTCA controller naming pattern (Ctrl-MTCA-XXX) — needs Dis-specific logic
 - **ELEM-3/4**: Subsystem/Device uniqueness across project — checked via Naming Service API only
 
 ## [Round 2] — 2026-03-25
