@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESS PV Naming Convention Guide</title>
+<style>
+:root {
+  --ess-navy: #002855; --ess-cyan: #00B0CA; --ess-blue: #41B6E6; --ess-green: #78BE20;
+  --bg: #FFFFFF; --surface: #F7F8FA; --border: #D8DCE4; --text: #1A1E2C; --text-2: #5A6070; --text-3: #6B7186;
+  --sys: #002855; --sub: #00857A; --dis: #6B3FA0; --dev: #C05F00; --idx: #A08B00; --prop: #0E7A4A;
+  --ok: #0E7A4A; --err: #C8102E; --warn: #B8860B;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;max-width:800px;margin:0 auto;padding:24px}
+h1{font-size:1.8rem;color:var(--ess-navy);margin-bottom:4px}
+h2{font-size:1.2rem;color:var(--ess-navy);margin:36px 0 14px;padding-bottom:8px;border-bottom:3px solid var(--ess-cyan)}
+h3{font-size:1rem;color:var(--text-2);margin:20px 0 10px}
+p{margin:8px 0}
+.subtitle{font-size:0.85rem;color:var(--text-3);margin-bottom:24px}
+.accent-bar{height:4px;background:linear-gradient(90deg,var(--ess-cyan),var(--ess-blue),var(--ess-green));margin-bottom:24px;border-radius:2px}
+code{font-family:ui-monospace,'Cascadia Code',monospace;font-size:0.85rem;background:var(--surface);padding:2px 6px;border-radius:3px}
+.seg{padding:3px 8px;border-radius:4px;font-weight:600;font-family:ui-monospace,monospace;font-size:0.9rem;cursor:pointer;transition:transform 0.15s}
+.seg:hover{transform:scale(1.08)}
+.seg-sys{background:rgba(0,40,85,0.1);color:var(--sys)}
+.seg-sub{background:rgba(0,133,122,0.1);color:var(--sub)}
+.seg-dis{background:rgba(107,63,160,0.1);color:var(--dis)}
+.seg-dev{background:rgba(192,95,0,0.1);color:var(--dev)}
+.seg-idx{background:rgba(160,139,0,0.1);color:var(--idx)}
+.seg-prop{background:rgba(14,122,74,0.1);color:var(--prop)}
+.sep{color:var(--text-3);padding:0 2px;font-size:1.1rem}
+.pv-anatomy{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:20px 24px;margin:16px 0;display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:1rem;justify-content:center}
+.seg-explain{display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0;font-size:0.85rem;line-height:1.5}
+.seg-explain.active{display:block}
+.seg-explain strong{color:var(--ess-navy)}
+.callout{background:rgba(0,176,202,0.06);border-left:4px solid var(--ess-cyan);padding:14px 18px;border-radius:0 8px 8px 0;margin:16px 0;font-size:0.88rem}
+.callout-warn{background:rgba(184,134,11,0.06);border-left-color:var(--warn)}
+.callout-ok{background:rgba(14,122,74,0.06);border-left-color:var(--ok)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:0.85rem}
+th{background:var(--surface);text-align:left;padding:10px 14px;border:1px solid var(--border);font-weight:600;color:var(--text-2);font-size:0.75rem;text-transform:uppercase;letter-spacing:0.04em}
+td{padding:10px 14px;border:1px solid var(--border);vertical-align:top}
+.good{color:var(--ok);font-weight:600} .bad{color:var(--err);font-weight:600}
+a{color:var(--ess-cyan);text-decoration:none} a:hover{text-decoration:underline}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 22px;margin-bottom:28px}
+.toc a{display:block;padding:4px 0;font-size:0.85rem}
+.decision-tree{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin:16px 0;font-size:0.88rem}
+.decision-tree .q{font-weight:700;color:var(--ess-navy);margin:6px 0 2px}
+.decision-tree .a{margin-left:20px;color:var(--text-2)}
+.quiz{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:18px 22px;margin:16px 0}
+.quiz h3{margin-top:0}
+.quiz-option{display:block;padding:8px 14px;margin:4px 0;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.85rem;transition:all 0.15s}
+.quiz-option:hover{background:rgba(0,176,202,0.06);border-color:var(--ess-cyan)}
+.quiz-option.correct{background:rgba(14,122,74,0.1);border-color:var(--ok);color:var(--ok)}
+.quiz-option.wrong{background:rgba(200,16,46,0.06);border-color:var(--err);color:var(--err)}
+.workflow{display:flex;flex-direction:column;gap:2px;margin:16px 0}
+.workflow-step{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:0.85rem}
+.workflow-step .num{background:var(--ess-navy);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0}
+.workflow-arrow{text-align:center;color:var(--text-3);font-size:0.8rem}
+.nav-back{position:fixed;bottom:20px;right:20px;background:var(--ess-navy);color:#fff;padding:8px 14px;border-radius:6px;font-size:0.72rem;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.nav-back:hover{background:#003A75;text-decoration:none}
+footer{margin-top:48px;padding:18px 0;border-top:1px solid var(--border);font-size:0.72rem;color:var(--text-3);text-align:center}
+</style>
+</head>
+<body>
+
+<h1>ESS PV Naming Convention Guide</h1>
+<div class="subtitle">A practical introduction for integrators, engineers, and physicists</div>
+<div class="accent-bar"></div>
+
+<a href="#" class="nav-back">&uarr; Top</a>
+
+<div class="toc">
+  <strong>In this guide</strong>
+  <a href="#what">1. What is ESS-0000757?</a>
+  <a href="#anatomy">2. Anatomy of a PV Name</a>
+  <a href="#formats">3. The Four Formats</a>
+  <a href="#property">4. Property Rules</a>
+  <a href="#mistakes">5. Common Mistakes</a>
+  <a href="#tools">6. Tools and Resources</a>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="what">1. What is ESS-0000757?</h2>
+
+<p>The <strong>European Spallation Source</strong> (ESS) is a neutron research facility being built in Lund, Sweden. It is one of the largest science infrastructure projects in Europe, involving <strong>11 partner institutes across 9 countries</strong>.</p>
+
+<p>ESS uses <strong>EPICS</strong> (Experimental Physics and Industrial Control System) to control thousands of devices &mdash; from temperature sensors to accelerator magnets. Every device exposes its measurements and settings through <strong>Process Variables (PVs)</strong>.</p>
+
+<p>When hundreds of engineers across multiple countries create PV names independently, chaos follows. Operators in the control room need to find the right PV instantly. Alarm systems need consistent names. Archiving needs predictable patterns.</p>
+
+<div class="callout">
+  <strong>ESS-0000757</strong> is the official naming convention document that solves this problem. Revision 10 defines exactly how every PV name at ESS must be structured. It is maintained by <strong>Jorick Lochet</strong> (ESS Naming Coordinator) and published on <a href="https://chess.esss.lu.se/enovia/link/ESS-0000757" target="_blank">CHESS</a>, the ESS document management system.
+</div>
+
+<p><strong>pvValidator</strong> is the tool that enforces these rules automatically. Instead of reading 33 pages of rules, you paste your PV names into pvValidator and it tells you what needs to change.</p>
+
+<!-- ============================================================ -->
+<h2 id="anatomy">2. Anatomy of a PV Name</h2>
+
+<p>Click on any segment to learn what it means:</p>
+
+<div class="pv-anatomy" id="pvDiagram">
+  <span class="seg seg-sys" onclick="showExplain('sys')">DTL</span>
+  <span class="sep">-</span>
+  <span class="seg seg-sub" onclick="showExplain('sub')">010</span>
+  <span class="sep">:</span>
+  <span class="seg seg-dis" onclick="showExplain('dis')">EMR</span>
+  <span class="sep">-</span>
+  <span class="seg seg-dev" onclick="showExplain('dev')">TT</span>
+  <span class="sep">-</span>
+  <span class="seg seg-idx" onclick="showExplain('idx')">001</span>
+  <span class="sep">:</span>
+  <span class="seg seg-prop" onclick="showExplain('prop')">Temperature</span>
+</div>
+
+<div class="seg-explain" id="explain-sys"><strong>System (DTL)</strong> &mdash; Where is this device? DTL = Drift Tube Linac, one of the accelerator sections. Systems are registered in the ESS Naming Service. 1-6 characters, must start with a letter.</div>
+<div class="seg-explain" id="explain-sub"><strong>Subsystem (010)</strong> &mdash; Which section? 010 = section 10 of the DTL. Subsystems can start with digits (e.g., DTL-010 for section numbers). 1-6 characters.</div>
+<div class="seg-explain" id="explain-dis"><strong>Discipline (EMR)</strong> &mdash; What engineering discipline? EMR = Electrical Measurement &amp; Regulation. Other examples: Vac (Vacuum), Cryo (Cryogenics), Ctrl (Control). 1-6 characters, must start with a letter.</div>
+<div class="seg-explain" id="explain-dev"><strong>Device (TT)</strong> &mdash; What type of device? TT = Temperature Transmitter. Other examples: PT (Pressure Transmitter), VG (Vacuum Gauge). 1-6 characters, must start with a letter.</div>
+<div class="seg-explain" id="explain-idx"><strong>Index (001)</strong> &mdash; Which instance? 001 = the first temperature transmitter. Use Scientific style (1-4 digits) or P&amp;ID style (3 digits + optional lowercase, e.g., 002a for redundant devices).</div>
+<div class="seg-explain" id="explain-prop"><strong>Property (Temperature)</strong> &mdash; What value does this PV represent? This is the part you choose as an integrator. Must start with an uppercase letter, use PascalCase for multi-word names (MassFlow, not massflow). Max 25 characters.</div>
+
+<div class="callout">
+  <strong>The three colons rule:</strong> Every PV name has exactly 2 colons, creating 3 parts:<br>
+  <code>SystemPart : DevicePart : Property</code>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="formats">3. The Four Formats</h2>
+
+<p>Not every PV has all segments. ESS defines four valid formats:</p>
+
+<div class="decision-tree">
+  <div class="q">Do you have a specific device?</div>
+  <div class="a"><strong>Yes</strong> &rarr; Do you have a subsystem?</div>
+  <div class="a" style="margin-left:40px"><strong>Yes</strong> &rarr; <code>Sys-Sub:Dis-Dev-Idx:Property</code> (full format)</div>
+  <div class="a" style="margin-left:40px"><strong>No</strong> &rarr; <code>Sys:Dis-Dev-Idx:Property</code> (no subsystem)</div>
+  <div class="a"><strong>No</strong> (system-wide value) &rarr; Do you have a subsystem?</div>
+  <div class="a" style="margin-left:40px"><strong>Yes</strong> &rarr; <code>Sys-Sub::Property</code> (high-level with subsystem)</div>
+  <div class="a" style="margin-left:40px"><strong>No</strong> &rarr; <code>Sys::Property</code> (high-level)</div>
+</div>
+
+<table>
+  <tr><th>Format</th><th>Example</th><th>When to use</th></tr>
+  <tr><td>Full</td><td><code>DTL-010:EMR-TT-001:Temperature</code></td><td>Most common. A specific device in a specific subsystem.</td></tr>
+  <tr><td>No subsystem</td><td><code>ISrc:Vac-VG-001:Pressure</code></td><td>Systems that don't have subsections.</td></tr>
+  <tr><td>High-level (sub)</td><td><code>DTL-010::Temperature</code></td><td>Aggregated value for a whole subsystem.</td></tr>
+  <tr><td>High-level</td><td><code>Tgt::PowerConsumption</code></td><td>System-wide value (no device, no subsystem).</td></tr>
+</table>
+
+<div class="callout-warn callout">
+  <strong>Note the double colon</strong> in high-level PVs: <code>Sys::Property</code>. The device section is empty, but both colons must be present.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="property">4. Property Rules &mdash; The Part You Write</h2>
+
+<p>The property is the only part of the PV name that you, as an integrator, get to choose freely. Here are the rules:</p>
+
+<table>
+  <tr><th>Rule</th><th>Requirement</th><th>Example</th></tr>
+  <tr><td>Length</td><td>4-20 chars recommended, 25 max</td><td><code>Temperature</code> (11 chars) &check;</td></tr>
+  <tr><td>Start</td><td>Must start with a letter (uppercase recommended)</td><td class="good">Temperature</td></tr>
+  <tr><td>Case</td><td>PascalCase for multi-word names</td><td><code>MassFlow</code> not <code>massflow</code></td></tr>
+  <tr><td>Characters</td><td>a-z, A-Z, 0-9, hyphen, underscore only</td><td>No <code>()</code> <code>[]</code> <code>.</code> <code>,</code></td></tr>
+  <tr><td>Setpoint</td><td>Use <code>-SP</code> suffix</td><td><span class="good">Temperature-SP</span> not <span class="bad">Temperature-S</span></td></tr>
+  <tr><td>Readback</td><td>Use <code>-RB</code> suffix</td><td><span class="good">Temperature-RB</span> not <span class="bad">Temperature-RBV</span></td></tr>
+  <tr><td>Reading</td><td>No suffix needed</td><td><span class="good">Temperature</span> not <span class="bad">Temperature-R</span></td></tr>
+  <tr><td>Internal</td><td><code>#</code> as first character</td><td><code>#DebugCalcResult</code> (not for OPI screens)</td></tr>
+</table>
+
+<div class="callout-ok callout">
+  <strong>Tip:</strong> Use <code>pvValidator --explain PROP-SP</code> on the command line to see the full documentation for any rule.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mistakes">5. Common Mistakes and How to Fix Them</h2>
+
+<table>
+  <tr><th>#</th><th>Mistake</th><th class="bad">Wrong</th><th class="good">Correct</th><th>Why</th></tr>
+  <tr><td>1</td><td>EPICS -RBV suffix</td><td class="bad">Temp-RBV</td><td class="good">Temp-RB</td><td>-RBV is an EPICS record field, not ESS convention</td></tr>
+  <tr><td>2</td><td>Ambiguous -S</td><td class="bad">Temp-S</td><td class="good">Temp-SP</td><td>-S could mean setpoint, status, or something else</td></tr>
+  <tr><td>3</td><td>All uppercase</td><td class="bad">TEMPERATURE</td><td class="good">Temperature</td><td>PascalCase is more readable</td></tr>
+  <tr><td>4</td><td>Starts with digit</td><td class="bad">2ndSensor</td><td class="good">SensorB</td><td>Properties must start with a letter</td></tr>
+  <tr><td>5</td><td>Too long</td><td class="bad">VeryLongPropertyName...</td><td class="good">Temp</td><td>Max 25 chars; use standard abbreviations</td></tr>
+</table>
+
+<div class="quiz">
+  <h3>Quick check: Which PV name is correct?</h3>
+  <div class="quiz-option" onclick="checkQuiz(this,false)"><code>DTL-010:EMR-TT-001:temperature-S</code></div>
+  <div class="quiz-option" onclick="checkQuiz(this,true)"><code>DTL-010:EMR-TT-001:Temperature-SP</code></div>
+  <div class="quiz-option" onclick="checkQuiz(this,false)"><code>DTL-010:EMR-TT-001:TEMPERATURE-RBV</code></div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="tools">6. Tools and Resources at ESS</h2>
+
+<p>Here is your workflow when creating PV names for ESS:</p>
+
+<div class="workflow">
+  <div class="workflow-step"><div class="num">1</div><div>You need PV names for your IOC &rarr; check with the <strong>Naming Coordinator</strong> if your System/Discipline mnemonics are registered</div></div>
+  <div class="workflow-arrow">&darr;</div>
+  <div class="workflow-step"><div class="num">2</div><div>Build your IOC &rarr; PV names go into <code>.db</code> files or substitution files</div></div>
+  <div class="workflow-arrow">&darr;</div>
+  <div class="workflow-step"><div class="num">3</div><div>Before deployment &rarr; run <strong>pvValidator</strong> to check all names: <code>pvValidator --suggest -i myfile.txt</code></div></div>
+  <div class="workflow-arrow">&darr;</div>
+  <div class="workflow-step"><div class="num">4</div><div>Fix any errors &rarr; pvValidator shows what is wrong, why, and how to fix it. Use <code>--fix</code> for automatic corrections.</div></div>
+  <div class="workflow-arrow">&darr;</div>
+  <div class="workflow-step"><div class="num">5</div><div>Register names &rarr; <strong>ESS Naming Service</strong> at <a href="https://naming.esss.lu.se/" target="_blank">naming.esss.lu.se</a></div></div>
+</div>
+
+<h3>Key resources</h3>
+<table>
+  <tr><th>Resource</th><th>What</th><th>Link</th></tr>
+  <tr><td><strong>ESS-0000757</strong></td><td>The official naming convention (33 pages)</td><td><a href="https://chess.esss.lu.se/enovia/link/ESS-0000757" target="_blank">CHESS</a></td></tr>
+  <tr><td><strong>pvValidator</strong></td><td>Automatic name validation + fix suggestions</td><td>This tool (CLI + Web-UI)</td></tr>
+  <tr><td><strong>Quick Reference</strong></td><td>One-page cheat sheet with all rules</td><td><a href="reference.html">reference.html</a></td></tr>
+  <tr><td><strong>ESS Naming Service</strong></td><td>Register and look up ESS names</td><td><a href="https://naming.esss.lu.se/" target="_blank">naming.esss.lu.se</a></td></tr>
+  <tr><td><strong>e3 Documentation</strong></td><td>EPICS Environment setup and usage</td><td><a href="https://e3.pages.ess.eu/" target="_blank">e3.pages.ess.eu</a></td></tr>
+  <tr><td><strong>ESS Artifactory</strong></td><td>conda + PyPI packages (public, no VPN)</td><td><a href="https://artifactory.esss.lu.se/" target="_blank">artifactory.esss.lu.se</a></td></tr>
+</table>
+
+<footer>
+  Based on <a href="https://chess.esss.lu.se/enovia/link/ESS-0000757" target="_blank">ESS-0000757 Rev. 10</a>
+  &mdash; European Spallation Source ERIC
+  <br>
+  <a href="reference.html">Quick Reference</a> &middot; <a href="index.html">pvValidator Web-UI</a>
+</footer>
+
+<script>
+function showExplain(id) {
+  document.querySelectorAll('.seg-explain').forEach(function(el) { el.classList.remove('active'); });
+  var el = document.getElementById('explain-' + id);
+  if (el) el.classList.add('active');
+}
+function checkQuiz(el, correct) {
+  el.classList.add(correct ? 'correct' : 'wrong');
+  if (correct) {
+    el.parentNode.querySelectorAll('.quiz-option').forEach(function(o) {
+      if (o !== el) o.style.opacity = '0.4';
+    });
+  }
+}
+</script>
+</body>
+</html>
