@@ -33,7 +33,7 @@ platforms = ["Linux","WSL"]
 where = ["."]
 
 [tool.setuptools.package-data]
-"pvValidatorUtils" = ["*.so*"]
+"pvValidatorUtils" = ["*.so*", "web/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
