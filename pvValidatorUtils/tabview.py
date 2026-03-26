@@ -10,7 +10,6 @@ import curses.ascii
 import locale
 import os
 import re
-import string
 import sys
 import unicodedata
 from collections import Counter
@@ -346,7 +345,7 @@ class Viewer:
         else:
             if 0 < ch < 256:
                 c = chr(ch)
-                if c in string.printable:
+                if c.isprintable():
                     res = self.textpad.gather().strip().lower()
                     self.search_str = res + chr(ch)
                     self.search_str = self.search_str.lower().strip()

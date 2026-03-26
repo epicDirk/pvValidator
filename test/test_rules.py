@@ -10,7 +10,10 @@ from pvValidatorUtils.rules import (
     check_device_index,
     check_element_characters,
     check_element_lengths,
+    check_legacy_index,
     check_legacy_prefix,
+    check_mtca_naming,
+    check_pascal_case,
     check_property_characters,
     check_property_length,
     check_property_suffix,
@@ -340,3 +343,143 @@ class TestCheckAllRules:
         msgs = check_all_rules(c)
         errors = [m for m in msgs if m.severity == Severity.ERROR]
         assert len(errors) >= 2
+
+
+# ---------------------------------------------------------------------------
+# Legacy 5-Digit Index (ESS-0000757 Annex C)
+# ---------------------------------------------------------------------------
+
+class TestLegacy5DigitIndex:
+
+    def test_5digit_cryo_warning(self):
+        c = parse("CWM-CWS03:Cryo-PT-12345:Temperature")
+        msgs = check_legacy_index(c)
+        assert has_warning(msgs, "legacy")
+
+    def test_4digit_cryo_ok(self):
+        c = parse("CWM-CWS03:Cryo-PT-1234:Temperature")
+        msgs = check_legacy_index(c)
+        assert len(msgs) == 0
+
+    def test_5digit_vac_warning(self):
+        c = parse("ISrc:Vac-VG-12345:Pressure")
+        msgs = check_legacy_index(c)
+        assert has_warning(msgs, "legacy")
+
+    def test_5digit_non_cryo_ok(self):
+        """Non-Cryo/Vac disciplines don't trigger legacy warning."""
+        c = parse("DTL-010:EMR-TT-12345:Temperature")
+        msgs = check_legacy_index(c)
+        assert len(msgs) == 0
+
+    def test_high_level_no_check(self):
+        c = parse("DTL-010::Temperature")
+        msgs = check_legacy_index(c)
+        assert len(msgs) == 0
+
+
+# ---------------------------------------------------------------------------
+# Pascal Case (ESS-0000757 §6.2 Rule 5)
+# ---------------------------------------------------------------------------
+
+class TestPascalCase:
+
+    def test_all_uppercase_warning(self):
+        c = parse("DTL-010:EMR-TT-001:TEMPERATURE")
+        msgs = check_pascal_case(c)
+        assert has_warning(msgs, "PascalCase")
+
+    def test_all_lowercase_warning(self):
+        c = parse("DTL-010:EMR-TT-001:temperature")
+        msgs = check_pascal_case(c)
+        assert has_warning(msgs, "PascalCase")
+
+    def test_pascal_case_ok(self):
+        c = parse("DTL-010:EMR-TT-001:Temperature")
+        msgs = check_pascal_case(c)
+        assert len(msgs) == 0
+
+    def test_mixed_case_ok(self):
+        c = parse("DTL-010:EMR-TT-001:TempMax")
+        msgs = check_pascal_case(c)
+        assert len(msgs) == 0
+
+    @pytest.mark.parametrize("prop", ["On", "Off", "In", "Out", "Ok"])
+    def test_short_exempt(self, prop):
+        c = parse(f"DTL-010:EMR-TT-001:{prop}")
+        msgs = check_pascal_case(c)
+        assert len(msgs) == 0
+
+    def test_internal_exempt(self):
+        c = parse("DTL-010:EMR-TT-001:#DEBUGVALUE")
+        msgs = check_pascal_case(c)
+        assert len(msgs) == 0
+
+    def test_with_suffix_sp(self):
+        """Check applies to base property, not suffix."""
+        c = parse("DTL-010:EMR-TT-001:TEMPERATURE-SP")
+        msgs = check_pascal_case(c)
+        assert has_warning(msgs, "PascalCase")
+
+    def test_4char_exempt(self):
+        """Properties <= 4 chars are exempt (could be abbreviations)."""
+        c = parse("DTL-010:EMR-TT-001:TEMP")
+        msgs = check_pascal_case(c)
+        assert len(msgs) == 0
+
+
+# ---------------------------------------------------------------------------
+# MTCA Controller Naming (ESS-0000757 Annex A)
+# ---------------------------------------------------------------------------
+
+class TestMTCANaming:
+
+    def test_ctrl_mtca_3digit_ok(self):
+        c = parse("PBI-BCM01:Ctrl-MTCA-100:Status")
+        msgs = check_mtca_naming(c)
+        assert len(msgs) == 0
+
+    def test_ctrl_mtca_wrong_index(self):
+        c = parse("PBI-BCM01:Ctrl-MTCA-12:Status")
+        msgs = check_mtca_naming(c)
+        assert has_warning(msgs, "3 digits")
+
+    def test_ctrl_cpu_3digit_ok(self):
+        c = parse("PBI-BCM01:Ctrl-CPU-001:Status")
+        msgs = check_mtca_naming(c)
+        assert len(msgs) == 0
+
+    def test_ctrl_evr_wrong_index(self):
+        c = parse("PBI-BCM01:Ctrl-EVR-1234:Status")
+        msgs = check_mtca_naming(c)
+        assert has_warning(msgs, "3 digits")
+
+    def test_non_ctrl_no_check(self):
+        c = parse("DTL-010:EMR-TT-001:Temperature")
+        msgs = check_mtca_naming(c)
+        assert len(msgs) == 0
+
+
+# ---------------------------------------------------------------------------
+# Target Station Exception (ESS-0000757 Annex B)
+# ---------------------------------------------------------------------------
+
+class TestTargetException:
+
+    def test_tgt_long_subsystem_info(self):
+        """Target Station subsystems > 6 chars get INFO, not ERROR."""
+        c = parse("Tgt-HeC1010:Proc-TT-003:Temperature")
+        msgs = check_element_lengths(c)
+        info = [m for m in msgs if m.severity == Severity.INFO and m.rule_id == "EXC-TGT"]
+        assert len(info) == 1
+
+    def test_tgt_normal_subsystem_ok(self):
+        c = parse("Tgt-HeC1:Proc-TT-003:Temperature")
+        msgs = check_element_lengths(c)
+        assert no_errors(msgs)
+
+    def test_non_tgt_long_subsystem_error(self):
+        """Non-Target systems still get ELEM-6 error."""
+        c = parse("DTL-ABCDEFG:EMR-TT-001:Temperature")
+        msgs = check_element_lengths(c)
+        assert any(m.rule_id == "ELEM-6" for m in msgs)

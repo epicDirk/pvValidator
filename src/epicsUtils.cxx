@@ -15,18 +15,15 @@ epicsUtils::epicsUtils(bool servdisc) {
   if (servdisc) {
     discoverServers(timeOut);
     stringstream ss;
-    for (ServerMap::const_iterator iter = serverMap.begin();
-         iter != serverMap.end(); iter++) {
-
-      const ServerEntry &entry = iter->second;
+    for (const auto &kv : serverMap) {
+      const ServerEntry &entry = kv.second;
 
       ss << "GUID 0x" << entry.guid << " version " << (int)entry.version << ": "
          << entry.protocol << "@[ ";
 
-      size_t count = entry.addresses.size();
-      for (size_t i = 0; i < count; i++) {
+      for (size_t i = 0; i < entry.addresses.size(); i++) {
         ss << inetAddressToString(entry.addresses[i]);
-        if (i < (count - 1))
+        if (i < (entry.addresses.size() - 1))
           ss << " ";
       }
       ss << " ]\n";
@@ -60,9 +57,8 @@ epicsUtils::epicsUtils(string serverAddress) {
   if (byGUIDSearch) {
     string originalGUID = serverAddress;
     bool resolved = false;
-    for (ServerMap::const_iterator iter = serverMap.begin();
-         iter != serverMap.end(); iter++) {
-      const ServerEntry &entry = iter->second;
+    for (const auto &kv : serverMap) {
+      const ServerEntry &entry = kv.second;
 
       if (strncmp(entry.guid.c_str(), &(originalGUID[2]), 24) == 0) {
         // found match
@@ -244,9 +240,8 @@ bool epicsUtils::processSearchResponse(osiSockAddr const &responseFrom,
   if (iter != serverMap.end()) {
     bool found = false;
     vector<osiSockAddr> &vec = iter->second.addresses;
-    for (vector<osiSockAddr>::const_iterator ai = vec.begin(); ai != vec.end();
-         ai++)
-      if (sockAddrAreIdentical(&(*ai), &serverAddress)) {
+    for (const auto &ai : vec)
+      if (sockAddrAreIdentical(&ai, &serverAddress)) {
         found = true;
         break;
       }
@@ -328,10 +323,9 @@ bool epicsUtils::discoverServers(double timeOut) {
       return false;
     }
 
-    for (IfaceNodeVector::const_iterator it(ifaces.begin()), end(ifaces.end());
-         it != end; ++it) {
-      if (it->validBcast && it->bcast.sa.sa_family == AF_INET) {
-        osiSockAddr bcast = it->bcast;
+    for (const auto &iface : ifaces) {
+      if (iface.validBcast && iface.bcast.sa.sa_family == AF_INET) {
+        osiSockAddr bcast = iface.bcast;
         bcast.ia.sin_port = htons(broadcastPort);
         broadcastAddresses.push_back(bcast);
       }

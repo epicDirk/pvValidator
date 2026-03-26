@@ -244,7 +244,11 @@ def check_property_characters(components: PVComponents) -> List[ValidationMessag
 
 
 def check_element_lengths(components: PVComponents) -> List[ValidationMessage]:
-    """ESS-0000757 §3 Rule 6: Sys/Sub/Dis/Dev max 6 characters."""
+    """ESS-0000757 §3 Rule 6: Sys/Sub/Dis/Dev max 6 characters.
+
+    Exception: Target Station (Tgt) may use longer subsystem codes
+    per ESS-0000757 Annex B, Section 9.2.
+    """
     msgs = []
     elements = [
         ("System", components.system),
@@ -254,11 +258,19 @@ def check_element_lengths(components: PVComponents) -> List[ValidationMessage]:
     ]
     for name, value in elements:
         if value and len(value) > MAX_ELEMENT_LENGTH:
-            msgs.append(ValidationMessage(
-                Severity.ERROR,
-                f'The {name} "{value}" exceeds {MAX_ELEMENT_LENGTH} characters ({len(value)})',
-                "ELEM-6",
-            ))
+            # Target Station exception for subsystem (Annex B)
+            if name == "Subsystem" and components.system == "Tgt":
+                msgs.append(ValidationMessage(
+                    Severity.INFO,
+                    f'Target Station subsystem "{value}" exceeds {MAX_ELEMENT_LENGTH} characters (allowed per Annex B)',
+                    "EXC-TGT",
+                ))
+            else:
+                msgs.append(ValidationMessage(
+                    Severity.ERROR,
+                    f'The {name} "{value}" exceeds {MAX_ELEMENT_LENGTH} characters ({len(value)})',
+                    "ELEM-6",
+                ))
     return msgs
 
 
@@ -346,6 +358,57 @@ def check_legacy_prefix(components: PVComponents) -> List[ValidationMessage]:
             ))
             break
     return msgs
+
+
+def check_legacy_index(components: PVComponents) -> List[ValidationMessage]:
+    """ESS-0000757 Annex C: 5-digit index is legacy for Cryo/Vacuum."""
+    if components.is_high_level or not components.index:
+        return []
+    if components.discipline in ("Cryo", "Vac") and len(components.index) > 4:
+        return [ValidationMessage(
+            Severity.WARNING,
+            f'5-digit index is legacy for {components.discipline} (use max 4 digits)',
+            "LEGACY-5DIGIT",
+        )]
+    return []
+
+
+def check_pascal_case(components: PVComponents) -> List[ValidationMessage]:
+    """ESS-0000757 §6.2 Rule 5: Properties SHOULD use PascalCase."""
+    prop = components.property
+    if not prop or prop.startswith("#"):
+        return []
+    # Strip standard suffixes before checking
+    clean = prop
+    for suffix in ("-SP", "-RB"):
+        if clean.endswith(suffix):
+            clean = clean[:-len(suffix)]
+            break
+    if len(clean) <= 4 or clean in KNOWN_SHORT_PROPERTIES:
+        return []
+    if clean.isupper() or clean.islower():
+        return [ValidationMessage(
+            Severity.WARNING,
+            "Property should use PascalCase for multi-word names",
+            "PROP-5",
+        )]
+    return []
+
+
+MTCA_DEVICES = frozenset({"MTCA", "CPU", "EVR"})
+
+
+def check_mtca_naming(components: PVComponents) -> List[ValidationMessage]:
+    """ESS-0000757 Annex A: MTCA controller index must be 3 digits."""
+    if components.discipline != "Ctrl" or components.device not in MTCA_DEVICES:
+        return []
+    if components.index and not re.match(r"^\d{3}$", components.index):
+        return [ValidationMessage(
+            Severity.WARNING,
+            "MTCA index should be 3 digits (system + counter)",
+            "EXC-MTCA",
+        )]
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -443,6 +506,9 @@ SINGLE_PV_RULES = [
     check_element_characters,
     check_device_index,
     check_legacy_prefix,
+    check_legacy_index,
+    check_pascal_case,
+    check_mtca_naming,
 ]
 
 
