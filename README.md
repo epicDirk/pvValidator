@@ -26,7 +26,7 @@ pip3 install pvValidatorUtils \
   -i https://artifactory.esss.lu.se/artifactory/api/pypi/pypi-virtual/simple --user
 ```
 
-**From source** (needs Python 3.8+, SWIG, CMake 3.0+, EPICS 7, C++ compiler):
+**From source** (needs Python 3.8+, SWIG, CMake 3.12+, EPICS 7, C++ compiler):
 ```bash
 source /path/to/epics/environment
 mkdir build && cd build
@@ -82,7 +82,7 @@ CLI (pvValidator.py)
 
 ## Testing
 
-147 tests, all runnable without ESS network access:
+322 tests, all runnable without ESS network access:
 
 ```bash
 # Offline tests (default)
@@ -92,7 +92,7 @@ pytest test/ -v -k "not backend and not pvepics and not test_all"
 pytest test/ -v --ess-network
 ```
 
-Tests cover format parsing (40), validation rules (59), API mocking (28), rule loader (17), and the original pvValidator tests (4).
+Tests cover format parsing (40), validation rules (67), API mocking (28), rule loader (17), autofix (30), cassettes (24), reporter (11), hypothesis fuzzing, DB parser (21), combinatorial/PICT (67), and the original pvValidator tests (4).
 
 ## Rule Configuration
 
