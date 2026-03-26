@@ -4,8 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>pvValidator — ESS EPICS PV Name Validator</title>
-<!-- Fonts: system fallback stack (no external requests, offline-compatible) -->
 <style>
+/* Self-hosted fonts — no external requests, works offline */
+@font-face { font-family: 'Titillium Web'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('fonts/titillium-web-regular.woff2') format('woff2'); }
+@font-face { font-family: 'Titillium Web'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('fonts/titillium-web-600.woff2') format('woff2'); }
+@font-face { font-family: 'Titillium Web'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('fonts/titillium-web-700.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('fonts/ibm-plex-mono-regular.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap;
+  src: url('fonts/ibm-plex-mono-500.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap;
+  src: url('fonts/ibm-plex-mono-600.woff2') format('woff2'); }
 :root {
   /* ESS Brand Colors */
   --ess-navy: #002855;
@@ -53,7 +65,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 15px; }
-body { font-family: 'Titillium Web', system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+body { font-family: 'Titillium Web', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
 /* Header */
 .header { background: var(--ess-navy); color: #fff; padding: 0; }
@@ -76,7 +88,7 @@ body { font-family: 'Titillium Web', system-ui, -apple-system, 'Segoe UI', sans-
 .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; text-align: center; transition: border-color 0.2s; }
 .stat:hover { border-color: var(--border-hover); }
-.stat-val { font-family: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace; font-size: 1.8rem; font-weight: 600; line-height: 1; color: var(--text); }
+.stat-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 600; line-height: 1; color: var(--text); }
 .stat-lbl { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; font-weight: 600; }
 .stat-ok .stat-val { color: var(--ok); }
 .stat-err .stat-val { color: var(--err); }
@@ -98,7 +110,7 @@ body { font-family: 'Titillium Web', system-ui, -apple-system, 'Segoe UI', sans-
 .toolbar-right { margin-left: auto; display: flex; gap: 8px; }
 
 /* Editor */
-.editor textarea { width: 100%; min-height: 150px; padding: 14px 16px; font-family: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+.editor textarea { width: 100%; min-height: 150px; padding: 14px 16px; font-family: 'IBM Plex Mono', monospace;
   font-size: 0.84rem; line-height: 1.85; background: var(--bg); border: 2px solid var(--border);
   border-radius: 8px; color: var(--text); resize: vertical; outline: none; transition: border-color 0.2s; }
 .editor textarea::placeholder { color: var(--text-3); }
@@ -122,8 +134,8 @@ body { font-family: 'Titillium Web', system-ui, -apple-system, 'Segoe UI', sans-
 .pv-row.is-valid { border-left: 4px solid var(--ok); background: var(--ok-bg); }
 .pv-row.bad-format { border-left: 4px solid var(--text-3); opacity: 0.65; }
 
-.pv-parsed { font-family: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace; font-size: 0.82rem; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
-.pv-raw { font-family: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Fira Code', monospace; font-size: 0.78rem; color: var(--text-3); word-break: break-all; }
+.pv-parsed { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.pv-raw { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: var(--text-3); word-break: break-all; }
 .seg { padding: 2px 7px; border-radius: 3px; font-weight: 500; }
 .seg-sys { background: var(--sys-bg); color: var(--sys); }
 .seg-sub { background: var(--sub-bg); color: var(--sub); }
@@ -162,7 +174,7 @@ footer .right { font-size: 0.68rem; color: var(--text-3); }
   padding: 16px 20px; margin-bottom: 16px; font-size: 0.78rem; line-height: 1.6; }
 .format-guide.open { display: block; }
 .format-guide h3 { font-size: 0.82rem; color: var(--ess-navy); margin: 0 0 8px; }
-.format-guide .fmt { font-family: ui-monospace, monospace; font-size: 0.8rem; background: var(--bg);
+.format-guide .fmt { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; background: var(--bg);
   border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 6px 0; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
 .format-guide .constraint { font-size: 0.7rem; color: var(--text-3); margin-top: 8px; }
 .format-guide a { color: var(--ess-cyan); }
