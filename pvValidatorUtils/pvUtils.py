@@ -76,7 +76,6 @@ class pvUtils:
         # Metadata
         self._getMeta()
         self.exiterror = False
-        self.pattern = "record"
         self.infovalidation = ""
 
         # Rule configuration (from YAML)
@@ -103,12 +102,7 @@ class pvUtils:
         self.data = []
         self.Title = f"pvValidator {self.version}"
         self.Widths = [6, 9, 10, 6, 6, 25, 60, 30]
-        self.headers = {"accept": "application/json"}
-
         # Legacy state tracking (preserved for backwards compat with tests + tabview)
-        self.exist = 1
-        self.notexist = 0
-        self.empty = 2
         self.datainfo = {}
         self.PVDict = {}
         self.VFormD = {}
@@ -286,9 +280,6 @@ class pvUtils:
         urls = self.api_client.DEFAULT_URLS
         url = urls.get(self.namingservice, urls["prod"])
         self.NameService = "Production" if self.namingservice == "prod" else "Testing"
-        self.urlparts = url + "rest/parts/mnemonic/"
-        self.urlname = url + "rest/deviceNames/"
-
         if not self.checkonlyfmt:
             try:
                 self.api_client.check_connectivity()
@@ -318,9 +309,9 @@ class pvUtils:
             # System check
             if sys_name not in self.SysStructCheckList:
                 self.SysStructCheckList[sys_name] = (
-                    self.exist if self.api_client.validate_system(sys_name) else self.notexist
+                    self.api_client.validate_system(sys_name)
                 )
-            if self.SysStructCheckList[sys_name] == self.notexist:
+            if self.SysStructCheckList[sys_name] == False:
                 scheck += f'Error: The System "{sys_name}" is not active in the Naming Service\n'
                 checkname = False
 
@@ -329,9 +320,9 @@ class pvUtils:
                 cache_key = f"{sys_name}-{subsys}"
                 if cache_key not in self.SysStructCheckList:
                     self.SysStructCheckList[cache_key] = (
-                        self.exist if self.api_client.validate_subsystem(sys_name, subsys) else self.notexist
+                        self.api_client.validate_subsystem(sys_name, subsys)
                     )
-                if self.SysStructCheckList[cache_key] == self.notexist:
+                if self.SysStructCheckList[cache_key] == False:
                     scheck += f'Error: The Subsystem "{subsys}" of the System "{sys_name}" is not active in the Naming Service\n'
                     checkname = False
 
@@ -349,17 +340,17 @@ class pvUtils:
 
                     if dis not in self.DevStructCheckList:
                         self.DevStructCheckList[dis] = (
-                            self.exist if self.api_client.validate_discipline(dis) else self.notexist
+                            self.api_client.validate_discipline(dis)
                         )
-                    if self.DevStructCheckList[dis] == self.notexist:
+                    if self.DevStructCheckList[dis] == False:
                         scheck += f'Error: The Discipline "{dis}" is not active in the Naming Service\n'
                         checkname = False
 
                     if d not in self.DevStructCheckList:
                         self.DevStructCheckList[d] = (
-                            self.exist if self.api_client.validate_device(dis, dev) else self.notexist
+                            self.api_client.validate_device(dis, dev)
                         )
-                    if self.DevStructCheckList[d] == self.notexist:
+                    if self.DevStructCheckList[d] == False:
                         scheck += f'Error: The Device "{dev}" of the Discipline "{dis}" is not active in the Naming Service\n'
                         checkname = False
 
@@ -394,14 +385,14 @@ class pvUtils:
     def _checkValidFormat(self):
         """Check PV format and run structural element rules."""
         for pv in self.pvlist:
-            pvelem = self._getPVFormat(pv)
+            components = parse_pv(pv)
+            pvelem = components.to_list() if components else []
             if self._isValidFormat(pvelem, pv):
                 self.VFormD[pv] = True
                 dev, prop = pv.rsplit(":", 1)
                 self.PVDict.setdefault(dev, []).append(prop)
 
                 # Structural checks from rules module
-                components = parse_pv(pv)
                 if components:
                     self._checkStructuralRules(pv, components)
             else:
@@ -626,23 +617,11 @@ class pvUtils:
 
     def _getMeta(self):
         """Load package metadata."""
+        from importlib.metadata import metadata
         pkg = "pvValidatorUtils"
-        if sys.version_info >= (3, 8, 0):
-            from importlib.metadata import metadata
-            meta = metadata(pkg)
-            self.author = meta.get("Author-email").split(" <")[0]
-            self.email = meta.get("Author-email").split()[2]
-        else:
-            from email import message_from_string
-            from pkg_resources import get_distribution
-            dist = get_distribution(pkg)
-            try:
-                pkginfo = dist.get_metadata("METADATA")
-            except FileNotFoundError:
-                pkginfo = dist.get_metadata("PKG-INFO")
-            meta = message_from_string(pkginfo)
-            self.author = meta.get("Author")
-            self.email = meta.get("Author-email")
+        meta = metadata(pkg)
+        self.author = meta.get("Author-email").split(" <")[0]
+        self.email = meta.get("Author-email").split()[2]
         self.version = meta.get("Version")
         self.license = meta.get("License")
         self.platform = meta.get_all("Platform")
