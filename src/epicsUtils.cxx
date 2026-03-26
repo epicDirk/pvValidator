@@ -49,21 +49,16 @@ epicsUtils::epicsUtils(string serverAddress) {
   else
     byGUIDSearch = false;
 
-  if (byGUIDSearch)
+  if (byGUIDSearch) {
     discoverServers(timeOut);
 
-  // by GUID search
-
-  if (byGUIDSearch) {
     string originalGUID = serverAddress;
     bool resolved = false;
     for (const auto &kv : serverMap) {
       const ServerEntry &entry = kv.second;
 
-      if (strncmp(entry.guid.c_str(), &(originalGUID[2]), 24) == 0) {
-        // found match
+      if (entry.guid == originalGUID.substr(2)) {
         if (!entry.addresses.empty()) {
-          // TODO for now we take only first server address
           serverAddress = inetAddressToString(entry.addresses[0]);
           resolved = true;
         }
@@ -282,76 +277,22 @@ bool epicsUtils::sendBroadcast(SOCKET socket, ByteBuffer &sendBuffer,
     if (status < 0) {
       char errStr[64];
       epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-      fprintf(stderr, "Send error: %s\n", errStr);
+      LOG(logLevelError, "Send error: %s", errStr);
     } else
       oneOK = true;
   }
   return oneOK;
 }
 
-bool epicsUtils::discoverServers(double timeOut) {
-  osiSockAttach();
-
+SOCKET epicsUtils::createDiscoverySocket(double timeOut,
+                                         osiSockAddr &localAddr) {
   SOCKET socket = epicsSocketCreate(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (socket == INVALID_SOCKET) {
     char errStr[64];
     epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-    fprintf(stderr, "Failed to create a socket: %s\n", errStr);
-    return false;
+    LOG(logLevelError, "Failed to create a socket: %s", errStr);
+    return INVALID_SOCKET;
   }
-
-  //
-  // read config
-  //
-
-  Configuration::shared_pointer configuration(new SystemConfigurationImpl());
-
-  string addressList =
-      configuration->getPropertyAsString("EPICS_PVA_ADDR_LIST", "");
-  bool autoAddressList =
-      configuration->getPropertyAsBoolean("EPICS_PVA_AUTO_ADDR_LIST", true);
-  int broadcastPort = configuration->getPropertyAsInteger(
-      "EPICS_PVA_BROADCAST_PORT", PVA_BROADCAST_PORT);
-
-  // query broadcast addresses of all IFs
-  InetAddrVector broadcastAddresses;
-  {
-    IfaceNodeVector ifaces;
-    if (discoverInterfaces(ifaces, socket, 0)) {
-      fprintf(stderr, "Unable to populate interface list\n");
-      epicsSocketDestroy(socket);
-      return false;
-    }
-
-    for (const auto &iface : ifaces) {
-      if (iface.validBcast && iface.bcast.sa.sa_family == AF_INET) {
-        osiSockAddr bcast = iface.bcast;
-        bcast.ia.sin_port = htons(broadcastPort);
-        broadcastAddresses.push_back(bcast);
-      }
-    }
-  }
-
-  // set broadcast address list
-  if (!addressList.empty()) {
-    // if auto is true, add it to specified list
-    InetAddrVector *appendList = 0;
-    if (autoAddressList)
-      appendList = &broadcastAddresses;
-
-    InetAddrVector list;
-    getSocketAddressList(list, addressList, broadcastPort, appendList);
-    if (!list.empty()) {
-      // delete old list and take ownership of a new one
-      broadcastAddresses = list;
-    }
-  }
-
-  for (size_t i = 0; i < broadcastAddresses.size(); i++)
-    LOG(logLevelDebug, "Broadcast address #%zu: %s.", i,
-        inetAddressToString(broadcastAddresses[i]).c_str());
-
-  // ---
 
   int optval = 1;
   int status = ::setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (char *)&optval,
@@ -359,9 +300,9 @@ bool epicsUtils::discoverServers(double timeOut) {
   if (status) {
     char errStr[64];
     epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-    fprintf(stderr, "Error setting SO_BROADCAST: %s\n", errStr);
+    LOG(logLevelError, "Error setting SO_BROADCAST: %s", errStr);
     epicsSocketDestroy(socket);
-    return false;
+    return INVALID_SOCKET;
   }
 
   osiSockAddr bindAddr;
@@ -374,14 +315,12 @@ bool epicsUtils::discoverServers(double timeOut) {
   if (status) {
     char errStr[64];
     epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-    fprintf(stderr, "Failed to bind: %s\n", errStr);
+    LOG(logLevelError, "Failed to bind: %s", errStr);
     epicsSocketDestroy(socket);
-    return false;
+    return INVALID_SOCKET;
   }
 
-  // set timeout
 #ifdef _WIN32
-  // ms
   DWORD timeout = 250;
 #else
   struct timeval timeout;
@@ -394,66 +333,82 @@ bool epicsUtils::discoverServers(double timeOut) {
   if (status) {
     char errStr[64];
     epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-    fprintf(stderr, "Error setting SO_RCVTIMEO: %s\n", errStr);
+    LOG(logLevelError, "Error setting SO_RCVTIMEO: %s", errStr);
     epicsSocketDestroy(socket);
-    return false;
+    return INVALID_SOCKET;
   }
 
-  osiSockAddr responseAddress;
   osiSocklen_t sockLen = sizeof(sockaddr);
-  // read the actual socket info
-  status = ::getsockname(socket, &responseAddress.sa, &sockLen);
+  status = ::getsockname(socket, &localAddr.sa, &sockLen);
   if (status) {
     char errStr[64];
     epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-    fprintf(stderr, "Failed to get local socket address: %s.", errStr);
+    LOG(logLevelError, "Failed to get local socket address: %s", errStr);
     epicsSocketDestroy(socket);
-    return false;
+    return INVALID_SOCKET;
   }
 
-  char buffer[1024];
-  ByteBuffer sendBuffer(buffer, sizeof(buffer) / sizeof(char));
+  return socket;
+}
 
-  sendBuffer.putByte(PVA_MAGIC);
-  sendBuffer.putByte(PVA_CLIENT_PROTOCOL_REVISION);
-  sendBuffer.putByte((EPICS_BYTE_ORDER == EPICS_ENDIAN_BIG)
-                         ? 0x80
-                         : 0x00);                // data + 7-bit endianess
-  sendBuffer.putByte((int8_t)CMD_SEARCH);        // search
-  sendBuffer.putInt(4 + 1 + 3 + 16 + 2 + 1 + 2); // "zero" payload
+InetAddrVector epicsUtils::buildBroadcastList(SOCKET socket) {
+  Configuration::shared_pointer configuration(new SystemConfigurationImpl());
 
-  sendBuffer.putInt(0); // sequenceId
-  sendBuffer.putByte(
-      (int8_t)0x81); // reply required // TODO unicast vs multicast; for now we
-                     // mark ourselves as unicast
-  sendBuffer.putByte((int8_t)0);   // reserved
-  sendBuffer.putShort((int16_t)0); // reserved
+  string addressList =
+      configuration->getPropertyAsString("EPICS_PVA_ADDR_LIST", "");
+  bool autoAddressList =
+      configuration->getPropertyAsBoolean("EPICS_PVA_AUTO_ADDR_LIST", true);
+  int broadcastPort = configuration->getPropertyAsInteger(
+      "EPICS_PVA_BROADCAST_PORT", PVA_BROADCAST_PORT);
 
-  // NOTE: is it possible (very likely) that address is any local address
-  // ::ffff:0.0.0.0
-  encodeAsIPv6Address(&sendBuffer, &responseAddress);
-  sendBuffer.putShort((int16_t)ntohs(responseAddress.ia.sin_port));
+  InetAddrVector broadcastAddresses;
+  {
+    IfaceNodeVector ifaces;
+    if (discoverInterfaces(ifaces, socket, 0)) {
+      LOG(logLevelError, "Unable to populate interface list");
+      return broadcastAddresses;
+    }
 
-  sendBuffer.putByte((int8_t)0x00); // protocol count
-  sendBuffer.putShort((int16_t)0);  // name count
-
-  if (!sendBroadcast(socket, sendBuffer, broadcastAddresses)) {
-    epicsSocketDestroy(socket);
-    return false;
+    for (const auto &iface : ifaces) {
+      if (iface.validBcast && iface.bcast.sa.sa_family == AF_INET) {
+        osiSockAddr bcast = iface.bcast;
+        bcast.ia.sin_port = htons(broadcastPort);
+        broadcastAddresses.push_back(bcast);
+      }
+    }
   }
 
+  if (!addressList.empty()) {
+    InetAddrVector *appendList = 0;
+    if (autoAddressList)
+      appendList = &broadcastAddresses;
+
+    InetAddrVector list;
+    getSocketAddressList(list, addressList, broadcastPort, appendList);
+    if (!list.empty()) {
+      broadcastAddresses = list;
+    }
+  }
+
+  for (size_t i = 0; i < broadcastAddresses.size(); i++)
+    LOG(logLevelDebug, "Broadcast address #%zu: %s.", i,
+        inetAddressToString(broadcastAddresses[i]).c_str());
+
+  return broadcastAddresses;
+}
+
+void epicsUtils::receiveResponses(SOCKET socket, ByteBuffer &sendBuffer,
+                                  InetAddrVector &broadcastAddresses) {
   char rxbuff[1024];
   ByteBuffer receiveBuffer(rxbuff, sizeof(rxbuff) / sizeof(char));
 
   osiSockAddr fromAddress;
   osiSocklen_t addrStructSize = sizeof(sockaddr);
-
   int sendCount = 0;
 
   while (true) {
     receiveBuffer.clear();
 
-    // receive packet from socket
     int bytesRead = ::recvfrom(socket, (char *)receiveBuffer.getBuffer(),
                                receiveBuffer.getRemaining(), 0,
                                (sockaddr *)&fromAddress, &addrStructSize);
@@ -466,47 +421,70 @@ bool epicsUtils::discoverServers(double timeOut) {
       }
       receiveBuffer.setPosition(bytesRead);
       receiveBuffer.flip();
-
       processSearchResponse(fromAddress, receiveBuffer);
 
     } else {
       if (bytesRead == -1) {
         int socketError = SOCKERRNO;
-
-        // interrupted or timeout
-        if (socketError == SOCK_EINTR ||
-            socketError == EAGAIN || // no alias in libCom
-            // windows times out with this
+        if (socketError == SOCK_EINTR || socketError == EAGAIN ||
             socketError == SOCK_ETIMEDOUT || socketError == SOCK_EWOULDBLOCK) {
-          // OK
-        } else if (socketError == SOCK_ECONNREFUSED || // avoid spurious
-                                                       // ECONNREFUSED in Linux
-                   socketError == SOCK_ECONNRESET) // or ECONNRESET in Windows
-        {
-          // OK
+          // timeout or interrupt — OK
+        } else if (socketError == SOCK_ECONNREFUSED ||
+                   socketError == SOCK_ECONNRESET) {
+          // spurious connection errors — OK
         } else {
-          // unexpected error
           char errStr[64];
           epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-          fprintf(stderr, "Socket recv error: %s\n", errStr);
+          LOG(logLevelError, "Socket recv error: %s", errStr);
           break;
         }
       }
 
       if (++sendCount < 3) {
-        if (!sendBroadcast(socket, sendBuffer, broadcastAddresses)) {
-          epicsSocketDestroy(socket);
-          return false;
-        }
+        if (!sendBroadcast(socket, sendBuffer, broadcastAddresses))
+          break;
       } else
         break;
     }
   }
+}
 
-  // TODO shutdown sockets?
-  // TODO this resouce is not released on failure
+bool epicsUtils::discoverServers(double timeOut) {
+  osiSockAttach();
+
+  osiSockAddr localAddr;
+  SOCKET socket = createDiscoverySocket(timeOut, localAddr);
+  if (socket == INVALID_SOCKET)
+    return false;
+
+  InetAddrVector broadcastAddresses = buildBroadcastList(socket);
+
+  // Build PVA search packet
+  char buffer[1024];
+  ByteBuffer sendBuffer(buffer, sizeof(buffer) / sizeof(char));
+
+  sendBuffer.putByte(PVA_MAGIC);
+  sendBuffer.putByte(PVA_CLIENT_PROTOCOL_REVISION);
+  sendBuffer.putByte((EPICS_BYTE_ORDER == EPICS_ENDIAN_BIG) ? 0x80 : 0x00);
+  sendBuffer.putByte((int8_t)CMD_SEARCH);
+  sendBuffer.putInt(4 + 1 + 3 + 16 + 2 + 1 + 2); // payload size
+
+  sendBuffer.putInt(0);            // sequenceId
+  sendBuffer.putByte((int8_t)0x81); // reply required (unicast)
+  sendBuffer.putByte((int8_t)0);   // reserved
+  sendBuffer.putShort((int16_t)0); // reserved
+  encodeAsIPv6Address(&sendBuffer, &localAddr);
+  sendBuffer.putShort((int16_t)ntohs(localAddr.ia.sin_port));
+  sendBuffer.putByte((int8_t)0x00); // protocol count
+  sendBuffer.putShort((int16_t)0);  // name count
+
+  if (!sendBroadcast(socket, sendBuffer, broadcastAddresses)) {
+    epicsSocketDestroy(socket);
+    return false;
+  }
+
+  receiveResponses(socket, sendBuffer, broadcastAddresses);
   epicsSocketDestroy(socket);
-
   return true;
 }
 

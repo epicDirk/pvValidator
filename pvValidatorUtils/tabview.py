@@ -453,7 +453,7 @@ class Viewer:
 
     def _search_cur_line_l(self, data, yp, xp):
         """Last, search from beginning of current line to current position"""
-        res = x = False
+        res = x = 0
         for x, item in enumerate(data[yp][:xp]):
             if self.search_str in item.lower():
                 res = True
@@ -839,39 +839,31 @@ class Viewer:
             yx = yx[: max_width - 1] + self.trunc_char
         return yx
 
-    def display(self):
-        """Refresh the current display"""
-        yp = self.y + self.win_y
-        xp = self.x + self.win_x
-
-        # Print the current cursor cell in the top left corner
+    def _render_header_bar(self, yp, xp):
+        """Render the top area: title, copyright, help hint, divider, legend."""
         self.scr.move(0, 0)
         self.scr.clrtoeol()
-        # info = " {}".format(self.location_string(yp, xp))
 
         strhelp = "Press F1 for Help"
-
         cl = "(\u2184) ESS "
-        self.addstr(
-            self.scr,
-            1,
-            int(self.max_x / 2),
-            self.Title,
-            curses.A_UNDERLINE + curses.A_BOLD,
-        )
+        self.addstr(self.scr, 1, int(self.max_x / 2), self.Title,
+                    curses.A_UNDERLINE + curses.A_BOLD)
         self.addstr(self.scr, 2, int(self.max_x / 2) + 1, cl, curses.A_BOLD)
-        self.addstr(
-            self.scr, 1, self.max_x - len(strhelp) - 1, strhelp, curses.A_REVERSE
-        )
-        # Adds the current cell content after the 'current cell' display
-        # wc = self.max_x - len(info) - 2
-        # s = self.cellstr(yp, xp, wc)
-        # addstr(self.scr, "  " + s, curses.A_NORMAL)
+        self.addstr(self.scr, 1, self.max_x - len(strhelp) - 1, strhelp, curses.A_REVERSE)
 
-        # Print a divider line
+        self.addstr(self.scr, 2, 0, "Legend:", curses.A_UNDERLINE)
+        self.addstr(self.scr, 3, 0, "******: Skip Naming API Validation Check", curses.A_NORMAL)
+        self.addstr(self.scr, 4, 0, "------: Not Registered/Wrong Format", curses.A_NORMAL)
+
+        totrow = "Tot Rows/Cols: " + str((len(self.data), self.num_data_columns))
+        currpos = "Curr Row/Col: (%s,%s)    " % (yp + 1, xp + 1)
+        self.addstr(self.scr, 4, self.max_x - len(totrow) - 30, currpos, curses.A_NORMAL)
+        self.addstr(self.scr, 4, self.max_x - len(totrow) - 1, totrow, curses.A_NORMAL)
+
         self.scr.hline(5, 0, curses.ACS_HLINE, self.max_x)
 
-        # Print the header if the correct offset is set
+    def _render_table(self, yp, xp):
+        """Render column headers and data rows."""
         if self.header_offset == self.header_offset_orig:
             self.scr.move(self.header_offset - 1, 0)
             self.scr.clrtoeol()
@@ -884,7 +876,6 @@ class Viewer:
                     hattr = curses.A_BOLD + curses.A_UNDERLINE
                 self.addstr(self.scr, self.header_offset - 1, xc, s, hattr)
 
-        # Print the table data
         for y in range(0, self.max_y - self.header_offset - self._input_win_open):
             yc = y + self.header_offset
             self.scr.move(yc, 0)
@@ -900,25 +891,16 @@ class Viewer:
                 xc, wc = self.column_xw(x)
                 s = self.cellstr(y + self.win_y, x + self.win_x, wc)
                 if yc == self.max_y - 1 and x == self.vis_columns - 1:
-                    # Prevents a curses error when filling in the bottom right
-                    # character
                     self.insstr(self.scr, yc, xc, s, attr)
                 else:
                     self.addstr(self.scr, yc, xc, s, attr)
 
-        totrow = "Tot Rows/Cols: " + str((len(self.data), self.num_data_columns))
-        currpos = "Curr Row/Col: (%s,%s)    " % (yp + 1, xp + 1)
-        self.addstr(self.scr, 2, 0, "Legend:", curses.A_UNDERLINE)
-        self.addstr(
-            self.scr, 3, 0, "******: Skip Naming API Validation Check", curses.A_NORMAL
-        )
-        self.addstr(
-            self.scr, 4, 0, "------: Not Registered/Wrong Format", curses.A_NORMAL
-        )
-        self.addstr(
-            self.scr, 4, self.max_x - len(totrow) - 30, currpos, curses.A_NORMAL
-        )
-        self.addstr(self.scr, 4, self.max_x - len(totrow) - 1, totrow, curses.A_NORMAL)
+    def display(self):
+        """Refresh the current display."""
+        yp = self.y + self.win_y
+        xp = self.x + self.win_x
+        self._render_header_bar(yp, xp)
+        self._render_table(yp, xp)
         self.scr.refresh()
 
     def save_csvfile(self):
@@ -1079,7 +1061,7 @@ class Viewer:
         Returns: list of ints [len_1, len_2...len_x]
         """
         d = zip(*d)
-        return [max(1, min(250, max(set(self._cell_len(j) for j in i)))) for i in d]
+        return [max(1, min(250, max(self._cell_len(j) for j in i))) for i in d]
 
     def _skip_to_value_change(self, x_inc, y_inc):
         m = self.consume_modifier()

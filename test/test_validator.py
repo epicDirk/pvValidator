@@ -107,11 +107,12 @@ def test_pvformat(pvobj_pvfmt: pvUtils):
     lines = get_lines(fmtfile)
     pvlist = pvobj_pvfmt.pvepics.pvstringlist
     assert pvlist.size() == lines, "Wrong PV list size extracted from input text file!"
-    pvobj_pvfmt._checkValidFormat()
+    with pytest.raises(SystemExit):
+        pvobj_pvfmt.run()
     assert len(pvobj_pvfmt.VFormD) == lines, "Wrong PV format dictionary size!"
     for pv in pvlist:
         assert not pvobj_pvfmt.VFormD[pv], (
-            "Wrong format of PV " + pv + " was not identified!"
+            "Wrong format of PV " + pv + " should have been identified as invalid"
         )
 
 
@@ -120,8 +121,8 @@ def test_pvprop(pvobj_pvcheck: pvUtils):
     lines = get_lines(rulefile)
     pvlist = pvobj_pvcheck.pvepics.pvstringlist
     assert pvlist.size() == lines, "Wrong PV list size extracted from input text file!"
-    pvobj_pvcheck._checkValidFormat()
-    pvobj_pvcheck._checkPropRules()
+    with pytest.raises(SystemExit):
+        pvobj_pvcheck.run()
     for c, pv in enumerate(pvlist):
         if c > RULE_FAIL_BOUNDARY:
             assert not pvobj_pvcheck.VWarnD[pv], (

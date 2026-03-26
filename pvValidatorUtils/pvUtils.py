@@ -76,7 +76,8 @@ class pvUtils:
         # Metadata
         self._getMeta()
         self.exiterror = False
-        self.infovalidation = ""
+        self._info_parts = []
+        self.infovalidation = ""  # joined in _buildSummary()
 
         # Rule configuration (from YAML)
         self.config = RuleConfig()
@@ -120,6 +121,9 @@ class pvUtils:
         self.PVNotRegistered = 0
         self.PVTot = len(self.pvepics.pvstringlist)
         self.charnotallow = set("!@$%^&*()+={}[]|\\:;'\"<>,.?/~`")
+
+        # Make infovalidation available for early reads (before run/buildSummary)
+        self.infovalidation = "".join(self._info_parts)
 
     # =================================================================
     # Main entry point
@@ -212,19 +216,20 @@ class pvUtils:
     def _buildSummary(self):
         """Build the validation summary text."""
         if self.address:
-            self.infovalidation += f"The PV list is taken from the server {self.address} to perform online validation\n"
+            self._info_parts.append(f"The PV list is taken from the server {self.address} to perform online validation\n")
 
-        self.infovalidation += f"The Total PVs are = {self.PVTot}\n"
+        self._info_parts.append(f"The Total PVs are = {self.PVTot}\n")
         if self.checkonlyfmt:
-            self.infovalidation += "The Total Not Valid PVs are = **Not Evaluated**\n"
-            self.infovalidation += "The PVs with NOT Registered Name are = **Not Evaluated**\n"
+            self._info_parts.append("The Total Not Valid PVs are = **Not Evaluated**\n")
+            self._info_parts.append("The PVs with NOT Registered Name are = **Not Evaluated**\n")
         else:
-            self.infovalidation += f"The Total Not Valid PVs are = {self.PVNotValid}\n"
-            self.infovalidation += f"The PVs with NOT Registered Name are = {self.PVNotRegistered}\n"
-        self.infovalidation += f"The PVs with Wrong Format are = {self.PVWrongFormat}\n"
-        self.infovalidation += f"The PVs with Rule Failure are = {self.PVRuleFail}\n"
-        self.infovalidation += f"The PVs with Rule Warning are = {self.PVRuleWarn}\n"
-        self.infovalidation += f"The PVs Internal are = {self.PVInternal}\n"
+            self._info_parts.append(f"The Total Not Valid PVs are = {self.PVNotValid}\n")
+            self._info_parts.append(f"The PVs with NOT Registered Name are = {self.PVNotRegistered}\n")
+        self._info_parts.append(f"The PVs with Wrong Format are = {self.PVWrongFormat}\n")
+        self._info_parts.append(f"The PVs with Rule Failure are = {self.PVRuleFail}\n")
+        self._info_parts.append(f"The PVs with Rule Warning are = {self.PVRuleWarn}\n")
+        self._info_parts.append(f"The PVs Internal are = {self.PVInternal}\n")
+        self.infovalidation = "".join(self._info_parts)
 
     def _output(self):
         """Write results to TUI, CSV, or stdout."""
@@ -283,14 +288,14 @@ class pvUtils:
         if not self.checkonlyfmt:
             try:
                 self.api_client.check_connectivity()
-                self.infovalidation += f"The Validation is done through {self.NameService} Naming Service\n"
+                self._info_parts.append(f"The Validation is done through {self.NameService} Naming Service\n")
             except NamingServiceConnectionError as e:
                 logger.error(str(e))
                 raise NamingServiceConnectionError(
                     f"Fail to connect to Naming Service {url}"
                 ) from e
         else:
-            self.infovalidation += "The Validation through Naming Service was skipped\n"
+            self._info_parts.append("The Validation through Naming Service was skipped\n")
 
     def _checkValidName(self):
         """Validate PV names against the Naming Service (delegates to NamingServiceClient)."""
@@ -542,7 +547,7 @@ class pvUtils:
             for lin in pvf:
                 if not lin.startswith("%") and not lin.startswith("#") and lin.strip():
                     self.pvepics.pvstringlist.push_back(lin.strip().split()[0])
-        self.infovalidation += f"The PV list is taken from the file {self.pvfile} to perform offline validation\n"
+        self._info_parts.append(f"The PV list is taken from the file {self.pvfile} to perform offline validation\n")
 
     def _checkEPICSDBFile(self):
         """Load PVs from an EPICS database file with optional macros."""
@@ -572,7 +577,7 @@ class pvUtils:
             )
         for ldb in listdb:
             self.pvepics.pvstringlist.push_back(ldb)
-        self.infovalidation += f"The PV list is taken from the EPICS DB {epicsdbfile} file to perform offline validation\n"
+        self._info_parts.append(f"The PV list is taken from the EPICS DB {epicsdbfile} file to perform offline validation\n")
 
     def _checkSUBSFile(self):
         """Load PVs from an EPICS substitutions file via MSI."""
@@ -604,7 +609,7 @@ class pvUtils:
             )
         for ldb in listdb:
             self.pvepics.pvstringlist.push_back(ldb)
-        self.infovalidation += f"The PV list is taken expanding the substitution file {msisubsfile} to perform offline validation\n"
+        self._info_parts.append(f"The PV list is taken expanding the substitution file {msisubsfile} to perform offline validation\n")
 
     # =================================================================
     # Metadata
