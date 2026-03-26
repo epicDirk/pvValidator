@@ -5,7 +5,6 @@ import pytest
 from pvValidatorUtils.parser import parse_pv
 from pvValidatorUtils.rules import (
     Severity,
-    ValidationMessage,
     check_all_rules,
     check_device_index,
     check_element_characters,
@@ -23,10 +22,10 @@ from pvValidatorUtils.rules import (
     normalize_for_confusion,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def parse(pv: str):
     """Parse a PV and assert it's valid."""
@@ -65,6 +64,7 @@ def no_errors(msgs):
 # PV Length
 # ---------------------------------------------------------------------------
 
+
 class TestPVLength:
     def test_within_limit(self):
         c = parse("DTL-010:EMR-TT-001:Temperature")
@@ -85,6 +85,7 @@ class TestPVLength:
 # ---------------------------------------------------------------------------
 # Property Length
 # ---------------------------------------------------------------------------
+
 
 class TestPropertyLength:
     def test_normal_length(self):
@@ -133,7 +134,9 @@ class TestPropertyLength:
         """ESS-0000757 Table 9: Known short state properties are valid."""
         c = parse(f"DTL-010:EMR-TT-001:{prop}")
         msgs = check_property_length(c)
-        assert not has_warning(msgs, "below 4"), f"Known property '{prop}' should not get a warning"
+        assert not has_warning(
+            msgs, "below 4"
+        ), f"Known property '{prop}' should not get a warning"
 
     def test_4char_no_warning(self):
         c = parse("DTL-010:EMR-TT-001:Temp")
@@ -145,16 +148,20 @@ class TestPropertyLength:
 # Property Suffix
 # ---------------------------------------------------------------------------
 
+
 class TestPropertySuffix:
 
-    @pytest.mark.parametrize("suffix,fragment", [
-        ("-S", "should end with -SP"),
-        ("_S", "should end with -SP"),
-        ("-RBV", "should end with -RB"),
-        ("_RBV", "should end with -RB"),
-        ("-R", "should not contain"),
-        ("_R", "should not contain"),
-    ])
+    @pytest.mark.parametrize(
+        "suffix,fragment",
+        [
+            ("-S", "should end with -SP"),
+            ("_S", "should end with -SP"),
+            ("-RBV", "should end with -RB"),
+            ("_RBV", "should end with -RB"),
+            ("-R", "should not contain"),
+            ("_R", "should not contain"),
+        ],
+    )
     def test_invalid_suffixes(self, suffix, fragment):
         c = parse(f"DTL-010:EMR-TT-001:Temperature{suffix}")
         assert has_error(check_property_suffix(c), fragment)
@@ -168,6 +175,7 @@ class TestPropertySuffix:
 # ---------------------------------------------------------------------------
 # Property Characters
 # ---------------------------------------------------------------------------
+
 
 class TestPropertyCharacters:
     def test_valid_property(self):
@@ -201,6 +209,7 @@ class TestPropertyCharacters:
 # Element Lengths
 # ---------------------------------------------------------------------------
 
+
 class TestElementLengths:
     def test_all_within_limit(self):
         c = parse("DTL-010:EMR-TT-001:Temperature")
@@ -210,12 +219,15 @@ class TestElementLengths:
         c = parse("ABCDEF-010:EMR-TT-001:Temperature")
         assert no_errors(check_element_lengths(c))
 
-    @pytest.mark.parametrize("pv,element_name", [
-        ("ABCDEFG-010:EMR-TT-001:Temperature", "System"),
-        ("DTL-ABCDEFG:EMR-TT-001:Temperature", "Subsystem"),
-        ("DTL-010:ABCDEFG-TT-001:Temperature", "Discipline"),
-        ("DTL-010:EMR-ABCDEFG-001:Temperature", "Device"),
-    ])
+    @pytest.mark.parametrize(
+        "pv,element_name",
+        [
+            ("ABCDEFG-010:EMR-TT-001:Temperature", "System"),
+            ("DTL-ABCDEFG:EMR-TT-001:Temperature", "Subsystem"),
+            ("DTL-010:ABCDEFG-TT-001:Temperature", "Discipline"),
+            ("DTL-010:EMR-ABCDEFG-001:Temperature", "Device"),
+        ],
+    )
     def test_7char_exceeds(self, pv, element_name):
         c = parse(pv)
         msgs = check_element_lengths(c)
@@ -225,6 +237,7 @@ class TestElementLengths:
 # ---------------------------------------------------------------------------
 # Element Characters
 # ---------------------------------------------------------------------------
+
 
 class TestElementCharacters:
     def test_valid_elements(self):
@@ -239,6 +252,7 @@ class TestElementCharacters:
 # ---------------------------------------------------------------------------
 # Device Index
 # ---------------------------------------------------------------------------
+
 
 class TestDeviceIndex:
 
@@ -265,6 +279,7 @@ class TestDeviceIndex:
 # Legacy Prefix
 # ---------------------------------------------------------------------------
 
+
 class TestLegacyPrefix:
 
     @pytest.mark.parametrize("prefix", ["Cmd_", "P_", "FB_", "SP_"])
@@ -280,6 +295,7 @@ class TestLegacyPrefix:
 # ---------------------------------------------------------------------------
 # Confusable Normalization
 # ---------------------------------------------------------------------------
+
 
 class TestNormalization:
     def test_case_insensitive(self):
@@ -300,19 +316,26 @@ class TestNormalization:
 # Property Uniqueness (O(n) algorithm)
 # ---------------------------------------------------------------------------
 
+
 class TestPropertyUniqueness:
     def test_no_duplicates(self):
-        msgs = check_property_uniqueness("DTL-010:EMR-TT-001", ["Temperature", "Pressure", "Voltage"])
+        msgs = check_property_uniqueness(
+            "DTL-010:EMR-TT-001", ["Temperature", "Pressure", "Voltage"]
+        )
         for pv_msgs in msgs.values():
             assert no_errors(pv_msgs)
 
     def test_exact_duplicate(self):
-        msgs = check_property_uniqueness("DTL-010:EMR-TT-001", ["Temperature", "Temperature"])
+        msgs = check_property_uniqueness(
+            "DTL-010:EMR-TT-001", ["Temperature", "Temperature"]
+        )
         all_msgs = [m for pv_msgs in msgs.values() for m in pv_msgs]
         assert has_error(all_msgs, "duplication")
 
     def test_case_confusion(self):
-        msgs = check_property_uniqueness("DTL-010:EMR-TT-001", ["Temperature", "temperature"])
+        msgs = check_property_uniqueness(
+            "DTL-010:EMR-TT-001", ["Temperature", "temperature"]
+        )
         all_msgs = [m for pv_msgs in msgs.values() for m in pv_msgs]
         assert has_error(all_msgs, "not unique")
 
@@ -331,6 +354,7 @@ class TestPropertyUniqueness:
 # check_all_rules integration
 # ---------------------------------------------------------------------------
 
+
 class TestCheckAllRules:
     def test_valid_pv_no_errors(self):
         c = parse("DTL-010:EMR-TT-001:Temperature")
@@ -348,6 +372,7 @@ class TestCheckAllRules:
 # ---------------------------------------------------------------------------
 # Legacy 5-Digit Index (ESS-0000757 Annex C)
 # ---------------------------------------------------------------------------
+
 
 class TestLegacy5DigitIndex:
 
@@ -381,6 +406,7 @@ class TestLegacy5DigitIndex:
 # ---------------------------------------------------------------------------
 # Pascal Case (ESS-0000757 §6.2 Rule 5)
 # ---------------------------------------------------------------------------
+
 
 class TestPascalCase:
 
@@ -432,6 +458,7 @@ class TestPascalCase:
 # MTCA Controller Naming (ESS-0000757 Annex A)
 # ---------------------------------------------------------------------------
 
+
 class TestMTCANaming:
 
     def test_ctrl_mtca_3digit_ok(self):
@@ -464,13 +491,16 @@ class TestMTCANaming:
 # Target Station Exception (ESS-0000757 Annex B)
 # ---------------------------------------------------------------------------
 
+
 class TestTargetException:
 
     def test_tgt_long_subsystem_info(self):
         """Target Station subsystems > 6 chars get INFO, not ERROR."""
         c = parse("Tgt-HeC1010:Proc-TT-003:Temperature")
         msgs = check_element_lengths(c)
-        info = [m for m in msgs if m.severity == Severity.INFO and m.rule_id == "EXC-TGT"]
+        info = [
+            m for m in msgs if m.severity == Severity.INFO and m.rule_id == "EXC-TGT"
+        ]
         assert len(info) == 1
 
     def test_tgt_normal_subsystem_ok(self):

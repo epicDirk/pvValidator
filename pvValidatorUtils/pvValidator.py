@@ -275,7 +275,18 @@ def _load_pv_list(args, pvepics):
 
     Shared by _run_with_reporter() and _run_with_autofix() to avoid
     duplicating the file-reading logic.
+
+    Note: -e (EPICS DB) and -m (substitution) inputs require SWIG compilation
+    and are handled by pvUtils.run(). These paths work with the standard
+    validation pipeline but not with --suggest/--fix/--format which bypass pvUtils.
     """
+    if getattr(args, "epicsdb", None) or getattr(args, "msi", None):
+        print(
+            "Error: --suggest/--fix/--format do not support -e (EPICS DB) or -m (substitution) input.\n"
+            "Use -i with a plain text PV list, or run without --suggest/--fix/--format\n"
+            "to use the standard validation pipeline with -e/-m."
+        )
+        sys.exit(1)
     pv_list = []
     if args.pvfile:
         with open(args.pvfile, "r", encoding="utf-8") as f:
@@ -294,7 +305,6 @@ def _run_with_reporter(args, pvepics):
     from pvValidatorUtils.parser import parse_pv
     from pvValidatorUtils.reporter import HTMLReporter, JSONReporter
     from pvValidatorUtils.rules import (
-        Severity,
         ValidationResult,
         check_all_rules,
         check_property_uniqueness,
@@ -336,6 +346,7 @@ def _run_with_reporter(args, pvepics):
 
     # Add autofix suggestions to each result
     from pvValidatorUtils.autofix import suggest_fixes
+
     for result in results:
         result.suggestions = suggest_fixes(result.pv)
 
@@ -385,7 +396,7 @@ def _explain_rule(rule_id):
 
 def _run_with_autofix(args, pvepics):
     """Run validation with auto-fix suggestions or automatic fixing."""
-    from pvValidatorUtils.autofix import Applicability, apply_fixes, suggest_fixes
+    from pvValidatorUtils.autofix import apply_fixes, suggest_fixes
 
     pv_list = _load_pv_list(args, pvepics)
     if not pv_list:
@@ -399,7 +410,9 @@ def _run_with_autofix(args, pvepics):
     for pv in pv_list:
         suggestions = suggest_fixes(pv)
         auto_suggestions = [s for s in suggestions if s.auto_fixable]
-        manual_suggestions = [s for s in suggestions if not s.auto_fixable and s.suggested]
+        manual_suggestions = [
+            s for s in suggestions if not s.auto_fixable and s.suggested
+        ]
 
         if not suggestions:
             valid_count += 1
@@ -408,16 +421,22 @@ def _run_with_autofix(args, pvepics):
             continue
 
         if args.fix and auto_suggestions:
-            result = apply_fixes(pv, include_suggested=getattr(args, 'unsafe', False))
+            result = apply_fixes(pv, include_suggested=getattr(args, "unsafe", False))
             if result != pv:
-                if getattr(args, 'interactive', False):
+                if getattr(args, "interactive", False):
                     # Interactive mode: prompt for each fix
                     print(f"\n  {pv}")
                     print(f"    → {result}")
                     for s in auto_suggestions:
-                        print(f"      [{s.rule_id}] {s.description}  [{s.applicability.value.upper()}]")
+                        print(
+                            f"      [{s.rule_id}] {s.description}  [{s.applicability.value.upper()}]"
+                        )
                     try:
-                        choice = input("    Apply? [Y]es / [N]o / [A]ll / [Q]uit > ").strip().lower()
+                        choice = (
+                            input("    Apply? [Y]es / [N]o / [A]ll / [Q]uit > ")
+                            .strip()
+                            .lower()
+                        )
                     except EOFError:
                         choice = "n"
                     if choice in ("q", "quit"):
@@ -456,7 +475,9 @@ def _run_with_autofix(args, pvepics):
     print()
     total = len(pv_list)
     if args.fix:
-        print(f"Total: {total} PVs | Fixed: {fixed_count} | Need review: {manual_count} | Valid: {valid_count}")
+        print(
+            f"Total: {total} PVs | Fixed: {fixed_count} | Need review: {manual_count} | Valid: {valid_count}"
+        )
     else:
         need_fix = total - valid_count
         print(f"Total: {total} PVs | Need fixes: {need_fix} | Valid: {valid_count}")

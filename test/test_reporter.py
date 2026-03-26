@@ -26,7 +26,9 @@ def sample_results():
             format_valid=True,
             components=invalid_pv,
             messages=[
-                ValidationMessage(Severity.ERROR, "Setpoint suffix must be -SP", "PROP-SP"),
+                ValidationMessage(
+                    Severity.ERROR, "Setpoint suffix must be -SP", "PROP-SP"
+                ),
             ],
         ),
         ValidationResult(

@@ -364,8 +364,6 @@ var RULE_INFO = {
   'PROP-2-WARN':{ref:'ESS-0000757 \u00a76.2 Rule 2',why:'Recommended limit is 20 chars. You can go to 25 with justification.',fix:'Consider abbreviating.'},
   'PROP-EMPTY':{ref:'ESS-0000757 \u00a76.2',why:'Every PV needs a property name after the last colon.',fix:'Add a property name (e.g., Temperature, Status, Pressure).'},
   'IDX-MANDATORY':{ref:'ESS-0000757 \u00a75.2',why:'Every device needs an index to distinguish multiple instances.',fix:'Add a numeric index (e.g., 001).'},
-  'IDX-LEN':{ref:'ESS-0000757 \u00a75.2',why:'Same 6-character limit as other name elements.',fix:'Shorten the index.'},
-  'IDX-STYLE':{ref:'ESS-0000757 \u00a75.2',why:'Should follow Scientific (1-4 digits) or P&ID (3 digits + lowercase).',fix:'Adjust format.'},
   'LEGACY-5DIGIT':{ref:'ESS-0000757 Annex C',why:'5-digit indexes in Cryo/Vac are legacy.',fix:'Use max 4 digits for new equipment.'},
   'EXC-MTCA':{ref:'ESS-0000757 Annex A',why:'MTCA controllers use 3-digit index (system + counter).',fix:'Zero-pad to 3 digits.'},
   'EXC-TGT':{ref:'ESS-0000757 Annex B',why:'Target Station subsystems may exceed 6 chars.',fix:'No action needed for Tgt PVs.'}

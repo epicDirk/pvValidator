@@ -15,10 +15,10 @@ import pathlib
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # CLI options
 # ---------------------------------------------------------------------------
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -33,6 +33,7 @@ def pytest_addoption(parser):
 # Markers
 # ---------------------------------------------------------------------------
 
+
 def pytest_configure(config):
     config.addinivalue_line("markers", "ess_network: requires ESS network access")
     config.addinivalue_line("markers", "epics_ioc: requires running EPICS IOC")
@@ -46,7 +47,9 @@ def pytest_collection_modifyitems(config, items):
                 item.add_marker(skip_network)
 
     # Always skip IOC tests unless explicitly included
-    skip_ioc = pytest.mark.skip(reason="needs running EPICS IOC (mark with @pytest.mark.epics_ioc)")
+    skip_ioc = pytest.mark.skip(
+        reason="needs running EPICS IOC (mark with @pytest.mark.epics_ioc)"
+    )
     for item in items:
         if "epics_ioc" in item.keywords:
             item.add_marker(skip_ioc)
@@ -73,6 +76,7 @@ def test_file_path(name: str) -> str:
 # ---------------------------------------------------------------------------
 # Mock epicsUtils (no EPICS dependency needed)
 # ---------------------------------------------------------------------------
+
 
 class MockEpicsUtils:
     """Lightweight mock for epicsUtils that doesn't need SWIG/EPICS.
@@ -120,17 +124,20 @@ def mock_epics():
 @pytest.fixture
 def mock_epics_with_pvs():
     """Factory fixture: returns a function that creates MockEpicsUtils with given PV list."""
+
     def _factory(pv_list):
         m = MockEpicsUtils()
         for pv in pv_list:
             m.pvstringlist.push_back(pv)
         return m
+
     return _factory
 
 
 # ---------------------------------------------------------------------------
 # Naming Service API mock responses
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def naming_api_responses():

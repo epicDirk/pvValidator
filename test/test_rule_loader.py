@@ -1,7 +1,5 @@
 """Tests for the YAML rule configuration loader."""
 
-import pytest
-
 from pvValidatorUtils.rule_loader import RuleConfig
 
 

@@ -17,7 +17,7 @@ before being shown. If the fix would introduce a new ERROR, it is downgraded
 to a manual suggestion. This prevents silent severity downgrades.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
 
@@ -31,10 +31,11 @@ class Applicability(Enum):
 
     Modeled after Ruff (Safe/Unsafe) and Clippy (MachineApplicable/MaybeIncorrect).
     """
-    SAFE = "safe"            # Deterministic, zero semantic risk. Applied with --fix.
+
+    SAFE = "safe"  # Deterministic, zero semantic risk. Applied with --fix.
     SUGGESTED = "suggested"  # Probably correct, verify. Applied with --fix --unsafe.
-    TEMPLATE = "template"    # Has placeholders. Display only.
-    MANUAL = "manual"        # Cannot auto-fix. Needs human decision.
+    TEMPLATE = "template"  # Has placeholders. Display only.
+    MANUAL = "manual"  # Cannot auto-fix. Needs human decision.
 
 
 @dataclass
@@ -50,6 +51,7 @@ class FixSuggestion:
         auto_fixable: True if applicability is SAFE (convenience property)
         verified: True if the suggestion was self-verified against validation rules
     """
+
     original: str
     suggested: str
     rule_id: str
@@ -76,13 +78,15 @@ def suggest_fixes(pv: str) -> List[FixSuggestion]:
     """
     components = parse_pv(pv)
     if components is None:
-        return [FixSuggestion(
-            original=pv,
-            suggested="",
-            rule_id="FMT",
-            description="Invalid PV format — cannot auto-fix (check colons and separators)",
-            applicability=Applicability.MANUAL,
-        )]
+        return [
+            FixSuggestion(
+                original=pv,
+                suggested="",
+                rule_id="FMT",
+                description="Invalid PV format — cannot auto-fix (check colons and separators)",
+                applicability=Applicability.MANUAL,
+            )
+        ]
 
     suggestions = []
 
@@ -194,8 +198,8 @@ def _fix_case(components: PVComponents) -> Optional[FixSuggestion]:
         return FixSuggestion(
             original=pv,
             suggested=f"{pv.rsplit(':', 1)[0]}:{new_prop}",
-            rule_id="PROP-11",
-            description=f'Uppercase first letter (recommended, not mandatory)',
+            rule_id="PROP-11-CASE",
+            description="Uppercase first letter (recommended, not mandatory)",
         )
     return None
 
@@ -210,13 +214,15 @@ def _check_element_length(components: PVComponents) -> List[FixSuggestion]:
         ("Device", components.device),
     ]:
         if value and len(value) > 6:
-            suggestions.append(FixSuggestion(
-                original=components.raw,
-                suggested="",
-                rule_id="ELEM-6",
-                description=f'{name} "{value}" exceeds 6 chars — needs human decision',
-                applicability=Applicability.MANUAL,
-            ))
+            suggestions.append(
+                FixSuggestion(
+                    original=components.raw,
+                    suggested="",
+                    rule_id="ELEM-6",
+                    description=f'{name} "{value}" exceeds 6 chars — needs human decision',
+                    applicability=Applicability.MANUAL,
+                )
+            )
     return suggestions
 
 
@@ -231,7 +237,7 @@ def _fix_legacy_prefix(components: PVComponents) -> Optional[FixSuggestion]:
 
     for legacy in LEGACY_PREFIXES:
         if prop.startswith(legacy):
-            new_prop = prop[len(legacy):]
+            new_prop = prop[len(legacy) :]
             if new_prop:
                 return FixSuggestion(
                     original=pv,
@@ -246,7 +252,12 @@ def _fix_legacy_prefix(components: PVComponents) -> Optional[FixSuggestion]:
 def _fix_mtca_index(components: PVComponents) -> Optional[FixSuggestion]:
     """Zero-pad MTCA controller index to 3 digits per ESS-0000757 Annex A."""
     import re as _re
-    if components.discipline != "Ctrl" or components.device not in ("MTCA", "CPU", "EVR"):
+
+    if components.discipline != "Ctrl" or components.device not in (
+        "MTCA",
+        "CPU",
+        "EVR",
+    ):
         return None
     idx = components.index
     if not idx or _re.match(r"^\d{3}$", idx):
@@ -254,9 +265,15 @@ def _fix_mtca_index(components: PVComponents) -> Optional[FixSuggestion]:
     if idx.isdigit() and len(idx) < 3:
         new_idx = idx.zfill(3)
         pv = components.raw
+        # Reconstruct PV from components to avoid string-replace hitting wrong segment
+        sys_part = components.system
+        if components.subsystem:
+            sys_part += f"-{components.subsystem}"
+        dev_part = f"{components.discipline}-{components.device}-{new_idx}"
+        suggested = f"{sys_part}:{dev_part}:{components.property}"
         return FixSuggestion(
             original=pv,
-            suggested=pv.replace(f"-{idx}:", f"-{new_idx}:"),
+            suggested=suggested,
             rule_id="EXC-MTCA",
             description=f'Zero-padded MTCA index "{idx}" → "{new_idx}" (3-digit format)',
             applicability=Applicability.SAFE,
@@ -273,7 +290,10 @@ def _verify_suggestions(suggestions: List[FixSuggestion]) -> None:
     from .rules import Severity, check_all_rules  # late import to avoid circular
 
     for s in suggestions:
-        if s.applicability in (Applicability.SAFE, Applicability.SUGGESTED) and s.suggested:
+        if (
+            s.applicability in (Applicability.SAFE, Applicability.SUGGESTED)
+            and s.suggested
+        ):
             components = parse_pv(s.suggested)
             if components is None:
                 # Fix produces unparseable PV — definitely broken
@@ -311,7 +331,11 @@ def apply_fixes(pv: str, include_suggested: bool = False) -> str:
         fixes = suggest_fixes(current)
         applied = False
         for fix in fixes:
-            if fix.applicability in applicable_tiers and fix.suggested and fix.suggested != current:
+            if (
+                fix.applicability in applicable_tiers
+                and fix.suggested
+                and fix.suggested != current
+            ):
                 current = fix.suggested
                 applied = True
                 break  # Re-evaluate from scratch after each change

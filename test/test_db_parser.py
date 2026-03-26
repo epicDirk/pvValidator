@@ -102,7 +102,7 @@ class TestRecordRegex:
         lines = [
             'record(ai, "DTL-010:EMR-TT-001:Temperature") {',
             '    field(DESC, "Temperature sensor")',
-            '}',
+            "}",
         ]
         results = []
         for line in lines:
@@ -119,6 +119,7 @@ class TestDBFileIntegration:
     def db_records(self):
         """Parse the test DB fixture file using the same logic as pvUtils."""
         import pathlib
+
         db_path = pathlib.Path(__file__).parent / "fixtures" / "test_records.db"
         results = []
         with open(db_path) as f:
