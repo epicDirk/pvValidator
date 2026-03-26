@@ -229,7 +229,8 @@ def main():
         parser.error("one of the arguments -s -i -e -m is required")
 
     # --verbose implies --suggest (show fix suggestions alongside validation)
-    if args.verbose and not args.suggest and not args.fix:
+    # But NOT when --format is specified (--format has its own output path)
+    if args.verbose and not args.suggest and not args.fix and not args.output_format:
         args.suggest = True
 
     # Handle --suggest or --fix (uses autofix module)
