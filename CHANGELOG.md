@@ -53,10 +53,18 @@ All notable changes to pvValidator are documented here.
 - `FixSuggestion.auto_fixable` is now a computed property based on `applicability` tier
 - `Applicability` enum replaces boolean `auto_fixable` parameter
 
-### Known gaps (still to implement)
-- Web-UI: expandable error details, fix buttons, format guide, format diagnostics
-- CLI: `--verbose` content integration
-- Interactive quick reference HTML (reference.html)
+### Web-UI
+- Expandable error details: click any badge to see Why + Fix explanation
+- "Fix" buttons on auto-fixable errors (suffix, case, legacy prefix)
+- "Fix All" toolbar button applies all safe fixes at once
+- Format diagnosis: "Invalid Format" now shows specific cause
+- Missing JS rules synced: PROP-5, PROP-2-WARN, LEGACY-5DIGIT, EXC-MTCA
+- RULE_INFO map with educational content for all rules
+
+### Documentation
+- `reference.html`: standalone interactive ESS PV Naming Quick Reference
+  (formats, elements, index, property rules, suffixes, confusables,
+  standard abbreviations, common mistakes)
 
 ## [Round 6] — 2026-03-26
 

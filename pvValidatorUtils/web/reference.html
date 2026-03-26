@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESS PV Naming Quick Reference</title>
+<style>
+:root {
+  --ess-navy: #002855; --ess-cyan: #00B0CA; --ess-blue: #41B6E6;
+  --bg: #FFFFFF; --surface: #F7F8FA; --border: #D8DCE4; --text: #1A1E2C; --text-2: #5A6070; --text-3: #6B7186;
+  --sys: #002855; --sub: #00857A; --dis: #6B3FA0; --dev: #C05F00; --idx: #A08B00; --prop: #0E7A4A;
+  --ok: #0E7A4A; --err: #C8102E; --warn: #B8860B;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;max-width:960px;margin:0 auto;padding:24px}
+h1{font-size:1.6rem;color:var(--ess-navy);margin-bottom:4px}
+h2{font-size:1.1rem;color:var(--ess-navy);margin:28px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--ess-cyan)}
+h3{font-size:0.9rem;color:var(--text-2);margin:16px 0 8px}
+.subtitle{font-size:0.8rem;color:var(--text-3);margin-bottom:20px}
+.accent-bar{height:3px;background:linear-gradient(90deg,var(--ess-cyan),var(--ess-blue));margin-bottom:20px}
+table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:0.82rem}
+th{background:var(--surface);text-align:left;padding:8px 12px;border:1px solid var(--border);font-weight:600;color:var(--text-2);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em}
+td{padding:8px 12px;border:1px solid var(--border);vertical-align:top}
+code{font-family:ui-monospace,'Cascadia Code',monospace;font-size:0.82rem;background:var(--surface);padding:1px 5px;border-radius:3px}
+.seg{padding:2px 6px;border-radius:3px;font-weight:500;font-family:ui-monospace,monospace;font-size:0.82rem}
+.seg-sys{background:rgba(0,40,85,0.08);color:var(--sys)}
+.seg-sub{background:rgba(0,133,122,0.08);color:var(--sub)}
+.seg-dis{background:rgba(107,63,160,0.08);color:var(--dis)}
+.seg-dev{background:rgba(192,95,0,0.08);color:var(--dev)}
+.seg-idx{background:rgba(160,139,0,0.08);color:var(--idx)}
+.seg-prop{background:rgba(14,122,74,0.08);color:var(--prop)}
+.sep{color:var(--text-3);padding:0 2px}
+.format-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin:8px 0;font-family:ui-monospace,monospace;font-size:0.88rem;display:flex;align-items:center;gap:3px;flex-wrap:wrap}
+.badge{font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:3px;text-transform:uppercase;letter-spacing:0.04em}
+.badge-err{color:var(--err);background:rgba(200,16,46,0.08);border:1px solid rgba(200,16,46,0.15)}
+.badge-warn{color:var(--warn);background:rgba(184,134,11,0.08);border:1px solid rgba(184,134,11,0.15)}
+.badge-ok{color:var(--ok);background:rgba(14,122,74,0.08);border:1px solid rgba(14,122,74,0.15)}
+.good{color:var(--ok)} .bad{color:var(--err)}
+a{color:var(--ess-cyan);text-decoration:none} a:hover{text-decoration:underline}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 20px;margin-bottom:24px}
+.toc a{display:block;padding:3px 0;font-size:0.82rem}
+.nav-back{position:fixed;bottom:20px;right:20px;background:var(--ess-navy);color:#fff;padding:8px 14px;border-radius:6px;font-size:0.72rem;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+.nav-back:hover{background:#003A75;text-decoration:none}
+footer{margin-top:40px;padding:16px 0;border-top:1px solid var(--border);font-size:0.72rem;color:var(--text-3);text-align:center}
+</style>
+</head>
+<body>
+
+<h1>ESS PV Naming Quick Reference</h1>
+<div class="subtitle">Based on ESS-0000757 Rev. 10 &mdash; for integrators, engineers, and physicists</div>
+<div class="accent-bar"></div>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <a href="#formats">1. PV Name Formats</a>
+  <a href="#elements">2. Name Elements (System, Subsystem, Discipline, Device)</a>
+  <a href="#index">3. Device Index</a>
+  <a href="#property">4. Property Rules</a>
+  <a href="#suffixes">5. Suffixes (-SP, -RB)</a>
+  <a href="#confusables">6. Confusable Characters</a>
+  <a href="#abbreviations">7. Standard Abbreviations</a>
+  <a href="#mistakes">8. Common Mistakes</a>
+</div>
+
+<a href="#" class="nav-back">&uarr; Top</a>
+
+<!-- ============================================================ -->
+<h2 id="formats">1. PV Name Formats</h2>
+
+<p>ESS EPICS PV names follow one of four formats. The colon (<code>:</code>) separates the three main parts.</p>
+
+<h3>Full device PV (most common)</h3>
+<div class="format-box">
+  <span class="seg seg-sys">System</span><span class="sep">-</span><span class="seg seg-sub">Subsystem</span><span class="sep">:</span><span class="seg seg-dis">Discipline</span><span class="sep">-</span><span class="seg seg-dev">Device</span><span class="sep">-</span><span class="seg seg-idx">Index</span><span class="sep">:</span><span class="seg seg-prop">Property</span>
+</div>
+<p>Example: <code>DTL-010:EMR-TT-001:Temperature</code></p>
+
+<h3>Without subsystem</h3>
+<div class="format-box">
+  <span class="seg seg-sys">System</span><span class="sep">:</span><span class="seg seg-dis">Discipline</span><span class="sep">-</span><span class="seg seg-dev">Device</span><span class="sep">-</span><span class="seg seg-idx">Index</span><span class="sep">:</span><span class="seg seg-prop">Property</span>
+</div>
+<p>Example: <code>ISrc:Vac-VG-001:Pressure</code></p>
+
+<h3>High-level system PV</h3>
+<div class="format-box">
+  <span class="seg seg-sys">System</span><span class="sep">::</span><span class="seg seg-prop">Property</span>
+  &nbsp;&nbsp;or&nbsp;&nbsp;
+  <span class="seg seg-sys">System</span><span class="sep">-</span><span class="seg seg-sub">Subsystem</span><span class="sep">::</span><span class="seg seg-prop">Property</span>
+</div>
+<p>Example: <code>Tgt::PowerConsumption</code> or <code>DTL-010::Temperature</code></p>
+
+<!-- ============================================================ -->
+<h2 id="elements">2. Name Elements</h2>
+
+<table>
+  <tr><th>Element</th><th>Length</th><th>Characters</th><th>Starts with</th><th>Example</th></tr>
+  <tr><td>System</td><td>1-6</td><td>Alphanumeric only</td><td>Letter</td><td><code>DTL</code>, <code>ISrc</code>, <code>Tgt</code></td></tr>
+  <tr><td>Subsystem</td><td>1-6</td><td>Alphanumeric only</td><td>Letter or digit*</td><td><code>010</code>, <code>CWS03</code></td></tr>
+  <tr><td>Discipline</td><td>1-6</td><td>Alphanumeric only</td><td>Letter</td><td><code>EMR</code>, <code>Vac</code>, <code>Ctrl</code></td></tr>
+  <tr><td>Device</td><td>1-6</td><td>Alphanumeric only</td><td>Letter</td><td><code>TT</code>, <code>VG</code>, <code>MTCA</code></td></tr>
+</table>
+<p>* Subsystems may start with digits (e.g., <code>DTL-010</code> for section numbers).</p>
+
+<!-- ============================================================ -->
+<h2 id="index">3. Device Index</h2>
+
+<table>
+  <tr><th>Style</th><th>Format</th><th>Example</th><th>Used by</th></tr>
+  <tr><td>Scientific</td><td>1-4 digits</td><td><code>001</code>, <code>1234</code></td><td>Accelerator, instruments</td></tr>
+  <tr><td>P&amp;ID</td><td>3 digits + optional a-z</td><td><code>011</code>, <code>002a</code></td><td>Mechanical, process engineering</td></tr>
+  <tr><td>MTCA</td><td>3 digits (system + counter)</td><td><code>100</code></td><td>Ctrl-MTCA, Ctrl-CPU, Ctrl-EVR</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="property">4. Property Rules</h2>
+
+<table>
+  <tr><th>Rule</th><th>Requirement</th><th>Type</th></tr>
+  <tr><td>Max length</td><td>25 characters (recommended: 20)</td><td><span class="badge badge-err">SHALL</span> / <span class="badge badge-warn">SHOULD</span></td></tr>
+  <tr><td>Min length</td><td>4 characters (known short forms exempt)</td><td><span class="badge badge-warn">SHOULD</span></td></tr>
+  <tr><td>First character</td><td>Must be a letter, uppercase recommended</td><td><span class="badge badge-err">SHALL</span> / <span class="badge badge-warn">SHOULD</span></td></tr>
+  <tr><td>Characters</td><td>Alphanumeric + hyphen + underscore only</td><td><span class="badge badge-err">SHALL</span></td></tr>
+  <tr><td>Case</td><td>PascalCase for multi-word names</td><td><span class="badge badge-warn">SHOULD</span></td></tr>
+  <tr><td>Uniqueness</td><td>Unique per device (case-insensitive, confusable-aware)</td><td><span class="badge badge-err">SHALL</span></td></tr>
+  <tr><td>Internal</td><td># as first character marks internal PVs</td><td>Convention</td></tr>
+  <tr><td>No units</td><td>Don't include units in the property name</td><td><span class="badge badge-err">SHALL NOT</span></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="suffixes">5. Suffixes</h2>
+
+<table>
+  <tr><th>Meaning</th><th class="good">Correct</th><th class="bad">Wrong</th></tr>
+  <tr><td>Setpoint</td><td class="good"><code>Temperature-SP</code></td><td class="bad"><code>Temperature-S</code>, <code>Temperature_S</code></td></tr>
+  <tr><td>Readback</td><td class="good"><code>Temperature-RB</code></td><td class="bad"><code>Temperature-RBV</code>, <code>Temperature_RBV</code></td></tr>
+  <tr><td>Reading (no suffix)</td><td class="good"><code>Temperature</code></td><td class="bad"><code>Temperature-R</code>, <code>Temperature_R</code></td></tr>
+</table>
+<p><strong>Note:</strong> -SP and -RB suffixes do not count toward the 25-character property limit.</p>
+
+<!-- ============================================================ -->
+<h2 id="confusables">6. Confusable Characters</h2>
+
+<p>These character pairs are considered identical when checking property uniqueness:</p>
+<table>
+  <tr><th>Characters</th><th>Issue</th><th>Example</th></tr>
+  <tr><td><code>I</code> / <code>l</code> / <code>1</code></td><td>Capital I, lowercase L, digit one</td><td><code>TempI</code> = <code>Templ</code> = <code>Temp1</code></td></tr>
+  <tr><td><code>O</code> / <code>0</code></td><td>Capital O, digit zero</td><td><code>TempO</code> = <code>Temp0</code></td></tr>
+  <tr><td><code>VV</code> / <code>W</code></td><td>Double V, letter W</td><td><code>VValid</code> = <code>Walid</code></td></tr>
+  <tr><td>Case</td><td>Case-insensitive comparison</td><td><code>Temp</code> = <code>temp</code> = <code>TEMP</code></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="abbreviations">7. Standard Abbreviations</h2>
+
+<h3>Quantity Properties (Tables 6-7)</h3>
+<table>
+  <tr><th>Quantity</th><th>Full</th><th>Abbreviated</th></tr>
+  <tr><td>Electric Current</td><td><code>Current</code></td><td><code>Curr</code></td></tr>
+  <tr><td>Voltage</td><td><code>Voltage</code></td><td><code>Volt</code></td></tr>
+  <tr><td>Pressure</td><td><code>Pressure</code></td><td><code>Pres</code></td></tr>
+  <tr><td>Temperature</td><td><code>Temperature</code></td><td><code>Temp</code></td></tr>
+  <tr><td>Power</td><td><code>Power</code></td><td><code>Powe</code></td></tr>
+  <tr><td>Energy</td><td><code>Energy</code></td><td><code>Ener</code></td></tr>
+  <tr><td>Frequency</td><td><code>Frequency</code></td><td><code>Freq</code></td></tr>
+  <tr><td>Mass Flow</td><td><code>MassFlow</code></td><td><code>MassFlow</code></td></tr>
+</table>
+
+<h3>State Properties (Table 9)</h3>
+<table>
+  <tr><th>State</th><th>Property</th></tr>
+  <tr><td>On / Off</td><td><code>On</code>, <code>Off</code></td></tr>
+  <tr><td>High / Low</td><td><code>High</code>, <code>Low</code></td></tr>
+  <tr><td>OK / Not OK</td><td><code>Ok</code>, <code>NotOk</code></td></tr>
+  <tr><td>Error</td><td><code>Error</code>, <code>Failure</code>, <code>Fault</code></td></tr>
+  <tr><td>Ready</td><td><code>Ready</code></td></tr>
+  <tr><td>Enabled / Disabled</td><td><code>Enabled</code>, <code>Disabled</code></td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="mistakes">8. Common Mistakes</h2>
+
+<table>
+  <tr><th>#</th><th>Mistake</th><th class="bad">Wrong</th><th class="good">Correct</th><th>Rule</th></tr>
+  <tr><td>1</td><td>EPICS -RBV suffix</td><td class="bad"><code>Temp-RBV</code></td><td class="good"><code>Temp-RB</code></td><td>PROP-RB</td></tr>
+  <tr><td>2</td><td>Ambiguous -S suffix</td><td class="bad"><code>Temp-S</code></td><td class="good"><code>Temp-SP</code></td><td>PROP-SP</td></tr>
+  <tr><td>3</td><td>Property too long</td><td class="bad"><code>VeryLongTemperatureReadingValue</code></td><td class="good"><code>Temp</code></td><td>PROP-2</td></tr>
+  <tr><td>4</td><td>Lowercase start</td><td class="bad"><code>temperature</code></td><td class="good"><code>Temperature</code></td><td>PROP-11-CASE</td></tr>
+  <tr><td>5</td><td>Element too long</td><td class="bad"><code>LINAC04</code></td><td class="good"><code>LIN</code></td><td>ELEM-6</td></tr>
+</table>
+
+<footer>
+  Based on <a href="https://chess.esss.lu.se/enovia/link/ESS-0000757">ESS-0000757 Rev. 10</a>
+  &mdash; European Spallation Source ERIC
+</footer>
+
+</body>
+</html>
