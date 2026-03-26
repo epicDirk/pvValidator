@@ -515,7 +515,7 @@ class pvUtils:
                 if pv not in self.PVWarnList and pv not in self.PVErrList:
                     self.datainfo[pv] += "Info: The PV follows ESS PV Property Rules\n"
 
-    def _checkDataMsg(self, pv1=None, err1=None, warn1=None, info1=None, pv2=None, err2=None):
+    def _checkDataMsg(self, pv1=None, err1=None, warn1=None, info1=None):
         """Track errors and warnings per PV."""
         if pv1 is not None:
             if err1 is not None and err1 not in self.datainfo.get(pv1, ""):
@@ -529,11 +529,6 @@ class pvUtils:
             if info1 is not None and info1 not in self.datainfo.get(pv1, ""):
                 self.datainfo[pv1] = self.datainfo.get(pv1, "") + info1
                 self.PVInternal += 1
-        if pv2 is not None:
-            if err2 is not None and err2 not in self.datainfo.get(pv2, ""):
-                self.datainfo[pv2] = self.datainfo.get(pv2, "") + err2
-                if pv2 not in self.PVErrList:
-                    self.PVErrList.append(pv2)
 
     # =================================================================
     # Input loading (unchanged — touches SWIG/C++ boundary)
