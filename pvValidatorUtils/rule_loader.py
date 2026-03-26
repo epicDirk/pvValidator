@@ -127,6 +127,10 @@ class RuleConfig:
                 return rule
         return None
 
+    def list_rules(self) -> List[str]:
+        """Return all rule IDs."""
+        return [r.get("id", "") for r in self.all_rules if r.get("id")]
+
     def get_reference(self, rule_id: str) -> str:
         """Get the ESS-0000757 section reference for a rule ID."""
         rule = self.get_rule(rule_id)

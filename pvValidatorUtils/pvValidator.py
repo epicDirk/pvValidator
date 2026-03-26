@@ -81,8 +81,8 @@ def main():
         help="discover IOC servers and exit",
     )
 
-    # Input parser
-    input_parser_group = parser.add_mutually_exclusive_group(required=True)
+    # Input parser (not required when using --explain)
+    input_parser_group = parser.add_mutually_exclusive_group(required=False)
     input_parser_group.add_argument(
         "-s",
         dest="iocserver",
@@ -155,7 +155,54 @@ def main():
         help="output format: json or html (writes to STDOUT)",
     )
 
+    # Autofix options
+    parser.add_argument(
+        "--suggest",
+        dest="suggest",
+        action="store_true",
+        default=False,
+        help="show auto-fix suggestions for validation errors",
+    )
+    parser.add_argument(
+        "--fix",
+        dest="fix",
+        action="store_true",
+        default=False,
+        help="apply safe auto-fixes and show results (use with -i or -e)",
+    )
+
+    # Verbose/explain options
+    parser.add_argument(
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="show detailed explanations for each validation finding",
+    )
+    parser.add_argument(
+        "--explain",
+        dest="explain",
+        metavar="RULE_ID",
+        default=None,
+        help="show full documentation for a specific rule (e.g., --explain PROP-SP)",
+    )
+
     args = parser.parse_args()
+
+    # Handle --explain (no input needed, just show rule info and exit)
+    if args.explain:
+        _explain_rule(args.explain)
+        return
+
+    # Require input source for all other operations
+    if not (args.iocserver or args.pvfile or args.epicsdb or args.msi):
+        parser.error("one of the arguments -s -i -e -m is required")
+
+    # Handle --suggest or --fix (uses autofix module)
+    if args.suggest or args.fix:
+        pvepics = pvinput(args)
+        _run_with_autofix(args, pvepics)
+        return
 
     # Handle --format json/html separately (uses new reporter module)
     if args.output_format:
@@ -252,3 +299,106 @@ def _run_with_reporter(args, pvepics):
     elif args.output_format == "html":
         reporter = HTMLReporter()
         print(reporter.generate(results, metadata))
+
+
+def _explain_rule(rule_id):
+    """Show full documentation for a specific validation rule."""
+    from pvValidatorUtils.rule_loader import RuleConfig
+
+    config = RuleConfig()
+    rule = config.get_rule(rule_id)
+    if rule is None:
+        # Try case-insensitive match
+        for rid in config.list_rules():
+            if rid.upper() == rule_id.upper():
+                rule = config.get_rule(rid)
+                rule_id = rid
+                break
+
+    if rule is None:
+        print(f"Unknown rule: {rule_id}")
+        print(f"Available rules: {', '.join(sorted(config.list_rules()))}")
+        sys.exit(1)
+
+    print(f"Rule: {rule_id}")
+    print(f"  Severity:  {rule.get('severity', 'unknown')}")
+    print(f"  Message:   {rule.get('message', '')}")
+    print(f"  Reference: {rule.get('reference', '')}")
+    if rule.get("why"):
+        print(f"  Why:       {rule['why']}")
+    if rule.get("fix"):
+        print(f"  Fix:       {rule['fix']}")
+    if rule.get("example_good"):
+        print(f"  Good:      {rule['example_good']}")
+    if rule.get("example_bad"):
+        print(f"  Bad:       {rule['example_bad']}")
+
+
+def _run_with_autofix(args, pvepics):
+    """Run validation with auto-fix suggestions or automatic fixing."""
+    from pvValidatorUtils.autofix import Applicability, apply_fixes, suggest_fixes
+
+    # Build PV list
+    pv_list = []
+    if args.pvfile:
+        with open(args.pvfile, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("%") and not line.startswith("#"):
+                    pv_list.append(line.split()[0])
+    elif pvepics:
+        for pv in pvepics.pvstringlist:
+            pv_list.append(pv)
+
+    if not pv_list:
+        print("No PV names to process.")
+        return
+
+    fixed_count = 0
+    manual_count = 0
+    valid_count = 0
+
+    for pv in pv_list:
+        suggestions = suggest_fixes(pv)
+        auto_suggestions = [s for s in suggestions if s.auto_fixable]
+        manual_suggestions = [s for s in suggestions if not s.auto_fixable and s.suggested]
+
+        if not suggestions:
+            valid_count += 1
+            if not args.fix:
+                print(f"  {pv}  ✓")
+            continue
+
+        if args.fix and auto_suggestions:
+            # Apply safe fixes
+            result = apply_fixes(pv)
+            if result != pv:
+                print(f"  {pv}")
+                print(f"    → {result}")
+                for s in auto_suggestions:
+                    print(f"      [{s.rule_id}] {s.description}")
+                fixed_count += 1
+            else:
+                valid_count += 1
+        else:
+            # Show suggestions only
+            print(f"  {pv}")
+            for s in suggestions:
+                tier = s.applicability.value.upper()
+                if s.suggested:
+                    print(f"    [{s.rule_id}] {s.description}  [{tier}]")
+                    print(f"      → {s.suggested}")
+                else:
+                    print(f"    [{s.rule_id}] {s.description}  [{tier}]")
+
+        if manual_suggestions:
+            manual_count += 1
+
+    # Summary
+    print()
+    total = len(pv_list)
+    if args.fix:
+        print(f"Total: {total} PVs | Fixed: {fixed_count} | Need review: {manual_count} | Valid: {valid_count}")
+    else:
+        need_fix = total - valid_count
+        print(f"Total: {total} PVs | Need fixes: {need_fix} | Valid: {valid_count}")
