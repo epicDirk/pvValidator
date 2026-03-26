@@ -41,8 +41,9 @@
 #include <pv/serializeHelper.h>
 #include <pva/client.h>
 
+// NOTE: using-namespace in headers is not best practice but is required here
+// because SWIG-generated wrapper code references unqualified type names.
 using namespace std;
-
 using namespace epics::pvData;
 using namespace epics::pvAccess;
 

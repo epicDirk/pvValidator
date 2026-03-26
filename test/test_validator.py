@@ -1,5 +1,4 @@
 import pathlib
-import tempfile
 from os import environ
 from time import sleep
 
@@ -8,13 +7,17 @@ from run_iocsh import IOC
 
 from pvValidatorUtils import epicsUtils, pvUtils
 
-fmtfile = "test/pvlist_fmt.txt"
-rulefile = "test/pvlist_rule.txt"
-apifile = "test/pvlist_api.txt"
-okfile = "test/pvlist_ok.txt"
-epicsdbfile = ["test/test.db", "P=Sys-Sub:,R=Dis-Dev-Idx:"]
-subsfile = ["test/test.substitutions", "PP=Sys-Sub:,RR=Dis-Dev-Idx:"]
-tmpf1 = tempfile.NamedTemporaryFile(suffix=".csv")
+_test_dir = str(pathlib.Path(__file__).parent)
+fmtfile = _test_dir + "/pvlist_fmt.txt"
+rulefile = _test_dir + "/pvlist_rule.txt"
+apifile = _test_dir + "/pvlist_api.txt"
+okfile = _test_dir + "/pvlist_ok.txt"
+epicsdbfile = [_test_dir + "/test.db", "P=Sys-Sub:,R=Dis-Dev-Idx:"]
+subsfile = [_test_dir + "/test.substitutions", "PP=Sys-Sub:,RR=Dis-Dev-Idx:"]
+
+# Rule/warning boundary: PVs at index 0-18 have rule failures,
+# PVs at index >18 have rule warnings (matches pvlist_rule.txt layout)
+RULE_FAIL_BOUNDARY = 18
 
 
 @pytest.fixture
@@ -77,22 +80,26 @@ def pvobj_backend():
 
 
 @pytest.fixture
-def pvobj_all():
+def pvobj_all(tmp_path):
     """
     This fixture is to check the entire PV validation sequence
     The PV list is given from the text file okfile
-    The PV validation outcome is written in the temporary file tmpf1.name
+    The PV validation outcome is written in a temporary CSV file
     """
+    csvfile = str(tmp_path / "output.csv")
     pvepics = epicsUtils()
-    return pvUtils(pvepics=pvepics, pvfile=okfile, csvfile=tmpf1.name)
+    pvu = pvUtils(pvepics=pvepics, pvfile=okfile, csvfile=csvfile)
+    pvu._test_csvfile = csvfile  # expose for assertion in test
+    return pvu
 
 
 def get_lines(file):
-    """Give the total numner of PV counting them from the input text file"""
-    return sum(
-        not line.isspace() and not line.startswith("%")
-        for line in pathlib.Path(file).open()
-    )
+    """Count PV lines in an input text file (skips comments and blank lines)."""
+    with pathlib.Path(file).open() as f:
+        return sum(
+            1 for line in f
+            if not line.isspace() and not line.startswith("%") and not line.startswith("#")
+        )
 
 
 def test_pvformat(pvobj_pvfmt: pvUtils):
@@ -116,13 +123,13 @@ def test_pvprop(pvobj_pvcheck: pvUtils):
     pvobj_pvcheck._checkValidFormat()
     pvobj_pvcheck._checkPropRules()
     for c, pv in enumerate(pvlist):
-        if c > 18:
+        if c > RULE_FAIL_BOUNDARY:
             assert not pvobj_pvcheck.VWarnD[pv], (
-                "PV " + pv + ", rule warning not identified!"
+                "PV " + pv + " should have a rule warning"
             )
         else:
             assert not pvobj_pvcheck.VRuleD[pv], (
-                "PV " + pv + ", rule failure not identified!"
+                "PV " + pv + " should have a rule failure"
             )
     assert pvobj_pvcheck.PVInternal == 2, "PV internal wrongly counted!"
 
@@ -179,9 +186,9 @@ def test_backend(pvobj_backend: pvUtils):
 def test_all(pvobj_all: pvUtils):
     """Test the entire PV validation sequence"""
     pvobj_all.run()
-    w = b"The PVs with Rule Failure are = 0"
-    c = tmpf1.read()
-    assert w in c, "Wrong csv file created!"
+    with open(pvobj_all._test_csvfile, "r") as f:
+        c = f.read()
+    assert "The PVs with Rule Failure are = 0" in c, "Wrong csv file created!"
     lines = get_lines(okfile)
     pvlist = pvobj_all.pvepics.pvstringlist
     assert pvlist.size() == lines, "Wrong PV list size extracted from input text file!"

@@ -34,6 +34,9 @@ class QuitException(Exception):
     pass
 
 
+PV_NAME_COL = 6  # Column index of the PV name in the data table
+
+
 class Viewer:
     """The actual viewer class.
     Args:
@@ -301,16 +304,16 @@ class Viewer:
         "Display current cell in a pop-up window"
         yp = self.y + self.win_y
         xp = self.x + self.win_x
-        s = "\n" + self.data[yp][xp]
-        if not s:
+        if not self.data[yp][xp]:
             # Only display pop-up if cells have contents
             return
+        s = "\n" + self.data[yp][xp]
         TextBox(self.scr, data=s, title=self.location_string(yp, xp))()
         self.resize()
 
     def show_row(self):
         yp = self.y + self.win_y
-        d = self.data[yp][6]
+        d = self.data[yp][PV_NAME_COL]
 
         if self.datainfo is not None:
             s = "\n" + self.datainfo[d]
@@ -365,8 +368,8 @@ class Viewer:
     def search(self):
         """Open search window, get input and set the search string."""
 
-        scr2 = curses.newwin(3, self.max_x - 100, self.max_y - 3, 0)
-        scr3 = scr2.derwin(1, self.max_x - 120, 1, 9)
+        scr2 = curses.newwin(3, max(20, self.max_x - 100), self.max_y - 3, 0)
+        scr3 = scr2.derwin(1, max(1, self.max_x - 120), 1, 9)
         scr2.box()
         scr2.move(1, 1)
         self.addstr(scr2, "Search: ")
@@ -436,10 +439,7 @@ class Viewer:
 
     def _reverse_data(self, data, yp, xp):
         yp, xp = self._reverse_yp_xp(data, yp, xp)
-        data.reverse()
-        for idx, i in enumerate(data):
-            i.reverse()
-            data[idx] = i
+        data = [row[::-1] for row in reversed(data)]
         return data, yp, xp
 
     def _search_cur_line_r(self, data, yp, xp):
@@ -831,25 +831,14 @@ class Viewer:
         trunc_char appended if it's longer than the allowed width.
         """
         yx_str = "({},{})"
-        # label_str = "{},{}"
         max_y = str(len(self.data))
         max_x = str(len(self.data[0]))
         max_yx = yx_str.format(max_y, max_x)
-
-        if self.header_offset != self.header_offset_orig:
-            # Hide column labels if header row disabled
-            max_width = min(int(self.max_x * 0.5), len(max_yx))
-        else:
-            # label = label_str.format('-', self.header[xp])
-            max_width = min(int(self.max_x * 0.5), len(max_yx))
+        max_width = min(int(self.max_x * 0.5), len(max_yx))
         yx = yx_str.format(yp + 1, xp + 1)
-        # pad = " " * (max_width - len(yx) )
-        # all = "{}{}".format(yx, pad)
-        all = "{}".format(yx)
-        if len(all) > max_width:
-            all = all[: max_width - 1] + self.trunc_char
-
-        return all
+        if len(yx) > max_width:
+            yx = yx[: max_width - 1] + self.trunc_char
+        return yx
 
     def display(self):
         """Refresh the current display"""
@@ -863,7 +852,7 @@ class Viewer:
 
         strhelp = "Press F1 for Help"
 
-        cl = "(\u2184) ESS - 2021 ".encode("utf-8")
+        cl = "(\u2184) ESS "
         self.addstr(
             self.scr,
             1,
@@ -934,8 +923,8 @@ class Viewer:
         self.scr.refresh()
 
     def save_csvfile(self):
-        save2 = curses.newwin(3, self.max_x - 100, self.max_y - 3, 0)
-        save3 = save2.derwin(1, self.max_x - 120, 1, 16)
+        save2 = curses.newwin(3, max(20, self.max_x - 100), self.max_y - 3, 0)
+        save3 = save2.derwin(1, max(1, self.max_x - 120), 1, 16)
         save2.box()
         save2.move(1, 1)
         self.addstr(save2, "Save csv file: ")
@@ -966,10 +955,12 @@ class Viewer:
                 for x in range(0, self.num_data_columns):
                     s = self.data[y][x]
                     j.append(s.strip())
-                d = self.data[y][6]
-                j.append(self.datainfo[d])
-                if y == 0:
-                    j.append(self.info)
+                d = self.data[y][PV_NAME_COL]
+                if self.datainfo is not None:
+                    j.append(self.datainfo.get(d, ""))
+                else:
+                    j.append("")
+                j.append(self.info if y == 0 else "")
                 it.append(j)
 
             with open(self.save_str, "w", newline="") as f:
@@ -986,8 +977,6 @@ class Viewer:
         buf = str()
         buf_width = 0
         for c in s:
-            if sys.version_info.major == 2:
-                c = c.decode("utf-8")
             w = 2 if unicodedata.east_asian_width(c) == "W" else 1
             if buf_width + w > width:
                 break
@@ -1048,13 +1037,11 @@ class Viewer:
         """Return the number of character cells a string will take
         (double-width aware). Defined as self._cell_len in __init__
         """
-        len = 0
+        width = 0
         for c in s:
-            if sys.version_info.major == 2:
-                c = c.decode("utf-8")
             w = 2 if unicodedata.east_asian_width(c) == "W" else 1
-            len += w
-        return len
+            width += w
+        return width
 
     def _mode_len(self, x):
         """Compute arithmetic mode (most common value) of the length of each item
@@ -1293,7 +1280,6 @@ def view(
         ioctitle:
         readme:
     """
-    lc_all = None
     if info is None:
         info = ""
     try:
@@ -1335,5 +1321,4 @@ def view(
                 search_str = e.search_str
                 continue
     finally:
-        if lc_all is not None:
-            locale.setlocale(locale.LC_ALL, lc_all)
+        pass
