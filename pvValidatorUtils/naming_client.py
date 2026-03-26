@@ -45,6 +45,18 @@ class NamingServiceClient:
         self.session = requests.Session()
         self.session.headers.update({"accept": "application/json"})
 
+        # Retry logic: 3 attempts with exponential backoff for transient failures
+        from requests.adapters import HTTPAdapter
+        try:
+            from urllib3.util.retry import Retry
+            retry = Retry(total=3, backoff_factor=0.5,
+                          status_forcelist=[502, 503, 504])
+            adapter = HTTPAdapter(max_retries=retry)
+            self.session.mount("http://", adapter)
+            self.session.mount("https://", adapter)
+        except ImportError:
+            pass  # urllib3 retry not available — proceed without
+
         # In-memory caches
         self._parts_cache: Dict[str, List[Dict]] = {}
         self._names_cache: Dict[str, Dict] = {}

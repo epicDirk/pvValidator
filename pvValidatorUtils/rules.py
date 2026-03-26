@@ -11,6 +11,12 @@ from typing import Dict, List, Optional
 
 from .parser import PVComponents
 
+__all__ = [
+    "Severity", "ValidationMessage", "ValidationResult",
+    "check_all_rules", "check_property_uniqueness",
+    "effective_property_length", "normalize_for_confusion",
+]
+
 # ---------------------------------------------------------------------------
 # Constants (from ESS-0000757)
 # ---------------------------------------------------------------------------

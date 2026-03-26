@@ -269,7 +269,7 @@ class pvUtils:
             else:
                 self.data[0].append(self.ioctitle)
                 self.data[1].append(self.infovalidation)
-                with open(self.csvfile, "w", newline="") as f:
+                with open(self.csvfile, "w", newline="", encoding="utf-8") as f:
                     writer = csv.writer(f)
                     writer.writerows(self.data)
         if self.exiterror:
@@ -543,7 +543,7 @@ class pvUtils:
         """Load PVs from a plain text file."""
         if self.pvfile is None:
             return
-        with open(self.pvfile, "r") as pvf:
+        with open(self.pvfile, "r", encoding="utf-8") as pvf:
             for lin in pvf:
                 if not lin.startswith("%") and not lin.startswith("#") and lin.strip():
                     self.pvepics.pvstringlist.push_back(lin.strip().split()[0])
@@ -555,7 +555,7 @@ class pvUtils:
             return
         listdb = []
         epicsdbfile = self.epicsdb[0]
-        with open(epicsdbfile, "r") as fdb:
+        with open(epicsdbfile, "r", encoding="utf-8") as fdb:
             for r in fdb:
                 if r.lstrip().startswith("#"):
                     continue
