@@ -78,6 +78,7 @@ private:
   ServerMap serverMap;
   bool processSearchResponse(osiSockAddr const &, ByteBuffer &);
   bool discoverServers(double);
+  bool sendBroadcast(SOCKET, ByteBuffer &, InetAddrVector &);
   bool byGUIDSearch;
   double timeOut;
 };

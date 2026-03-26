@@ -58,22 +58,24 @@ epicsUtils::epicsUtils(string serverAddress) {
   // by GUID search
 
   if (byGUIDSearch) {
+    string originalGUID = serverAddress;
     bool resolved = false;
     for (ServerMap::const_iterator iter = serverMap.begin();
          iter != serverMap.end(); iter++) {
       const ServerEntry &entry = iter->second;
 
-      if (strncmp(entry.guid.c_str(), &(serverAddress[2]), 24) == 0) {
+      if (strncmp(entry.guid.c_str(), &(originalGUID[2]), 24) == 0) {
         // found match
-
-        // TODO for now we take only first server address
-        serverAddress = inetAddressToString(entry.addresses[0]);
-        resolved = true;
+        if (!entry.addresses.empty()) {
+          // TODO for now we take only first server address
+          serverAddress = inetAddressToString(entry.addresses[0]);
+          resolved = true;
+        }
       }
     }
 
     if (!resolved) {
-      throw std::runtime_error(string("Failed to resolve GUID '") + serverAddress + "'");
+      throw std::runtime_error(string("Failed to resolve GUID '") + originalGUID + "'");
     }
   }
 
@@ -105,6 +107,8 @@ epicsUtils::epicsUtils(string serverAddress) {
   }
 
   PVStringArray::shared_pointer pvs(ret->getSubField<PVStringArray>("value"));
+  if (!pvs)
+    throw std::runtime_error("Server response missing 'value' field");
 
   PVStringArray::const_svector val(pvs->view());
 
@@ -161,6 +165,8 @@ string epicsUtils::deserializeString(ByteBuffer *buffer) {
       (size_t)-1) // TODO null strings check, to be removed in the future
   {
     // entire string is in buffer, simply create a string out of it (copy)
+    if (size > buffer->getRemaining())
+      THROW_BASE_EXCEPTION("string size exceeds buffer remaining");
     std::size_t pos = buffer->getPosition();
     string str(buffer->getBuffer() + pos, size);
     buffer->setPosition(pos + size);
@@ -198,8 +204,13 @@ bool epicsUtils::processSearchResponse(osiSockAddr const &responseFrom,
   if (command != (int8)0x04)
     return false;
 
-  size_t payloadSize = receiveBuffer.getInt();
+  int32 rawPayloadSize = receiveBuffer.getInt();
+  if (rawPayloadSize < 0)
+    return false;
+  size_t payloadSize = (size_t)rawPayloadSize;
   if (payloadSize < (12 + 4 + 16 + 2))
+    return false;
+  if (receiveBuffer.getRemaining() < payloadSize)
     return false;
 
   epics::pvAccess::ServerGUID guid;
@@ -258,6 +269,31 @@ bool epicsUtils::processSearchResponse(osiSockAddr const &responseFrom,
   }
 }
 
+bool epicsUtils::sendBroadcast(SOCKET socket, ByteBuffer &sendBuffer,
+                               InetAddrVector &broadcastAddresses) {
+  bool oneOK = false;
+  for (size_t i = 0; i < broadcastAddresses.size(); i++) {
+    if (pvAccessIsLoggable(logLevelDebug)) {
+      char strBuffer[64];
+      sockAddrToDottedIP(&broadcastAddresses[i].sa, strBuffer,
+                         sizeof(strBuffer));
+      LOG(logLevelDebug, "UDP Tx (%zu) -> %s", sendBuffer.getPosition(),
+          strBuffer);
+    }
+
+    int status = ::sendto(socket, sendBuffer.getBuffer(),
+                          sendBuffer.getPosition(), 0,
+                          &broadcastAddresses[i].sa, sizeof(sockaddr));
+    if (status < 0) {
+      char errStr[64];
+      epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
+      fprintf(stderr, "Send error: %s\n", errStr);
+    } else
+      oneOK = true;
+  }
+  return oneOK;
+}
+
 bool epicsUtils::discoverServers(double timeOut) {
   osiSockAttach();
 
@@ -288,6 +324,7 @@ bool epicsUtils::discoverServers(double timeOut) {
     IfaceNodeVector ifaces;
     if (discoverInterfaces(ifaces, socket, 0)) {
       fprintf(stderr, "Unable to populate interface list\n");
+      epicsSocketDestroy(socket);
       return false;
     }
 
@@ -364,6 +401,7 @@ bool epicsUtils::discoverServers(double timeOut) {
     char errStr[64];
     epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
     fprintf(stderr, "Error setting SO_RCVTIMEO: %s\n", errStr);
+    epicsSocketDestroy(socket);
     return false;
   }
 
@@ -375,6 +413,7 @@ bool epicsUtils::discoverServers(double timeOut) {
     char errStr[64];
     epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
     fprintf(stderr, "Failed to get local socket address: %s.", errStr);
+    epicsSocketDestroy(socket);
     return false;
   }
 
@@ -404,28 +443,10 @@ bool epicsUtils::discoverServers(double timeOut) {
   sendBuffer.putByte((int8_t)0x00); // protocol count
   sendBuffer.putShort((int16_t)0);  // name count
 
-  bool oneOK = false;
-  for (size_t i = 0; i < broadcastAddresses.size(); i++) {
-    if (pvAccessIsLoggable(logLevelDebug)) {
-      char strBuffer[64];
-      sockAddrToDottedIP(&broadcastAddresses[i].sa, strBuffer,
-                         sizeof(strBuffer));
-      LOG(logLevelDebug, "UDP Tx (%zu) -> %s", sendBuffer.getPosition(),
-          strBuffer);
-    }
-
-    status = ::sendto(socket, sendBuffer.getBuffer(), sendBuffer.getPosition(),
-                      0, &broadcastAddresses[i].sa, sizeof(sockaddr));
-    if (status < 0) {
-      char errStr[64];
-      epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-      fprintf(stderr, "Send error: %s\n", errStr);
-    } else
-      oneOK = true;
-  }
-
-  if (!oneOK)
+  if (!sendBroadcast(socket, sendBuffer, broadcastAddresses)) {
+    epicsSocketDestroy(socket);
     return false;
+  }
 
   char rxbuff[1024];
   ByteBuffer receiveBuffer(rxbuff, sizeof(rxbuff) / sizeof(char));
@@ -479,24 +500,10 @@ bool epicsUtils::discoverServers(double timeOut) {
       }
 
       if (++sendCount < 3) {
-        // TODO duplicate code
-        bool oneOK = false;
-        for (size_t i = 0; i < broadcastAddresses.size(); i++) {
-          // send the packet
-          status =
-              ::sendto(socket, sendBuffer.getBuffer(), sendBuffer.getPosition(),
-                       0, &broadcastAddresses[i].sa, sizeof(sockaddr));
-          if (status < 0) {
-            char errStr[64];
-            epicsSocketConvertErrnoToString(errStr, sizeof(errStr));
-            fprintf(stderr, "Send error: %s\n", errStr);
-          } else
-            oneOK = true;
-        }
-
-        if (!oneOK)
+        if (!sendBroadcast(socket, sendBuffer, broadcastAddresses)) {
+          epicsSocketDestroy(socket);
           return false;
-
+        }
       } else
         break;
     }

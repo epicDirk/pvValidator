@@ -2,8 +2,16 @@
 %module epicsUtils
 %include <std_string.i>
 %include <std_vector.i>
+%include <exception.i>
 
-
+/* Translate C++ exceptions to Python RuntimeError */
+%exception {
+  try {
+    $action
+  } catch (const std::exception& e) {
+    SWIG_exception(SWIG_RuntimeError, e.what());
+  }
+}
 
 namespace std {
     %template(VectorInt) vector<int>;
@@ -11,15 +19,11 @@ namespace std {
     %template(VectorString) vector<string>;
 };
 
-namespace epics{
-    namespace pvData{
-
-    }
-    namespace pvAccess{
-
-    }
+/* Tell SWIG about EPICS namespaces used in the header */
+namespace epics {
+    namespace pvData {}
+    namespace pvAccess {}
 }
-
 
 %{
 #include "epicsUtils.h"
