@@ -36,6 +36,38 @@ All notable changes to pvValidator are documented here.
 - Dead `location_string` branches and `lc_all` in tabview.py
 - Hardcoded year "2021" in tabview.py TUI footer
 
+## [Round 7] — 2026-03-26 (in progress)
+
+### Added
+- **Autofix self-verification** (Semgrep pattern): every suggestion is validated before
+  being shown — fixes that introduce new ERRORs are automatically downgraded to MANUAL
+- **Four-tier applicability model**: Safe / Suggested / Template / Manual (Ruff/Clippy-inspired)
+- **New autofix rules**: Legacy prefix stripping (Cmd_, P_, FB_, SP_), MTCA index zero-padding
+- **CLI flags**: `--suggest` (show fix suggestions), `--fix` (apply safe fixes),
+  `--explain RULE_ID` (show full rule documentation), `--verbose` (detailed output)
+- **Educational YAML content**: every rule now has `why`, `fix`, `example_good`, `example_bad`
+  fields accessible via `--explain` and Web-UI tooltips
+- 23 new autofix tests (370 total)
+
+### Changed
+- `FixSuggestion.auto_fixable` is now a computed property based on `applicability` tier
+- `Applicability` enum replaces boolean `auto_fixable` parameter
+
+### Known gaps (still to implement)
+- Web-UI: expandable error details, fix buttons, format guide, format diagnostics
+- CLI: `--verbose` content integration
+- Interactive quick reference HTML (reference.html)
+
+## [Round 6] — 2026-03-26
+
+### Changed
+- epicsUtils.cxx: split discoverServers (250 LOC) into createDiscoverySocket,
+  buildBroadcastList, receiveResponses sub-methods
+- epicsUtils.cxx: all fprintf(stderr) → EPICS LOG macros, strncmp → std::string
+- tabview.py: split display() into _render_header_bar + _render_table
+- pvUtils.py: infovalidation string-concat → list + join pattern
+- test_validator.py: private method calls → run() end-to-end tests
+
 ## [Round 5] — 2026-03-26
 
 ### Added
