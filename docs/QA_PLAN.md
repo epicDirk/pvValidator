@@ -16,13 +16,17 @@ Dieser QA-Plan definiert die Kriterien unter denen pvValidator als **production-
 | Kategorie | Tests | Status | Offline |
 |-----------|-------|--------|---------|
 | PV Format Parser (4 Formate) | 40 | Grün | Ja |
-| Validierungsregeln (alle ESS-0000757 Regeln) | 59 | Grün | Ja |
+| Validierungsregeln (alle ESS-0000757 Regeln) | 67 | Grün | Ja |
 | API-Mocking (Naming Service Simulation) | 28 | Grün | Ja |
 | VCR Cassettes (echte ESS-Daten) | 24 | Grün | Ja |
 | YAML Rule Loader | 17 | Grün | Ja |
 | JSON/HTML Reporter | 11 | Grün | Ja |
+| Autofix (Self-Verification, 4-Tier, Legacy, MTCA) | 59 | Grün | Ja |
+| DB Parser (Regex, Integration) | 21 | Grün | Ja |
+| Combinatorial/PICT Tests | 67 | Grün | Ja |
+| Hypothesis Fuzzing | ~20 | Grün | Ja |
 | Original pvValidator Tests | 4 | Grün | Ja |
-| **Gesamt** | **182+** | **Grün** | **Ja** |
+| **Gesamt** | **370** | **Grün** | **Ja** |
 
 **Kriterium:** Alle Tests müssen grün sein. Kein Test darf ESS-Netzwerk erfordern (außer mit `--ess-network` Flag).
 
@@ -138,13 +142,17 @@ Dieser QA-Plan definiert die Kriterien unter denen pvValidator als **production-
 
 | Dokument | Vorhanden |
 |----------|-----------|
-| README.md | Ja — komplett neu geschrieben |
+| README.md | Ja — 370 Tests, CLI Flags, Exit Codes, Documentation Section |
 | CONTRIBUTING.md | Ja |
+| CHANGELOG.md | Ja — Runden 1-7 + Alfio Pre-Fork History |
 | ONLINE_MODE_SETUP.md | Ja |
 | HOW_TO_RECORD.md (Cassettes) | Ja |
 | Architecture Diagram (HTML) | Ja |
-| YAML Rule Reference | Ja (ess-0000757-rev10.yaml) |
+| YAML Rule Reference | Ja (ess-0000757-rev10.yaml) mit Why/Fix/Examples |
 | Standard Properties Catalog | Ja (standard_properties.yaml) |
+| guide.html | Ja — ESS Naming Convention Tutorial (6 Abschnitte) |
+| reference.html | Ja — Quick Reference Cheat Sheet |
+| Web-UI (index.html) | Ja — Live Validation + Expandable Details + Fix Buttons |
 
 ---
 
@@ -152,16 +160,24 @@ Dieser QA-Plan definiert die Kriterien unter denen pvValidator als **production-
 
 Vor der Freigabe für den ESS-Einsatz:
 
-- [ ] Alle automatischen Tests grün (182+)
-- [ ] Docker Build erfolgreich
-- [ ] Online-Validierung getestet (im ESS-Netz)
-- [ ] CLI-Optionen manuell getestet (--noapi, --format, -i, -e, -s)
-- [ ] Web-UI getestet (Load Examples, Datei-Upload, JSON Export)
+- [ ] Alle automatischen Tests grün (370 Tests)
+- [ ] Docker Build erfolgreich (`docker build -t pvvalidator . && docker run --rm pvvalidator`)
+- [ ] Online-Validierung getestet (im ESS-Netz, `--ess-network` Flag)
+- [ ] CLI-Optionen getestet: `-i`, `-e`, `-s`, `--noapi`, `--format json`, `--format html`
+- [ ] CLI Autofix getestet: `--suggest`, `--fix`, `--fix --unsafe`, `--fix --interactive`
+- [ ] CLI Info getestet: `--explain PROP-SP`, `--debug`, `--verbose`
+- [ ] Web-UI getestet: Load Examples, File Upload, JSON Export, Fix All, Format Guide
+- [ ] Web-UI: Klick auf Error-Badge → Why/Fix Panel öffnet
+- [ ] Web-UI: "Invalid Format" zeigt spezifische Diagnose
+- [ ] guide.html: 6 Abschnitte, interaktives PV-Diagramm, Quiz funktioniert
+- [ ] reference.html: Alle Tabellen korrekt, Links funktionieren
 - [ ] Bekannte ESS PVs validiert (DTL-010:EMR-TT-001:Temperature = VALID)
 - [ ] Bekannte fehlerhafte PVs erkannt (Temperature-S = Error PROP-SP)
 - [ ] VCR Cassettes aufgenommen und Tests grün
 - [ ] README gelesen und Anleitung nachvollziehbar
-- [ ] Kein Sicherheitsrisiko (keine Credentials im Code, keine Schreibzugriffe auf Naming Service)
+- [ ] OWASP Security Audit: 0 Critical, 0 High offen
+- [ ] black + isort + flake8: alle Python-Dateien clean
+- [ ] Kein Sicherheitsrisiko (keine Credentials, keine Schreibzugriffe auf Naming Service)
 - [ ] Code Review durch zweite Person
 
 **Sign-Off:**

@@ -157,6 +157,16 @@ footer .left a { color: var(--text-2); text-decoration: none; }
 footer .left a:hover { color: var(--ess-cyan); }
 footer .right { font-size: 0.68rem; color: var(--text-3); }
 
+/* Format Guide Panel */
+.format-guide { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px 20px; margin-bottom: 16px; font-size: 0.78rem; line-height: 1.6; }
+.format-guide.open { display: block; }
+.format-guide h3 { font-size: 0.82rem; color: var(--ess-navy); margin: 0 0 8px; }
+.format-guide .fmt { font-family: ui-monospace, monospace; font-size: 0.8rem; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 6px 0; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.format-guide .constraint { font-size: 0.7rem; color: var(--text-3); margin-top: 8px; }
+.format-guide a { color: var(--ess-cyan); }
+
 /* Expandable error details */
 .msg { cursor: pointer; }
 .msg-detail { display: none; font-size: 0.66rem; font-weight: 400; color: var(--text-2); padding: 6px 10px;
@@ -223,12 +233,21 @@ footer .right { font-size: 0.68rem; color: var(--text-3); }
     </button>
     <button class="btn" onclick="clearAll()">Clear</button>
     <button class="btn btn-fix-all btn-accent" onclick="fixAll()" aria-label="Apply all safe auto-fixes">Fix All</button>
+    <button class="btn" onclick="toggleGuide()" aria-label="Toggle format guide">Format Guide</button>
     <div class="toolbar-right">
       <button class="btn" onclick="exportJSON()" aria-label="Export validation results as JSON">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         Export JSON
       </button>
     </div>
+  </div>
+
+  <div class="format-guide" id="formatGuide">
+    <h3>ESS PV Name Formats</h3>
+    <div class="fmt"><span class="seg seg-sys">Sys</span><span class="sep">-</span><span class="seg seg-sub">Sub</span><span class="sep">:</span><span class="seg seg-dis">Dis</span><span class="sep">-</span><span class="seg seg-dev">Dev</span><span class="sep">-</span><span class="seg seg-idx">Idx</span><span class="sep">:</span><span class="seg seg-prop">Property</span></div>
+    <div class="fmt"><span class="seg seg-sys">Sys</span><span class="sep">:</span><span class="seg seg-dis">Dis</span><span class="sep">-</span><span class="seg seg-dev">Dev</span><span class="sep">-</span><span class="seg seg-idx">Idx</span><span class="sep">:</span><span class="seg seg-prop">Property</span></div>
+    <div class="fmt"><span class="seg seg-sys">Sys</span><span class="sep">-</span><span class="seg seg-sub">Sub</span><span class="sep">::</span><span class="seg seg-prop">Property</span> &nbsp; or &nbsp; <span class="seg seg-sys">Sys</span><span class="sep">::</span><span class="seg seg-prop">Property</span></div>
+    <div class="constraint">Elements: 1-6 chars, alphanumeric, letter start (subsystem may start with digit). Property: 4-25 chars, PascalCase, -SP/-RB suffixes. <a href="reference.html">Full reference &rarr;</a> <a href="guide.html">Learn the convention &rarr;</a></div>
   </div>
 
   <div class="editor">
@@ -513,6 +532,7 @@ function loadExample(){document.getElementById('pvInput').value=
   'INVALID::FORMAT::HERE';
   validate();}
 function clearAll(){document.getElementById('pvInput').value='';validate();}
+function toggleGuide(){document.getElementById('formatGuide').classList.toggle('open');}
 function toggleDetail(uid){var el=document.getElementById('detail-'+uid);if(el)el.classList.toggle('open');}
 function applyFix(idx,suggested){
   var ta=document.getElementById('pvInput');var lines=ta.value.split('\n');
