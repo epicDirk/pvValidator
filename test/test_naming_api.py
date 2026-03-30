@@ -106,8 +106,8 @@ class TestNamingServiceConnectivity:
         assert "Production" in pvu.infovalidation
 
     @responses.activate
-    def test_service_unreachable_exits(self):
-        """When service is unreachable, validator should exit."""
+    def test_service_unreachable_falls_back(self):
+        """When service is unreachable, validator falls back to format-only."""
         responses.add(
             responses.HEAD,
             PROD_BASE,
@@ -115,8 +115,9 @@ class TestNamingServiceConnectivity:
         )
         if not HAS_EPICS:
             pytest.skip("Requires compiled SWIG modules")
-        with pytest.raises((SystemExit, ConnectionError)):
-            make_pvutils(["DTL-010:EMR-TT-001:Temperature"])
+        pvu = make_pvutils(["DTL-010:EMR-TT-001:Temperature"])
+        assert pvu.checkonlyfmt is True
+        assert "unreachable" in pvu.infovalidation.lower()
 
     @responses.activate
     def test_noapi_skips_connection(self):
@@ -394,6 +395,196 @@ class TestOfflineValidation:
 # ---------------------------------------------------------------------------
 # Tests: Confusable character detection
 # ---------------------------------------------------------------------------
+
+
+class TestSuggestions:
+    """Test 'Did you mean?' suggestions for unrecognized mnemonics."""
+
+    def test_edit_distance_exact(self):
+        """Edit distance between identical strings should be 0."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        assert NamingServiceClient._edit_distance("DTL", "DTL") == 0
+
+    def test_edit_distance_swap(self):
+        """Damerau-Levenshtein distance for adjacent transposition should be 1."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        assert NamingServiceClient._edit_distance("DLT", "DTL") == 1
+
+    def test_edit_distance_single_char(self):
+        """Edit distance for single substitution should be 1."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        assert NamingServiceClient._edit_distance("DTL", "DXL") == 1
+
+    def test_closest_match_finds_swap(self):
+        """closest_match should find 'DTL' when given 'DLT'."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        result = NamingServiceClient._closest_match("DLT", ["DTL", "RFQ", "MEBT"])
+        assert result == "DTL"
+
+    def test_closest_match_no_match(self):
+        """closest_match should return None when no candidate is close enough."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        result = NamingServiceClient._closest_match("ZZZZZ", ["DTL", "RFQ", "MEBT"])
+        assert result is None
+
+    @responses.activate
+    def test_suggest_correction_with_api_search(self):
+        """suggest_correction should use API search when available."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        responses.add(
+            responses.GET,
+            PROD_BASE + "rest/parts/mnemonic/search/DT",
+            json=[
+                {
+                    "mnemonic": "DTL",
+                    "name": "Drift Tube Linac",
+                    "status": "Approved",
+                    "type": "System Structure",
+                    "level": "2",
+                }
+            ],
+            status=200,
+        )
+        client = NamingServiceClient()
+        result = client.suggest_correction("DT", category="system")
+        assert result is not None
+        assert "DTL" in result
+
+    def test_suggest_correction_with_cache(self):
+        """suggest_correction should use edit distance on cached mnemonics."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        client = NamingServiceClient()
+        # Pre-populate cache with known parts
+        client._parts_cache["DTL"] = [
+            {
+                "mnemonic": "DTL",
+                "status": "Approved",
+                "type": "System Structure",
+                "level": "2",
+            }
+        ]
+        client._parts_cache["RFQ"] = [
+            {
+                "mnemonic": "RFQ",
+                "status": "Approved",
+                "type": "System Structure",
+                "level": "2",
+            }
+        ]
+        # search_parts will fail (no mock), so it falls through to cache
+        result = client.suggest_correction("DLT", category="system")
+        assert result is not None
+        assert "DTL" in result
+
+
+class TestConfusableElements:
+    """Test ELEM-3/ELEM-4: visually confusable name elements."""
+
+    def test_find_confusables_with_cache(self):
+        """find_confusables should detect cached mnemonics with same skeleton."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        client = NamingServiceClient()
+        # Pre-populate cache: ISrc and lSrc both approved System Structure
+        client._parts_cache["ISrc"] = [
+            {
+                "mnemonic": "ISrc",
+                "status": "Approved",
+                "type": "System Structure",
+                "level": "2",
+            }
+        ]
+        client._parts_cache["lSrc"] = [
+            {
+                "mnemonic": "lSrc",
+                "status": "Approved",
+                "type": "System Structure",
+                "level": "2",
+            }
+        ]
+        result = client.find_confusables("ISrc", category="system")
+        assert "lSrc" in result
+
+    def test_find_confusables_no_match(self):
+        """find_confusables should return empty when no skeleton match."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        client = NamingServiceClient()
+        client._parts_cache["DTL"] = [
+            {
+                "mnemonic": "DTL",
+                "status": "Approved",
+                "type": "System Structure",
+                "level": "2",
+            }
+        ]
+        result = client.find_confusables("RFQ", category="system")
+        assert result == []
+
+    def test_find_confusables_excludes_self(self):
+        """find_confusables should not include the mnemonic itself."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        client = NamingServiceClient()
+        client._parts_cache["DTL"] = [
+            {
+                "mnemonic": "DTL",
+                "status": "Approved",
+                "type": "System Structure",
+                "level": "2",
+            }
+        ]
+        result = client.find_confusables("DTL", category="system")
+        assert "DTL" not in result
+
+    @responses.activate
+    def test_find_confusables_O_0_discipline(self):
+        """Discipline EOR vs E0R detected via skeleton normalization."""
+        from pvValidatorUtils.naming_client import NamingServiceClient
+
+        # Mock prefix search for "E" and "EO"
+        responses.add(
+            responses.GET,
+            PROD_BASE + "rest/parts/mnemonic/search/E",
+            json=[
+                {
+                    "mnemonic": "EOR",
+                    "status": "Approved",
+                    "type": "Device Structure",
+                    "level": "1",
+                },
+                {
+                    "mnemonic": "E0R",
+                    "status": "Approved",
+                    "type": "Device Structure",
+                    "level": "1",
+                },
+            ],
+            status=200,
+        )
+        responses.add(
+            responses.GET,
+            PROD_BASE + "rest/parts/mnemonic/search/EO",
+            json=[
+                {
+                    "mnemonic": "EOR",
+                    "status": "Approved",
+                    "type": "Device Structure",
+                    "level": "1",
+                },
+            ],
+            status=200,
+        )
+        client = NamingServiceClient()
+        result = client.find_confusables("EOR", category="discipline")
+        assert "E0R" in result
 
 
 class TestConfusableDetection:

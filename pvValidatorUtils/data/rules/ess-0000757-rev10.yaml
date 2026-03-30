@@ -84,6 +84,37 @@ elements:
     example_good: "DTL-010:EMR-TT-001:Temperature"
     example_bad: "DTL-010:2MR-TT-001:Temperature"
 
+  - id: "ELEM-3"
+    check: "confusable_system"
+    applies_to: ["System", "Subsystem"]
+    severity: "warning"
+    message: "System/subsystem name is visually confusable with another registered mnemonic"
+    reference: "Section 3"
+    why: >
+      On alarm panels and control room displays, characters like I/l/1, O/0,
+      and VV/W are visually indistinguishable. If two registered system or
+      subsystem mnemonics differ only by these characters, an operator could
+      misidentify which subsystem is alarming. ESS-0000757 requires that
+      mnemonics be visually distinct.
+    fix: "Contact the Naming Coordinator to choose a more distinct mnemonic that avoids I/l/1, O/0, or VV/W confusion."
+    example_good: "ISrc-010:EMR-TT-001:Temperature (no confusable system exists)"
+    example_bad: "lSrc-010:EMR-TT-001:Temperature (confusable with ISrc — I↔l)"
+
+  - id: "ELEM-4"
+    check: "confusable_device"
+    applies_to: ["Discipline", "Device"]
+    severity: "warning"
+    message: "Discipline/device name is visually confusable with another registered mnemonic"
+    reference: "Section 3"
+    why: >
+      On alarm panels and control room displays, characters like I/l/1, O/0,
+      and VV/W are visually indistinguishable. If two registered discipline or
+      device type mnemonics differ only by these characters, an operator could
+      misidentify which device is alarming.
+    fix: "Contact the Naming Coordinator to choose a more distinct mnemonic that avoids I/l/1, O/0, or VV/W confusion."
+    example_good: "DTL-010:EMR-TT-001:Temperature (no confusable discipline exists)"
+    example_bad: "DTL-010:E0R-TT-001:Temperature (confusable with EOR — O↔0)"
+
   - id: "ELEM-5"
     check: "min_length"
     value: 1

@@ -87,7 +87,7 @@ class NamingServiceClient:
         try:
             self.session.head(self.base_url, timeout=1)
             return True
-        except requests.exceptions.ConnectionError as e:
+        except (requests.exceptions.ConnectionError, ConnectionError, OSError) as e:
             raise NamingServiceConnectionError(
                 f"Failed to connect to Naming Service at {self.base_url}: {e}"
             ) from e
@@ -293,3 +293,198 @@ class NamingServiceClient:
                 "status": "",
                 "message": f'The Name "{ess_name}" is not registered in the Naming Service',
             }
+
+    # -----------------------------------------------------------------
+    # Confusable mnemonic detection (ELEM-3, ELEM-4)
+    # -----------------------------------------------------------------
+
+    def find_confusables(
+        self, mnemonic: str, category: Optional[str] = None
+    ) -> List[str]:
+        """Find registered mnemonics that are visually confusable with *mnemonic*.
+
+        Uses the same skeleton normalization as property uniqueness checks:
+        I↔l↔1, O↔0, VV↔W (case-insensitive).
+
+        Searches the Naming Service for mnemonics sharing the first 1-2
+        characters (prefix search) and also checks the local cache.
+
+        Args:
+            mnemonic: The mnemonic to check (e.g., "ISrc")
+            category: Optional filter — "system" or "discipline"
+
+        Returns:
+            List of confusable registered mnemonics (excluding *mnemonic* itself).
+        """
+        from .rules import normalize_for_confusion
+
+        target_skeleton = normalize_for_confusion(mnemonic)
+
+        # Gather candidates from API prefix search + cache
+        candidates: set = set()
+        for prefix_len in (1, 2):
+            if len(mnemonic) >= prefix_len:
+                results = self.search_parts(mnemonic[:prefix_len])
+                for r in results:
+                    if r.get("status") != "Approved" or not r.get("mnemonic"):
+                        continue
+                    if category == "system" and r.get("type") != "System Structure":
+                        continue
+                    if category == "discipline" and r.get("type") != "Device Structure":
+                        continue
+                    candidates.add(r["mnemonic"])
+
+        for cand in self._collect_candidates(category):
+            candidates.add(cand)
+
+        # Find those whose skeleton matches but whose name differs
+        confusables = []
+        for cand in candidates:
+            if cand.lower() == mnemonic.lower():
+                continue  # same mnemonic (case-insensitive)
+            if normalize_for_confusion(cand) == target_skeleton:
+                confusables.append(cand)
+
+        return confusables
+
+    # -----------------------------------------------------------------
+    # Search / "Did you mean?" support
+    # -----------------------------------------------------------------
+
+    def search_parts(self, query: str) -> List[Dict]:
+        """Search for mnemonics matching a query (prefix/substring).
+
+        Uses GET /rest/parts/mnemonic/search/{query}.
+        Returns list of matching parts with mnemonic, name, status.
+        """
+        try:
+            resp = self.session.get(
+                self.base_url + "rest/parts/mnemonic/search/"
+                + url_quote(query, safe="-:"),
+                timeout=self.timeout,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.exceptions.RequestException:
+            return []
+
+    def suggest_correction(self, mnemonic: str, category: Optional[str] = None) -> Optional[str]:
+        """Suggest a correction for an unrecognized mnemonic.
+
+        Uses a combination of API prefix search and local edit-distance
+        matching against cached and search-fetched mnemonics.
+
+        Args:
+            mnemonic: The unrecognized mnemonic (e.g., "DLT")
+            category: Optional filter — "system", "discipline", or None
+
+        Returns:
+            A suggestion string like 'Did you mean "DTL"?' or None.
+        """
+        # Strategy 1: API exact-prefix search
+        results = self.search_parts(mnemonic)
+        approved = [
+            r for r in results
+            if r.get("status") == "Approved"
+            and r.get("mnemonic", "").lower() != mnemonic.lower()
+        ] if results else []
+        if approved:
+            best = approved[0]
+            name = best.get("name", "")
+            if name:
+                return f'Did you mean "{best["mnemonic"]}" ({name})?'
+            return f'Did you mean "{best["mnemonic"]}"?'
+
+        # Strategy 2: Short-prefix search to find nearby mnemonics,
+        # then edit-distance ranking. This catches character-swap typos
+        # like "DLT" → "DTL" that a prefix search misses.
+        nearby = set()
+        for prefix_len in (1, 2):
+            if len(mnemonic) >= prefix_len:
+                prefix_results = self.search_parts(mnemonic[:prefix_len])
+                for r in prefix_results:
+                    if r.get("status") != "Approved" or not r.get("mnemonic"):
+                        continue
+                    if category == "system" and r.get("type") != "System Structure":
+                        continue
+                    if category == "discipline" and r.get("type") != "Device Structure":
+                        continue
+                    nearby.add(r["mnemonic"])
+
+        # Also include cached mnemonics
+        for cand in self._collect_candidates(category):
+            nearby.add(cand)
+
+        if nearby:
+            best_match = self._closest_match(mnemonic, list(nearby))
+            if best_match:
+                return f'Did you mean "{best_match}"?'
+
+        return None
+
+    def _collect_candidates(self, category: Optional[str]) -> List[str]:
+        """Collect known mnemonics from cache for edit-distance matching."""
+        candidates = set()
+        for key, items in self._parts_cache.items():
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                mnem = item.get("mnemonic", "")
+                if not mnem:
+                    continue
+                if item.get("status") != "Approved":
+                    continue
+                if category == "system" and item.get("type") != "System Structure":
+                    continue
+                if category == "discipline" and item.get("type") != "Device Structure":
+                    continue
+                candidates.add(mnem)
+        return list(candidates)
+
+    @staticmethod
+    def _closest_match(query: str, candidates: List[str], max_distance: int = 2) -> Optional[str]:
+        """Find the closest match by Levenshtein edit distance.
+
+        Only returns a match if the distance is <= max_distance.
+        """
+        best = None
+        best_dist = max_distance + 1
+        q_lower = query.lower()
+        for candidate in candidates:
+            dist = NamingServiceClient._edit_distance(q_lower, candidate.lower())
+            if dist < best_dist:
+                best_dist = dist
+                best = candidate
+        return best if best_dist <= max_distance else None
+
+    @staticmethod
+    def _edit_distance(s1: str, s2: str) -> int:
+        """Compute Damerau-Levenshtein distance (includes transpositions).
+
+        Unlike plain Levenshtein, this counts adjacent character swaps
+        (e.g., "DLT" → "DTL") as a single operation.
+        """
+        len1, len2 = len(s1), len(s2)
+        # Use a full matrix for Damerau-Levenshtein
+        d = [[0] * (len2 + 1) for _ in range(len1 + 1)]
+        for i in range(len1 + 1):
+            d[i][0] = i
+        for j in range(len2 + 1):
+            d[0][j] = j
+        for i in range(1, len1 + 1):
+            for j in range(1, len2 + 1):
+                cost = 0 if s1[i - 1] == s2[j - 1] else 1
+                d[i][j] = min(
+                    d[i - 1][j] + 1,       # deletion
+                    d[i][j - 1] + 1,        # insertion
+                    d[i - 1][j - 1] + cost,  # substitution
+                )
+                # Transposition
+                if (
+                    i > 1
+                    and j > 1
+                    and s1[i - 1] == s2[j - 2]
+                    and s1[i - 2] == s2[j - 1]
+                ):
+                    d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
+        return d[len1][len2]

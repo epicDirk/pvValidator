@@ -16,6 +16,7 @@ __all__ = [
     "ValidationMessage",
     "ValidationResult",
     "check_all_rules",
+    "check_confusable_element",
     "check_property_uniqueness",
     "effective_property_length",
     "normalize_for_confusion",
@@ -505,6 +506,60 @@ def normalize_for_confusion(prop: str) -> str:
     result = result.replace("vv", "w")
     result = LEADING_ZERO_REGEX.sub("@", result)
     return result
+
+
+def _describe_confusion(mnemonic: str, other: str) -> str:
+    """Describe which confusable characters differ between two mnemonics."""
+    pairs = []
+    m_lower, o_lower = mnemonic.lower(), other.lower()
+    # Check each confusable pair
+    if "i" in m_lower or "l" in m_lower or "1" in m_lower:
+        m_norm = m_lower.replace("l", "1").replace("i", "1")
+        o_norm = o_lower.replace("l", "1").replace("i", "1")
+        if m_norm == o_norm and m_lower != o_lower:
+            pairs.append("I\u2194l\u21941")
+    if "o" in m_lower or "0" in m_lower:
+        m_norm = m_lower.replace("o", "0")
+        o_norm = o_lower.replace("o", "0")
+        if m_norm == o_norm and m_lower != o_lower:
+            pairs.append("O\u21940")
+    if "vv" in m_lower or "w" in m_lower:
+        m_norm = m_lower.replace("vv", "w")
+        o_norm = o_lower.replace("vv", "w")
+        if m_norm == o_norm and m_lower != o_lower:
+            pairs.append("VV\u2194W")
+    return ", ".join(pairs) if pairs else "visual similarity"
+
+
+def check_confusable_element(
+    mnemonic: str,
+    confusables: List[str],
+    element_type: str,
+) -> List[ValidationMessage]:
+    """Check if a name element is visually confusable with registered mnemonics.
+
+    Args:
+        mnemonic: The mnemonic being validated (e.g., "ISrc")
+        confusables: List of registered mnemonics with the same visual skeleton
+        element_type: "system", "subsystem", "discipline", or "device"
+
+    Returns:
+        List of ValidationMessages (warnings) for each confusable match.
+    """
+    msgs = []
+    rule_id = "ELEM-3" if element_type in ("system", "subsystem") else "ELEM-4"
+    for other in confusables:
+        confusion = _describe_confusion(mnemonic, other)
+        msgs.append(
+            ValidationMessage(
+                Severity.WARNING,
+                f'{element_type.title()} "{mnemonic}" is visually confusable with '
+                f'registered {element_type} "{other}" ({confusion}). '
+                f"Consider a more distinct name.",
+                rule_id,
+            )
+        )
+    return msgs
 
 
 def check_property_uniqueness(
