@@ -179,15 +179,15 @@ Vor der Freigabe für den ESS-Einsatz:
 - [x] CLI-Optionen getestet: `-i`, `-e`, `--noapi`, `--format json`, `--format html` — 2026-03-30
 - [x] CLI Autofix getestet: `--suggest`, `--fix` — 2026-03-30
 - [x] CLI Info getestet: `--explain PROP-SP`, `--verbose` — 2026-03-30
-- [ ] Web-UI getestet: Load Examples, File Upload, JSON Export, Fix All, Format Guide
-- [ ] Web-UI: Klick auf Error-Badge → Why/Fix Panel öffnet
-- [ ] Web-UI: "Invalid Format" zeigt spezifische Diagnose
-- [ ] guide.html: 6 Abschnitte, interaktives PV-Diagramm, Quiz funktioniert
-- [ ] reference.html: Alle Tabellen korrekt, Links funktionieren
+- [x] Web-UI getestet: Load Examples, File Upload, JSON Export, Fix All, Format Guide — 2026-03-30 (Chrome Browser)
+- [x] Web-UI: Klick auf Error-Badge → Why/Fix Panel öffnet — 2026-03-30 (Chrome Browser)
+- [x] Web-UI: "Invalid Format" zeigt spezifische Diagnose — 2026-03-30 (Chrome Browser)
+- [x] guide.html: 6 Abschnitte, interaktives PV-Diagramm, Quiz funktioniert — 2026-03-30 (Chrome Browser)
+- [x] reference.html: Alle Tabellen korrekt, Links funktionieren — 2026-03-30 (Chrome Browser)
 - [x] Bekannte ESS PVs validiert (DTL-010:EMR-TT-001:Temperature = VALID) — 2026-03-30
 - [x] Bekannte fehlerhafte PVs erkannt (Temperature-S = Error PROP-SP) — 2026-03-30
 - [x] VCR Cassettes aufgenommen und Tests grün — 2026-03-30 (69 frische Antworten)
-- [ ] README gelesen und Anleitung nachvollziehbar
+- [x] README gelesen und Anleitung nachvollziehbar — 2026-03-30 (GitHub rendering verifiziert, 391 Tests korrekt)
 - [x] OWASP Security Audit: 0 Critical, 0 High offen — Audit 2026-03-26, keine neuen Angriffsflächen
 - [x] Linter: flake8 clean (SWIG-Module ausgeschlossen), black/isort bekannte Legacy-Differenzen
 - [x] Kein Sicherheitsrisiko (keine Credentials, keine Schreibzugriffe auf Naming Service)
