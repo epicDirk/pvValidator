@@ -2,7 +2,7 @@
 
 All notable changes to pvValidator are documented here.
 
-## [Unreleased] — Round 4 (2026-03-26)
+## [2.0.0] — 2026-03-30
 
 ### Security
 - **SWIG exception handling**: Added `%exception` directive to both `.i` files — C++ exceptions now propagate as Python `RuntimeError` instead of crashing the process
@@ -47,7 +47,7 @@ All notable changes to pvValidator are documented here.
   `--explain RULE_ID` (show full rule documentation), `--verbose` (detailed output)
 - **Educational YAML content**: every rule now has `why`, `fix`, `example_good`, `example_bad`
   fields accessible via `--explain` and Web-UI tooltips
-- 23 new autofix tests (370 total)
+- 23 new autofix tests (391 total)
 
 ### Changed
 - `FixSuggestion.auto_fixable` is now a computed property based on `applicability` tier
