@@ -27,6 +27,7 @@ from pvValidatorUtils.rules import (
     KNOWN_SHORT_PROPERTIES,
     MAX_PROP_RECOMMENDED,
     Severity,
+    check_confusable_element,
     check_device_index,
     check_element_characters,
     check_element_lengths,
@@ -292,22 +293,34 @@ class pvUtils:
     # =================================================================
 
     def _checkNamingService(self):
-        """Check Naming Service availability."""
-        # Legacy URL attributes (still used by _checkValidName for compatibility)
+        """Check Naming Service availability.
+
+        If the Naming Service is unreachable and -n was requested,
+        falls back to format-only validation with a warning instead
+        of crashing.
+        """
         urls = self.api_client.DEFAULT_URLS
         url = urls.get(self.namingservice, urls["prod"])
         self.NameService = "Production" if self.namingservice == "prod" else "Testing"
+        self._api_available = False
         if not self.checkonlyfmt:
             try:
                 self.api_client.check_connectivity()
+                self._api_available = True
                 self._info_parts.append(
                     f"The Validation is done through {self.NameService} Naming Service\n"
                 )
-            except NamingServiceConnectionError as e:
-                logger.error(str(e))
-                raise NamingServiceConnectionError(
-                    f"Fail to connect to Naming Service {url}"
-                ) from e
+            except NamingServiceConnectionError:
+                logger.warning(
+                    "Naming Service at %s is unreachable — "
+                    "falling back to format-only validation",
+                    url,
+                )
+                self._info_parts.append(
+                    f"Warning: {self.NameService} Naming Service at {url} "
+                    "is unreachable — validation limited to format and property rules\n"
+                )
+                self.checkonlyfmt = True
         else:
             self._info_parts.append(
                 "The Validation through Naming Service was skipped\n"
@@ -333,8 +346,23 @@ class pvUtils:
                     sys_name
                 )
             if self.SysStructCheckList[sys_name] is False:
-                scheck += f'Error: The System "{sys_name}" is not active in the Naming Service\n'
+                msg = f'Error: The System "{sys_name}" is not active in the Naming Service'
+                suggestion = self.api_client.suggest_correction(
+                    sys_name, category="system"
+                )
+                if suggestion:
+                    msg += f"\n  Hint: {suggestion}"
+                scheck += msg + "\n"
                 checkname = False
+            else:
+                # ELEM-3: Check for visually confusable system names
+                confusables = self.api_client.find_confusables(
+                    sys_name, category="system"
+                )
+                for msg in check_confusable_element(
+                    sys_name, confusables, "system"
+                ):
+                    scheck += f"Warning: {msg.message}\n"
 
             # Subsystem check
             if subsys:
@@ -364,8 +392,23 @@ class pvUtils:
                             self.api_client.validate_discipline(dis)
                         )
                     if self.DevStructCheckList[dis] is False:
-                        scheck += f'Error: The Discipline "{dis}" is not active in the Naming Service\n'
+                        msg = f'Error: The Discipline "{dis}" is not active in the Naming Service'
+                        suggestion = self.api_client.suggest_correction(
+                            dis, category="discipline"
+                        )
+                        if suggestion:
+                            msg += f"\n  Hint: {suggestion}"
+                        scheck += msg + "\n"
                         checkname = False
+                    else:
+                        # ELEM-4: Check for visually confusable discipline names
+                        confusables = self.api_client.find_confusables(
+                            dis, category="discipline"
+                        )
+                        for msg in check_confusable_element(
+                            dis, confusables, "discipline"
+                        ):
+                            scheck += f"Warning: {msg.message}\n"
 
                     if d not in self.DevStructCheckList:
                         self.DevStructCheckList[d] = self.api_client.validate_device(
