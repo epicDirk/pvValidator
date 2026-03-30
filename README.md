@@ -104,7 +104,7 @@ CLI (pvValidator.py)
 
 ## Testing
 
-370 tests, all runnable without ESS network access:
+391 tests, all runnable without ESS network access:
 
 ```bash
 # Offline tests (default)
@@ -114,7 +114,7 @@ pytest test/ -v -k "not backend and not pvepics and not test_all"
 pytest test/ -v --ess-network
 ```
 
-Tests cover format parsing (40), validation rules (67), API mocking (28), rule loader (17), autofix (30), cassettes (24), reporter (11), hypothesis fuzzing, DB parser (21), combinatorial/PICT (67), and the original pvValidator tests (4).
+Tests cover format parsing (40), validation rules (67), API mocking (28), rule loader (17), autofix (30), cassettes (24), reporter (11), hypothesis fuzzing, DB parser (21), combinatorial/PICT (67), "Did you mean?" suggestions (7), confusable detection (11), and the original pvValidator tests (4).
 
 ## Rule Configuration
 
