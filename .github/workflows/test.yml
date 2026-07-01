@@ -34,6 +34,13 @@ jobs:
         run: |
           pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py test/test_autofix.py test/test_pict.py test/test_db_parser.py test/test_fuzzing.py test/test_packaging.py test/test_naming_client_robustness.py test/test_reporter_escaping.py test/test_rule_loader_sync.py test/test_backcompat.py -v --tb=short --junitxml=test-results.xml
 
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results.xml
+
   test-distribution:
     name: Built distribution contains bundled data
     runs-on: ubuntu-latest
@@ -62,10 +69,3 @@ jobs:
               assert any(n.endswith(RULE) for n in t.getnames()), f"{RULE} missing from sdist {sd}"
           print("OK: rule YAML present in both wheel and sdist")
           PY
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ matrix.python-version }}
-          path: test-results.xml
