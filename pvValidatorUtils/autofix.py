@@ -226,11 +226,10 @@ def _check_element_length(components: PVComponents) -> List[FixSuggestion]:
     return suggestions
 
 
-LEGACY_PREFIXES = ["Cmd_", "P_", "FB_", "SP_"]
-
-
 def _fix_legacy_prefix(components: PVComponents) -> Optional[FixSuggestion]:
     """Strip legacy property prefixes per ESS-0000757 Annex C."""
+    from .rules import LEGACY_PREFIXES  # single source of truth (rules.py)
+
     prop = components.property
     pv = components.raw
     prefix_part = pv.rsplit(":", 1)[0]

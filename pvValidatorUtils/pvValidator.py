@@ -289,7 +289,7 @@ def _load_pv_list(args, pvepics):
         sys.exit(1)
     pv_list = []
     if args.pvfile:
-        with open(args.pvfile, "r", encoding="utf-8") as f:
+        with open(args.pvfile, "r", encoding="utf-8-sig") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("%") and not line.startswith("#"):

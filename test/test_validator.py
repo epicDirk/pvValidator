@@ -190,8 +190,9 @@ def test_backend(pvobj_backend: pvUtils):
         )
 
 
+@pytest.mark.ess_network
 def test_all(pvobj_all: pvUtils):
-    """Test the entire PV validation sequence"""
+    """Test the entire PV validation sequence (queries the Naming Service → needs ESS network)"""
     pvobj_all.run()
     with open(pvobj_all._test_csvfile, "r") as f:
         c = f.read()

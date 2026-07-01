@@ -11,9 +11,12 @@ All notable changes to pvValidator are documented here.
   Added `data/**/*`, `include-package-data`, and a `MANIFEST.in` so **both** wheel and
   sdist ship the rule data; constrained `packages.find` to `pvValidatorUtils*`
   (`test/` no longer leaks into the wheel).
-- **Package import**: guarded the `msiUtils` SWIG import (like `epicsUtils`) so the
-  package imports without compiled SWIG — fixes the pure-Python CI, which previously
-  errored at collection (last two runs were red).
+- **Package import**: guarded the `msiUtils` SWIG import (importing the *module*, so
+  `pvUtils` can call `msiUtils.msiUtils(...)`) so the package imports without compiled
+  SWIG — fixes the pure-Python CI, which previously errored at collection (last two runs
+  were red).
+- **test_validator**: mark `test_all` as `ess_network` — it queries the Naming Service,
+  so `docker run --rm pvvalidator` (offline) no longer fails on it; it now skips cleanly.
 
 ### Changed
 - **pyproject.toml**: modern SPDX license expression (`GPL-3.0-only`), dropped the
@@ -21,6 +24,9 @@ All notable changes to pvValidator are documented here.
   Build now emits zero setuptools deprecation warnings.
 - **naming_client.py**: bounded response caches, `close()`/context-manager,
   malformed-JSON handling, distinct connection-vs-HTTP logging.
+- **PV-list input**: read files as `utf-8-sig` (tolerate a leading BOM from Windows editors).
+- **LEGACY_PREFIXES**: single source of truth in `rules.py` (autofix now imports it
+  instead of keeping its own copy).
 
 ### Added
 - `test/test_packaging.py` + CI jobs (GitHub `test-distribution`, GitLab `test:dist`)

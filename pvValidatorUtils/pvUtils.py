@@ -642,7 +642,7 @@ class pvUtils:
         """Load PVs from a plain text file."""
         if self.pvfile is None:
             return
-        with open(self.pvfile, "r", encoding="utf-8") as pvf:
+        with open(self.pvfile, "r", encoding="utf-8-sig") as pvf:
             for lin in pvf:
                 if not lin.startswith("%") and not lin.startswith("#") and lin.strip():
                     self.pvepics.pvstringlist.push_back(lin.strip().split()[0])
