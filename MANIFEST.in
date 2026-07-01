@@ -1,0 +1,11 @@
+# Guarantee bundled runtime resources are included in the source distribution
+# (sdist). The wheel is covered by [tool.setuptools.package-data] in pyproject.toml,
+# but the sdist only picks up VCS-tracked files unless listed here. The rule YAML
+# under data/ is loaded at runtime by rule_loader.py, so it MUST ship.
+recursive-include pvValidatorUtils/data *.yaml
+recursive-include pvValidatorUtils/web *
+recursive-include pvValidatorUtils *.so*
+include pyproject.toml
+include README.md
+include LICENSE
+include CHANGELOG.md

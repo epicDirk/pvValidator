@@ -33,6 +33,10 @@ class NamingServiceClient:
         "test": "https://naming-test-01.cslab.esss.lu.se/",
     }
 
+    # Cap the response caches so a very large input list cannot grow memory
+    # without bound (oldest entries are evicted first).
+    _MAX_CACHE_ENTRIES = 4096
+
     def __init__(
         self,
         environment: str = "prod",
@@ -92,6 +96,22 @@ class NamingServiceClient:
                 f"Failed to connect to Naming Service at {self.base_url}: {e}"
             ) from e
 
+    def close(self) -> None:
+        """Release the underlying HTTP session (connection pool)."""
+        self.session.close()
+
+    def __enter__(self) -> "NamingServiceClient":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
+    def _cache_put(self, cache: dict, key: str, value: Any) -> None:
+        """Store *value* under *key*, evicting the oldest entry when the cap is hit."""
+        if key not in cache and len(cache) >= self._MAX_CACHE_ENTRIES:
+            cache.pop(next(iter(cache)))
+        cache[key] = value
+
     # -----------------------------------------------------------------
     # Low-level API calls
     # -----------------------------------------------------------------
@@ -107,12 +127,17 @@ class NamingServiceClient:
             )
             resp.raise_for_status()
             data = resp.json()
-            self._parts_cache[mnemonic] = data
-            return data
+        except ValueError as e:  # malformed JSON in an otherwise-OK response
+            raise NamingServiceResponseError(
+                f"Malformed JSON from Naming Service for parts '{mnemonic}': {e}"
+            ) from e
         except requests.exceptions.RequestException as e:
+            logger.warning("Naming Service parts query for '%s' failed: %s", mnemonic, e)
             raise NamingServiceResponseError(
                 f"Failed to query parts for '{mnemonic}': {e}"
             ) from e
+        self._cache_put(self._parts_cache, mnemonic, data)
+        return data
 
     def _get_device_name(self, name: str) -> Dict:
         """GET /rest/deviceNames/{name}"""
@@ -125,12 +150,17 @@ class NamingServiceClient:
             )
             resp.raise_for_status()
             data = resp.json()
-            self._names_cache[name] = data
-            return data
+        except ValueError as e:  # malformed JSON in an otherwise-OK response
+            raise NamingServiceResponseError(
+                f"Malformed JSON from Naming Service for device name '{name}': {e}"
+            ) from e
         except requests.exceptions.RequestException as e:
+            logger.warning("Naming Service device-name query for '%s' failed: %s", name, e)
             raise NamingServiceResponseError(
                 f"Failed to query device name '{name}': {e}"
             ) from e
+        self._cache_put(self._names_cache, name, data)
+        return data
 
     # -----------------------------------------------------------------
     # High-level validation methods

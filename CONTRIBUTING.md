@@ -11,7 +11,7 @@ docker run -it -v $(pwd):/app pvvalidator bash
 
 ### From source
 
-Requires Python 3.8+, SWIG, CMake 3.0+, EPICS 7.
+Requires Python 3.8+, SWIG, CMake 3.12+, EPICS 7.
 
 ```bash
 source /path/to/epics/environment
@@ -71,3 +71,10 @@ See `test/cassettes/HOW_TO_RECORD.md` for instructions on recording API response
 - Python: PEP 8, enforced by flake8 and black
 - C++: clang-format
 - Code style: enforced by flake8 and black
+
+## ESS-interne Ressourcen
+
+Naming Service (API + Repos), e3-Build-Umgebung und Artifactory sind in
+[docs/ESS-RESOURCES.md](docs/ESS-RESOURCES.md) dokumentiert — inkl. des Repos
+[`naming-backend`](https://gitlab.esss.lu.se/ics-software/naming-backend), das die vom
+pvValidator abgefragte Naming-API bereitstellt (relevant für das geplante API-Update).

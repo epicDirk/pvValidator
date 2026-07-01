@@ -32,7 +32,36 @@ jobs:
         # SWIG-dependent tests (test_validator, test_naming_api, test_cassettes)
         # run in GitLab CI Docker with the full e3 environment.
         run: |
-          pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py test/test_autofix.py test/test_pict.py test/test_db_parser.py test/test_fuzzing.py -v --tb=short --junitxml=test-results.xml
+          pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py test/test_autofix.py test/test_pict.py test/test_db_parser.py test/test_fuzzing.py test/test_packaging.py -v --tb=short --junitxml=test-results.xml
+
+  test-distribution:
+    name: Built distribution contains bundled data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Build the REAL wheel + sdist (not an editable install) and prove the
+      # rule YAML is bundled. This is the gate that would have caught the
+      # missing `data/**/*` package-data entry.
+      - name: Build and validate distribution
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          twine check dist/*
+          python - <<'PY'
+          import glob, zipfile, tarfile, sys
+          RULE = "pvValidatorUtils/data/rules/ess-0000757-rev10.yaml"
+          whl = glob.glob("dist/*.whl")[0]
+          with zipfile.ZipFile(whl) as z:
+              assert RULE in z.namelist(), f"{RULE} missing from wheel {whl}"
+          sd = glob.glob("dist/*.tar.gz")[0]
+          with tarfile.open(sd) as t:
+              assert any(n.endswith(RULE) for n in t.getnames()), f"{RULE} missing from sdist {sd}"
+          print("OK: rule YAML present in both wheel and sdist")
+          PY
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

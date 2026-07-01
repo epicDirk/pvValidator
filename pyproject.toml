@@ -1,5 +1,6 @@
 [build-system]
-requires = ["setuptools>=68"]
+# SPDX license expression (below) requires setuptools>=77; the e3 conda env ships 82.
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,18 +8,18 @@ name = "pvValidatorUtils"
 version = "2.0.0"
 authors = [
     {name = "Alfio Rizzo", email = "alfio.rizzo@ess.eu"},
-    {name = "Dirk Nordt", email = "dirk.nordt@esss.se"},
 ]
 description = "Validates EPICS PV names against ESS Naming Convention (ESS-0000757)"
 readme = "README.md"
-license = {text = "GPL-3.0-only"}
+license = "GPL-3.0-only"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
 ]
 dependencies = [
-    "requests",
-    "pyyaml",
+    # Floor versions avoid known-old-version pitfalls; the e3 env ships
+    # requests 2.33 / pyyaml 6.0. yaml.safe_load is used (not yaml.load).
+    "requests>=2.25",
+    "pyyaml>=5.4",
 ]
 keywords = ["PV", "Validation", "Naming Convention"]
 requires-python = ">=3.8"
@@ -28,18 +29,26 @@ test = ["pytest", "responses", "hypothesis"]
 
 [tool.setuptools]
 platforms = ["Linux","WSL"]
+# Ensure bundled resources listed in package-data / MANIFEST.in land in BOTH the
+# wheel and the sdist (sdist otherwise only ships VCS-tracked files).
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
+# Only the actual package — never accidentally ship test/, build/, docs/ as importable packages.
+include = ["pvValidatorUtils*"]
 
 [tool.setuptools.package-data]
-"pvValidatorUtils" = ["*.so*", "web/**/*"]
+# Bundled runtime resources: compiled SWIG modules, the web UI, and the rule data
+# (data/**/* was missing — a real `pip install` then shipped no ess-0000757-rev10.yaml).
+"pvValidatorUtils" = ["*.so*", "web/**/*", "data/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
 markers = [
     "ess_network: requires ESS Naming Service network access",
     "epics_ioc: requires running EPICS IOC",
+    "packaging: builds the sdist/wheel to verify bundled data files ship",
 ]
 
 [project.scripts]

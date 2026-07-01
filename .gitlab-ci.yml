@@ -64,6 +64,37 @@ test:offline:
       junit: report.xml
 
 # ---------------------------------------------------------------------------
+# Test: Distribution — build the REAL wheel/sdist and prove bundled data ships.
+# This is the gate that would have caught the missing `data/**/*` package-data
+# entry; all other jobs use editable installs and never see the built artifact.
+# ---------------------------------------------------------------------------
+
+test:dist:
+  stage: test
+  image: python:3.11
+  needs: []
+  script:
+    - python -m pip install --upgrade build twine
+    - python -m build
+    - twine check dist/*
+    - |
+      python - <<'PY'
+      import glob, zipfile, tarfile
+      RULE = "pvValidatorUtils/data/rules/ess-0000757-rev10.yaml"
+      whl = glob.glob("dist/*.whl")[0]
+      with zipfile.ZipFile(whl) as z:
+          assert RULE in z.namelist(), f"{RULE} missing from wheel {whl}"
+      sd = glob.glob("dist/*.tar.gz")[0]
+      with tarfile.open(sd) as t:
+          assert any(n.endswith(RULE) for n in t.getnames()), f"{RULE} missing from sdist {sd}"
+      print("OK: rule YAML present in both wheel and sdist")
+      PY
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+
+# ---------------------------------------------------------------------------
 # Test: API (requires ESS network — runner on ESS TN)
 # ---------------------------------------------------------------------------
 

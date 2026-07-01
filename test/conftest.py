@@ -37,6 +37,10 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     config.addinivalue_line("markers", "ess_network: requires ESS network access")
     config.addinivalue_line("markers", "epics_ioc: requires running EPICS IOC")
+    config.addinivalue_line(
+        "markers",
+        "packaging: builds the sdist/wheel to verify bundled data files ship",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
