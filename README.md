@@ -104,17 +104,26 @@ CLI (pvValidator.py)
 
 ## Testing
 
-391 tests, all runnable without ESS network access:
+The suite runs **offline by default**; tests that need the ESS Naming Service or a running IOC are
+opt-in (marked `ess_network` / `epics_ioc` and skipped otherwise).
 
 ```bash
-# Offline tests (default)
+# Offline tests (default — no ESS network, no IOC)
 pytest test/ -v -k "not backend and not pvepics and not test_all"
 
-# Include ESS Naming Service tests (needs network)
+# Include ESS Naming Service tests (needs ESS network)
 pytest test/ -v --ess-network
 ```
 
-Tests cover format parsing (40), validation rules (67), API mocking (28), rule loader (17), autofix (30), cassettes (24), reporter (11), hypothesis fuzzing, DB parser (21), combinatorial/PICT (67), "Did you mean?" suggestions (7), confusable detection (11), and the original pvValidator tests (4).
+Coverage: format parsing, validation rules, API mocking, rule loader, autofix, VCR cassettes,
+reporter, hypothesis fuzzing, DB parser, combinatorial/PICT, confusable detection — plus regression
+tests for packaging (wheel/sdist actually bundle the rule YAML), HTML-report escaping,
+builtin-defaults↔YAML sync, backwards-compatibility, and Naming-Service-client robustness. A CI job
+(`test-distribution`) builds the real wheel/sdist and asserts the rule data is bundled.
+
+> Historical full-suite runs (incl. ESS network + IOC) reported **391 passing on 2026-03-30**; that
+> figure is environment-bound. The offline subset is the default gate; the SWIG/EPICS-dependent tests
+> run in the e3 Docker / GitLab CI.
 
 ## Rule Configuration
 

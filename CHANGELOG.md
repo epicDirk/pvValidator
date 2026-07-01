@@ -17,6 +17,8 @@ All notable changes to pvValidator are documented here.
   were red).
 - **test_validator**: mark `test_all` as `ess_network` — it queries the Naming Service,
   so `docker run --rm pvvalidator` (offline) no longer fails on it; it now skips cleanly.
+- **CI**: the `test-results` artifact upload was accidentally attached to the `test-distribution`
+  job (which has no matrix and produces no junit XML) — moved it back under `test-pure-python`.
 
 ### Changed
 - **pyproject.toml**: modern SPDX license expression (`GPL-3.0-only`), dropped the
