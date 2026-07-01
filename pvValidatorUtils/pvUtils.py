@@ -25,8 +25,8 @@ from pvValidatorUtils.parser import parse_pv
 from pvValidatorUtils.rule_loader import RuleConfig
 from pvValidatorUtils.rules import (
     KNOWN_SHORT_PROPERTIES,
-    MAX_PROP_RECOMMENDED,
     Severity,
+    _strip_standard_suffix,
     check_confusable_element,
     check_device_index,
     check_element_characters,
@@ -332,6 +332,11 @@ class pvUtils:
                     "is unreachable — validation limited to format and property rules\n"
                 )
                 self.checkonlyfmt = True
+                # Online validation was explicitly requested (not --noapi) but the
+                # names could NOT be verified against the registry. Make the run
+                # exit non-zero so a CI gate does not silently pass unverified names
+                # (the graceful format-only fallback + warning above still apply).
+                self.exiterror = True
         else:
             self._info_parts.append(
                 "The Validation through Naming Service was skipped\n"
@@ -539,6 +544,7 @@ class pvUtils:
 
         max_pv = self.config.max_pv_length
         max_prop = self.config.max_property_length
+        max_prop_recommended = self.config.max_property_length_recommended
         min_prop_warn = self.config.min_property_length_warn
 
         for dev, plist in self.PVDict.items():
@@ -569,10 +575,10 @@ class pvUtils:
                     if (TempErr[0] in prop) or (TempErr[1] in prop):
                         errmsg += tmperrmsg
                     self._checkDataMsg(pv1=pv, err1=errmsg)
-                elif prop_eff_len > MAX_PROP_RECOMMENDED:
+                elif prop_eff_len > max_prop_recommended:
                     self._checkDataMsg(
                         pv1=pv,
-                        warn1=f"Warning: The PV Property exceeds recommended {MAX_PROP_RECOMMENDED} characters ({prop_eff_len})\n",
+                        warn1=f"Warning: The PV Property exceeds recommended {max_prop_recommended} characters ({prop_eff_len})\n",
                     )
 
                 if prop.endswith("-S") or prop.endswith("_S"):
@@ -594,7 +600,12 @@ class pvUtils:
                     )
 
                 if 0 < prop_eff_len < min_prop_warn:
-                    clean = prop.lstrip("#")
+                    # Strip the leading '#' AND a -SP/-RB suffix before the whitelist
+                    # lookup (mirror rules.check_property_length) so valid short
+                    # setpoints/readbacks like "On-SP"/"Set-SP" are not flagged PROP-3.
+                    clean = _strip_standard_suffix(
+                        prop[1:] if prop.startswith("#") else prop
+                    )
                     if clean not in KNOWN_SHORT_PROPERTIES:
                         self._checkDataMsg(
                             pv1=pv,

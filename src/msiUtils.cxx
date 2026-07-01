@@ -745,8 +745,13 @@ void msiUtils::makeSubstitutions(inputData *const inputPvt,
       size_t i;
 
       for (i = 0; i < NELEMENTS(cmdNames); i++) {
-        if (strstr(command, cmdNames[i])) {
+        /* Prefix match (command starts at the first non-space char) + break, so
+           an `include "substitute*.template"` line is not mis-detected as a
+           substitute directive because the filename contains "substitute", and
+           the first matching keyword wins deterministically. */
+        if (strncmp(command, cmdNames[i], strlen(cmdNames[i])) == 0) {
           cmdind = (int)i;
+          break;
         }
       }
       if (cmdind < 0)

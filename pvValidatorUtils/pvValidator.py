@@ -290,9 +290,11 @@ def main():
     # Classic pipeline (TUI / CSV / stdout table) needs the epicsUtils container.
     from pvValidatorUtils import pvUtils
 
-    pvepics = pvinput(args)
-
     try:
+        # pvinput() is inside the try so a missing input file (ArgumentTypeError)
+        # or a missing SWIG module (PVValidatorError) produces a clean message +
+        # exit code instead of an uncaught traceback.
+        pvepics = pvinput(args)
         pv = pvUtils(
             pvepics=pvepics,
             namingservice=args.nameservice,
@@ -305,6 +307,11 @@ def main():
         )
         pv.run()
     except PVValidatorError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except argparse.ArgumentTypeError as e:
+        # exit 1 (not argparse's 2) to match the --format/--suggest/--fix paths,
+        # which report a missing input file via _load_pv_list with the same code.
         print(f"Error: {e}")
         sys.exit(1)
     except SystemExit:
@@ -389,7 +396,16 @@ def _run_with_reporter(args, pvepics):
             uniqueness_msgs = check_property_uniqueness(dev_key, props)
             for pv_str, msgs in uniqueness_msgs.items():
                 for result in results:
-                    if result.pv == pv_str:
+                    # Match on the reconstructed uniqueness key (ess_name:property),
+                    # NOT result.pv: for high-level "Sys::Prop" PVs ess_name has no
+                    # device part, so result.pv (double colon) never equals the
+                    # single-colon key and PROP-1 was silently dropped (exit 0).
+                    # Guard components (None for invalid-format results).
+                    if (
+                        result.components is not None
+                        and f"{result.components.ess_name}:{result.components.property}"
+                        == pv_str
+                    ):
                         result.messages.extend(msgs)
 
     # Add autofix suggestions to each result
@@ -434,8 +450,10 @@ def _explain_rule(rule_id):
         sys.exit(1)
 
     print(f"Rule: {rule_id}")
+    if rule.get("pattern"):  # FMT-* format rules carry a pattern instead of a message
+        print(f"  Pattern:   {rule['pattern']}")
     print(f"  Severity:  {rule.get('severity', 'unknown')}")
-    print(f"  Message:   {rule.get('message', '')}")
+    print(f"  Message:   {rule.get('message', rule.get('description', ''))}")
     print(f"  Reference: {rule.get('reference', '')}")
     if rule.get("why"):
         print(f"  Why:       {rule['why']}")
@@ -503,7 +521,10 @@ def _run_with_autofix(args, pvepics):
                         fixed_count += 1
                         fixed[pv] = result
                     else:
-                        valid_count += 1
+                        # Declined: the PV still has its violations, so it is NOT
+                        # valid — count it as needing manual review (once; continue
+                        # avoids a second tally in the manual_suggestions block).
+                        manual_count += 1
                         continue
                 else:
                     print(f"  {pv}")

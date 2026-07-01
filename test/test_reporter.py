@@ -58,9 +58,15 @@ class TestJSONReporter:
     def test_summary_counts(self, sample_results, metadata):
         reporter = JSONReporter()
         data = json.loads(reporter.generate(sample_results, metadata))
-        assert data["summary"]["total_pvs"] == 3
-        assert data["summary"]["valid"] == 1
-        assert data["summary"]["errors"] == 2
+        s = data["summary"]
+        assert s["total_pvs"] == 3
+        assert s["valid"] == 1
+        # errors is gated on format_valid: the PROP-SP result counts under errors,
+        # the format-invalid result counts under invalid_format (not double-counted).
+        assert s["errors"] == 1
+        assert s["invalid_format"] == 1
+        # buckets partition the total
+        assert s["valid"] + s["errors"] + s["warnings"] + s["invalid_format"] == 3
 
     def test_result_structure(self, sample_results, metadata):
         reporter = JSONReporter()

@@ -314,7 +314,9 @@ function parsePV(pv) {
   var segs = devPart.split('-');
   if (segs.length < 3) return null;
   var discipline = segs[0], device = segs[1], index = segs.slice(2).join('-');
-  if (!discipline || !device) return null;
+  // Reject an empty index (trailing dash, e.g. "EMR-TT-") like Python parse_pv;
+  // "EMR-TT--" keeps index "-" (truthy) and stays parseable, matching Python.
+  if (!discipline || !device || !index) return null;
   return { system:system, subsystem:subsystem, discipline:discipline, device:device, index:index, property:prop, raw:pv,
     formatType: subsystem ? 'full' : 'no-subsystem' };
 }
@@ -324,14 +326,21 @@ var DISALLOWED = new Set('!@$%^&*()+={}[]|\\:;\'"<>,.?/~`'.split(''));
 var MAX_PV=60, MAX_PROP=25, MIN_PROP=4, MAX_ELEM=6;
 var LEGACY = ['Cmd_','P_','FB_','SP_'];
 var KNOWN_SHORT = new Set(['On','Off','In','Out','Ok','Set','Get','Ack','Low','High']);
-function epLen(p) { return p.endsWith('-SP') ? p.length-3 : p.endsWith('-RB') ? p.length-3 : p.length; }
+// Effective property length: exclude a leading '#' (internal marker) AND a -SP/-RB
+// suffix, mirroring Python effective_property_length so internal PVs are not
+// mis-flagged PROP-2 (the '#' must not count toward the 25-char limit).
+function epLen(p){p=p.replace(/^#/,'');return (p.endsWith('-SP')||p.endsWith('-RB'))?p.length-3:p.length;}
+// Effective short-property name for the KNOWN_SHORT lookup: strip one leading '#'
+// AND one -SP/-RB suffix (mirror Python rules._strip_standard_suffix(prop.lstrip('#')))
+// so valid short setpoints/readbacks like On-SP are not spuriously flagged PROP-3.
+function shortName(p){p=p.replace(/^#/,'');return (p.endsWith('-SP')||p.endsWith('-RB'))?p.slice(0,-3):p;}
 function checkRules(c) {
   var m=[], p=c.property, pv=c.raw, el=epLen(p);
   if (pv.length>MAX_PV) m.push({s:'error',m:'PV exceeds '+MAX_PV+' chars ('+pv.length+')',r:'PV-LEN'});
   if (!p||p.length===0) { m.push({s:'error',m:'Property is missing',r:'PROP-EMPTY'}); return m; }
   if (el>MAX_PROP) m.push({s:'error',m:'Property exceeds '+MAX_PROP+' chars ('+el+')',r:'PROP-2'});
   else if (el>20) m.push({s:'warning',m:'Property exceeds recommended 20 chars ('+el+')',r:'PROP-2-WARN'});
-  if (el>0&&el<MIN_PROP&&!KNOWN_SHORT.has(p.replace(/^#/,''))) m.push({s:'warning',m:'Property below '+MIN_PROP+' chars',r:'PROP-3'});
+  if (el>0&&el<MIN_PROP&&!KNOWN_SHORT.has(shortName(p))) m.push({s:'warning',m:'Property below '+MIN_PROP+' chars',r:'PROP-3'});
   if (p.endsWith('-S')||p.endsWith('_S')) m.push({s:'error',m:'Setpoint must use -SP',r:'PROP-SP'});
   if (p.endsWith('-R')||p.endsWith('_R')) m.push({s:'error',m:'Reading should not have -R',r:'PROP-R'});
   if (p.endsWith('-RBV')||p.endsWith('_RBV')) m.push({s:'error',m:'Readback must use -RB',r:'PROP-RB'});
@@ -341,7 +350,11 @@ function checkRules(c) {
     if (p.length>0&&/^[a-z]/.test(p)) m.push({s:'warning',m:'Should start uppercase',r:'PROP-11'});
   }
   if (p.indexOf('#')>0) m.push({s:'error',m:'# only as first char',r:'PROP-11'});
-  for (var i=0;i<p.length;i++) if (DISALLOWED.has(p[i])){m.push({s:'error',m:'Disallowed character',r:'PROP-11'});break;}
+  // ASCII-alnum allowlist (+ - _ #), mirroring Python rules.check_property_characters,
+  // so spaces/tabs/non-ASCII are flagged (the old DISALLOWED blocklist let them pass).
+  // Skip internal ('#'-prefixed) PVs: Python early-returns for them (PROP-INT only, no
+  // char-set check), so running the loop would wrongly flag e.g. '#Temp°C'.
+  if(!p.startsWith('#'))for (var i=0;i<p.length;i++){var ch=p[i];if(!(ch.charCodeAt(0)<128&&/[A-Za-z0-9]/.test(ch))&&ch!=='-'&&ch!=='_'&&ch!=='#'){m.push({s:'error',m:'Disallowed character',r:'PROP-11'});break;}}
   var elems=[['System',c.system,true],['Subsystem',c.subsystem,false],['Discipline',c.discipline,true],['Device',c.device,true]];
   for (var e=0;e<elems.length;e++){var v=elems[e][1];if(!v)continue;
     if(v.length>MAX_ELEM){
@@ -370,10 +383,21 @@ function checkRules(c) {
     m.push({s:'warning',m:'MTCA index should be 3 digits',r:'EXC-MTCA'});
   return m;
 }
-function normConf(p){return p.toLowerCase().replace(/[il]/g,'1').replace(/o/g,'0').replace(/vv/g,'w').replace(/0+(?![_a-z\-])(?!$)/g,'@');}
-function checkConf(devPVs){var extra={};for(var d in devPVs){var ps=devPVs[d],seen={};for(var i=0;i<ps.length;i++){
-  var n=normConf(ps[i].p);if(seen[n]!==undefined){var k=d+':'+ps[i].p;if(!extra[k])extra[k]=[];
-  extra[k].push({s:'error',m:'Confusable with '+d+':'+seen[n],r:'PROP-1'});}else{seen[n]=ps[i].p;}}}return extra;}
+// Collapse only LEADING zeros of a digit group (mirror Python LEADING_ZERO_REGEX):
+// Ch001 == Ch0001, but Val100 != Val1000. Temp01 stays distinct from Temp1.
+function normConf(p){return p.toLowerCase().replace(/[il]/g,'1').replace(/o/g,'0').replace(/vv/g,'w').replace(/(?<![0-9])0+(?=[0-9])/g,'@');}
+// Flag BOTH occurrences of a confusable/duplicate property pair (mirror Python
+// check_property_uniqueness) and key `extra` by the RAW pv so validate()'s
+// cf[results[j].pv] lookup matches for high-level "Sys::Prop" PVs too (single-colon
+// device key != double-colon raw would otherwise drop the message).
+function checkConf(devPVs){var extra={},done={};
+  function add(pv,other){var key=pv+' '+other;if(done[key])return;done[key]=1;
+    if(!extra[pv])extra[pv]=[];
+    extra[pv].push({s:'error',m:'Property not unique — check '+other,r:'PROP-1'});}
+  for(var d in devPVs){var ps=devPVs[d],seen={};for(var i=0;i<ps.length;i++){
+    var n=normConf(ps[i].p);
+    if(seen[n]!==undefined){add(ps[i].pv,seen[n].pv);add(seen[n].pv,ps[i].pv);}
+    else{seen[n]={p:ps[i].p,pv:ps[i].pv};}}}return extra;}
 
 // Rule educational content (from ess-0000757-rev10.yaml)
 var RULE_INFO = {
@@ -577,7 +601,8 @@ function fixAll(){
 }
 function exportJSON(){if(!lastResults.length)return;var out={generated:new Date().toISOString(),
   rule_document:'ESS-0000757',summary:{total:lastResults.length,
-  valid:lastResults.filter(function(r){return r.comp&&!r.msgs.some(function(m){return m.s==='error';});}).length,
+  valid:lastResults.filter(function(r){return r.comp&&!r.msgs.some(function(m){return m.s==='error';})&&!r.msgs.some(function(m){return m.s==='warning';});}).length,
+  warnings:lastResults.filter(function(r){return r.comp&&!r.msgs.some(function(m){return m.s==='error';})&&r.msgs.some(function(m){return m.s==='warning';});}).length,
   errors:lastResults.filter(function(r){return!r.comp||r.msgs.some(function(m){return m.s==='error';});}).length},
   results:lastResults.map(function(r){return{pv:r.pv,format_valid:!!r.comp,components:r.comp||null,
     messages:r.msgs.map(function(m){return{severity:m.s,message:m.m,rule_id:m.r};})};})};

@@ -2,6 +2,62 @@
 
 All notable changes to pvValidator are documented here.
 
+## [Unreleased] — QA round 3: adversarial bug-hunt fixes (2026-07-01)
+
+An adversarial multi-agent bug-hunt (each finding double-verified against the code)
+surfaced these real defects; all are fixed with regression tests.
+
+### Fixed — false verdicts / exit codes
+- **Internal-PV `#` was counted toward property length.** `effective_property_length`
+  now strips a leading `#` (the internal-PV marker) as well as a `-SP/-RB` suffix, so an
+  internal PV with a 25-char body is no longer mis-flagged `PROP-2` (>25) and pushed to
+  NOT VALID. Fixes both `rules.py` and the classic `pvUtils` path.
+- **Leading-zero confusion over-matched.** `normalize_for_confusion` collapsed interior/
+  trailing zero-runs too, so genuinely different properties (`Val100` vs `Val1000`) were
+  reported as a `PROP-1` collision. The regex now collapses only the *leading* zeros of a
+  digit group (`Ch001`≡`Ch0001` preserved; `Temp01`≠`Temp1` unchanged).
+- **High-level `Sys::Prop` uniqueness was dropped from JSON/HTML reports.** `PROP-1`
+  messages were matched to results by the raw PV, which never equals the single-colon
+  uniqueness key for high-level PVs — so duplicates were silent and `--format` exited 0.
+  Now matched on the reconstructed `ess_name:property` key (guarded against invalid-format
+  results). Consistent with the `--suggest/--fix` gate.
+- **Classic pipeline spuriously warned `PROP-3`** on valid short setpoints/readbacks
+  (`On-SP`, `Set-SP`, `Ack-RB`): it now strips `-SP/-RB` before the known-short whitelist,
+  matching `check_all_rules`.
+- **naming_client `mnemonicPath` match is now segment-boundary-anchored** (`mp == full or
+  mp.endswith("-"+full)`) — the old unanchored substring could accept a wrong system/
+  discipline whose name happened to be a suffix. *Verified against the live prod API.*
+
+### Fixed — C++ (MSI)
+- **`makeSubstitutions` command detection** used `strstr` with no `break`, so an
+  `include "substitute*.template"` line was mis-dispatched as a `substitute` directive
+  (the include was silently dropped). Now a prefix match (`strncmp`) + `break`.
+  *Inspection-verified; built and tested only in the GitLab/e3 CI.*
+
+### Fixed — CLI / reporter / robustness
+- **Naming Service unreachable in online mode** (`-n`, not `--noapi`) now exits non-zero:
+  the graceful format-only fallback + warning remain, but a run that could not verify names
+  against the registry no longer reports success to a CI gate.
+- **`--fix` decline** in interactive mode no longer counts a still-invalid PV as *Valid*
+  (now *Need review*).
+- **`pvinput()` is inside the try/except**, so a missing input file / missing SWIG module
+  gives a clean message + exit code instead of a traceback.
+- **Report summary buckets partition the total** (valid/warnings/errors/invalid_format):
+  a format-invalid result carrying a message is no longer double-counted, and the HTML
+  report gained an *Invalid Format* stat card. Report metadata is HTML-escaped.
+- **Empty/comment-only rules YAML** falls back to the built-in defaults instead of raising
+  `AttributeError`; `--explain FMT-1..4` now resolves; the recommended property-length limit
+  is read from `RuleConfig` like its siblings (no hardcoded constant).
+- **autofix:** the legacy `SP_` prefix is now a **manual** suggestion (not auto-applied) —
+  stripping it to a bare name could silently drop setpoint semantics; `Cmd_/P_/FB_` stay safe.
+- **Web UI (`index.html`) parity with the Python engine:** `PROP-1` flags both members of a
+  confusable pair and reaches high-level PVs; leading-zero normalisation, the `PROP-3`
+  suffix strip, and the `PROP-11` ASCII-alnum allowlist now match Python; `parsePV` rejects a
+  trailing-dash empty index; the JSON export counts warnings-only PVs correctly.
+- **Test harness:** `HAS_EPICS` in `test_naming_api.py`/`test_cassettes.py` now checks
+  `epicsUtils is not None` (the lazy `__init__` makes the import succeed with `None`), so on
+  a no-SWIG checkout those tests **skip** instead of erroring.
+
 ## [Unreleased] — QA round 2: correctness & robustness (2026-07-01)
 
 ### Fixed

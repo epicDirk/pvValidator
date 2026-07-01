@@ -64,7 +64,10 @@ def mock_naming_service(cassettes):
 try:
     from pvValidatorUtils import epicsUtils, pvUtils
 
-    HAS_EPICS = True
+    # See test_naming_api.py: the import succeeds with None on a no-SWIG host, so the
+    # object must be checked directly (mirrors conftest._has_swig()) — otherwise these
+    # tests error with 'NoneType is not callable' instead of skipping.
+    HAS_EPICS = epicsUtils is not None
 except ImportError:
     HAS_EPICS = False
 

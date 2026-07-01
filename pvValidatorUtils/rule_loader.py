@@ -51,8 +51,18 @@ class RuleConfig:
             return
 
         with open(path, encoding="utf-8") as f:
-            self._config = yaml.safe_load(f)
+            loaded = yaml.safe_load(f)
 
+        # An empty or comment-only YAML makes safe_load return None; fall back to
+        # built-in defaults instead of crashing every accessor with AttributeError.
+        if not isinstance(loaded, dict):
+            logger.warning(
+                f"Rules file {path} is empty or malformed — using built-in defaults"
+            )
+            self._config = self._builtin_defaults()
+            return
+
+        self._config = loaded
         logger.info(f"Loaded rules: {self.document} Rev {self.revision}")
 
     # -----------------------------------------------------------------
@@ -110,9 +120,15 @@ class RuleConfig:
         return self._config.get("exceptions", [])
 
     @property
+    def format_pattern_rules(self) -> List[Dict]:
+        """The valid PV-format patterns (FMT-*), stored under format.valid_patterns."""
+        return self.format_rules.get("valid_patterns", [])
+
+    @property
     def all_rules(self) -> List[Dict]:
         """All rules flattened into a single list."""
         rules = []
+        rules.extend(self.format_pattern_rules)  # FMT-* so --explain FMT-1 resolves
         rules.extend(self.element_rules)
         rules.extend(self.index_rules)
         rules.extend(self.property_rules)
@@ -169,6 +185,15 @@ class RuleConfig:
             if rule.get("id") == "PROP-2":
                 return rule.get("value", 25)
         return 25
+
+    @property
+    def max_property_length_recommended(self) -> int:
+        # SHOULD limit (ESS-0000757 §6.2 Rule 2). Sourced from config like its
+        # siblings above, not a hardcoded constant, so all thresholds stay wired.
+        for rule in self.property_rules:
+            if rule.get("id") == "PROP-2-WARN":
+                return rule.get("value", 20)
+        return 20
 
     @property
     def min_property_length_warn(self) -> int:

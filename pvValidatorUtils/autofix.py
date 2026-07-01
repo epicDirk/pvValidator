@@ -238,6 +238,22 @@ def _fix_legacy_prefix(components: PVComponents) -> Optional[FixSuggestion]:
         if prop.startswith(legacy):
             new_prop = prop[len(legacy) :]
             if new_prop:
+                # "SP_" is ambiguous: it may denote a setpoint (which should become a
+                # -SP *suffix*) rather than a pure legacy prefix to drop. Stripping it
+                # to a bare name could silently change the signal's meaning, so leave
+                # it as a MANUAL suggestion for a human to confirm. Other prefixes
+                # (Cmd_, P_, FB_) are unambiguous and stay SAFE (auto-applied).
+                if legacy == "SP_":
+                    return FixSuggestion(
+                        original=pv,
+                        suggested=f"{prefix_part}:{new_prop}",
+                        rule_id="LEGACY-PREFIX",
+                        description=(
+                            f'Legacy prefix "{legacy}": remove it, or if it denotes a '
+                            "setpoint use a -SP suffix instead (manual decision)"
+                        ),
+                        applicability=Applicability.MANUAL,
+                    )
                 return FixSuggestion(
                     original=pv,
                     suggested=f"{prefix_part}:{new_prop}",

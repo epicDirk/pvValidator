@@ -61,7 +61,10 @@ def register_all_mocks(api_data):
 try:
     from pvValidatorUtils import epicsUtils, pvUtils
 
-    HAS_EPICS = True
+    # The lazy package __init__ makes `import epicsUtils` succeed with None when the
+    # SWIG module is absent, so the import no longer raises — check the object itself
+    # (mirrors conftest._has_swig()). Otherwise these tests error instead of skipping.
+    HAS_EPICS = epicsUtils is not None
 except ImportError:
     HAS_EPICS = False
 

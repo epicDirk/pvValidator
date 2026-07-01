@@ -46,8 +46,13 @@ class JSONReporter:
             for r in results
             if r.format_valid and not r.has_errors and not r.has_warnings
         )
-        errors = sum(1 for r in results if r.has_errors)
-        warnings = sum(1 for r in results if r.has_warnings and not r.has_errors)
+        # errors/warnings are gated on format_valid so a format-invalid result that
+        # also carries a message is counted ONLY under invalid_format — otherwise the
+        # buckets would double-count it and no longer partition the total.
+        errors = sum(1 for r in results if r.format_valid and r.has_errors)
+        warnings = sum(
+            1 for r in results if r.format_valid and r.has_warnings and not r.has_errors
+        )
         invalid_format = sum(1 for r in results if not r.format_valid)
         return {
             "total_pvs": total,
@@ -116,8 +121,10 @@ class HTMLReporter:
     ) -> str:
         summary = self._summary(results)
         rows_html = "\n".join(self._result_row(r) for r in results)
-        version = metadata.get("version", "") if metadata else ""
-        document = (
+        # Escape metadata like every other interpolated field (defensive: these are
+        # constants today, but nothing should be injected into the HTML unescaped).
+        version = self._escape(metadata.get("version", "") if metadata else "")
+        document = self._escape(
             metadata.get("document", "ESS-0000757") if metadata else "ESS-0000757"
         )
 
@@ -179,6 +186,7 @@ tr:hover td {{ background: #141414; }}
     <div class="stat stat-valid"><div class="stat-value">{summary['valid']}</div><div class="stat-label">Valid</div></div>
     <div class="stat stat-error"><div class="stat-value">{summary['errors']}</div><div class="stat-label">Errors</div></div>
     <div class="stat stat-warn"><div class="stat-value">{summary['warnings']}</div><div class="stat-label">Warnings</div></div>
+    <div class="stat stat-error"><div class="stat-value">{summary['invalid_format']}</div><div class="stat-label">Invalid Format</div></div>
   </div>
   <div class="filter">
     <input type="text" id="search" placeholder="Filter PVs..." oninput="filterTable(this.value)">
@@ -210,13 +218,20 @@ function filterTable(q) {{
             for r in results
             if r.format_valid and not r.has_errors and not r.has_warnings
         )
-        errors = sum(1 for r in results if r.has_errors)
-        warnings = sum(1 for r in results if r.has_warnings and not r.has_errors)
+        # Gate errors/warnings on format_valid and expose invalid_format so the
+        # stat cards partition the total (a format-invalid PV was previously dropped
+        # from the cards AND could be double-counted under errors).
+        errors = sum(1 for r in results if r.format_valid and r.has_errors)
+        warnings = sum(
+            1 for r in results if r.format_valid and r.has_warnings and not r.has_errors
+        )
+        invalid_format = sum(1 for r in results if not r.format_valid)
         return {
             "total_pvs": total,
             "valid": valid,
             "errors": errors,
             "warnings": warnings,
+            "invalid_format": invalid_format,
         }
 
     def _result_row(self, result: ValidationResult) -> str:

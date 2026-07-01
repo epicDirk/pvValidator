@@ -187,6 +187,45 @@ def test_mtca_warning_is_status_effective(tmp_path):
     assert pv.exiterror is False
 
 
+def test_classic_short_setpoint_no_prop3(tmp_path):
+    """Round 3 (E): the classic pipeline must strip -SP/-RB before the short-property
+    whitelist, so a valid short setpoint like On-SP is not spuriously flagged PROP-3
+    (previously it diverged from check_all_rules / the --format path)."""
+    f = tmp_path / "pvs.txt"
+    f.write_text(
+        "LEBT:PBI-Dev-001:On-SP\n"
+    )  # property "On-SP" -> effective "On" (known short)
+    pv = pvUtils(pvepics=epicsUtils(), checkonlyfmt=True, pvfile=str(f), stdout=True)
+    pv.run()  # clean -> no SystemExit
+    name = "LEBT:PBI-Dev-001:On-SP"
+    assert not pv.VWarnD.get(name), "On-SP must not get a PROP-3 short-property warning"
+    assert pv.exiterror is False
+
+
+def test_naming_unreachable_online_exits_nonzero(tmp_path, monkeypatch):
+    """Round 3: online validation (-n, not --noapi) that cannot reach the naming
+    service degrades to format-only + warning BUT must exit non-zero, so a CI gate
+    does not silently pass names that were never verified against the registry."""
+    from pvValidatorUtils import naming_client
+    from pvValidatorUtils.exceptions import NamingServiceConnectionError
+
+    def _unreachable(self):
+        raise NamingServiceConnectionError("simulated outage")
+
+    monkeypatch.setattr(
+        naming_client.NamingServiceClient, "check_connectivity", _unreachable
+    )
+    f = tmp_path / "pvs.txt"
+    f.write_text(
+        "SEE-010:EMR-TT-001:Temperature\n"
+    )  # format-valid; would pass format-only
+    pv = pvUtils(pvepics=epicsUtils(), checkonlyfmt=False, pvfile=str(f), stdout=True)
+    assert pv.checkonlyfmt is True, "unreachable service must degrade to format-only"
+    assert pv.exiterror is True, "unverified online run must be exit-effective"
+    with pytest.raises(SystemExit):
+        pv.run()
+
+
 def test_epicsdb(pvobj_pvdb: pvUtils):
     """Testing the parsing of the EPICS database"""
     pvlist = pvobj_pvdb.pvepics.pvstringlist

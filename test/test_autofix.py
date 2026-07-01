@@ -222,10 +222,11 @@ class TestLegacyPrefixFix:
     @pytest.mark.parametrize(
         "prefix,prop,expected",
         [
+            # Unambiguous legacy prefixes: auto-fixable (SAFE). SP_ is deliberately
+            # excluded — it is now MANUAL (see test_sp_prefix_is_manual below).
             ("Cmd_", "Cmd_Temperature", "Temperature"),
             ("P_", "P_Pressure", "Pressure"),
             ("FB_", "FB_Status", "Status"),
-            ("SP_", "SP_Setpoint", "Setpoint"),
         ],
     )
     def test_legacy_prefix_stripped(self, prefix, prop, expected):
@@ -235,6 +236,15 @@ class TestLegacyPrefixFix:
         assert len(legacy) == 1
         assert legacy[0].auto_fixable
         assert legacy[0].suggested.endswith(f":{expected}")
+
+    def test_sp_prefix_is_manual(self):
+        """SP_ is ambiguous (setpoint vs pure prefix), so it is a MANUAL suggestion,
+        not auto-applied — it still offers the stripped form for a human to confirm."""
+        fixes = suggest_fixes("DTL-010:EMR-TT-001:SP_Setpoint")
+        legacy = [f for f in fixes if f.rule_id == "LEGACY-PREFIX"]
+        assert len(legacy) == 1
+        assert not legacy[0].auto_fixable
+        assert legacy[0].suggested.endswith(":Setpoint")
 
     def test_no_legacy_prefix_no_fix(self):
         fixes = suggest_fixes("DTL-010:EMR-TT-001:Temperature")

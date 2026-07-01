@@ -49,7 +49,11 @@ KNOWN_SHORT_PROPERTIES = frozenset(
 )
 
 ELEMENT_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
-LEADING_ZERO_REGEX = re.compile(r"0+(?![_A-Za-z-])(?!$)")
+# Collapse ONLY the leading zeros of a digit group (a zero-run preceded by a
+# non-digit and followed by a digit) to a single '@', so "Ch001" and "Ch0001"
+# share a skeleton. Must NOT collapse interior/trailing zero-runs, or genuinely
+# distinct numbers like "Val100" vs "Val1000" would falsely collide (PROP-1).
+LEADING_ZERO_REGEX = re.compile(r"(?<![0-9])0+(?=[0-9])")
 
 LEGACY_PREFIXES = ["Cmd_", "P_", "FB_", "SP_"]
 DISALLOWED_CHARS = set("!@$%^&*()+={}[]|\\:;'\"<>,.?/~`")
@@ -184,7 +188,8 @@ def check_property_length(components: PVComponents) -> List[ValidationMessage]:
         # Compare against the whitelist using the *effective* name: strip the
         # leading '#' AND the -SP/-RB suffix, so a valid short setpoint/readback
         # like "On-SP" or "Set-SP" is recognised (was spuriously flagged PROP-3).
-        clean = _strip_standard_suffix(prop.lstrip("#"))
+        # Strip exactly one leading '#' (same normalisation as effective_property_length).
+        clean = _strip_standard_suffix(prop[1:] if prop.startswith("#") else prop)
         if clean not in KNOWN_SHORT_PROPERTIES:
             msgs.append(
                 ValidationMessage(
@@ -213,8 +218,15 @@ def _strip_standard_suffix(prop: str) -> str:
 
 
 def effective_property_length(prop: str) -> int:
-    """Property length excluding -SP/-RB suffix (ESS-0000757 §6.2 Rule 9)."""
-    return len(_strip_standard_suffix(prop))
+    """Property length excluding the leading '#' marker and a -SP/-RB suffix.
+
+    The '#' marks an internal PV (parser.is_internal) and is not part of the
+    property name, so it must not count toward the length (ESS-0000757 §6.2
+    Rule 9). Strip exactly one leading '#' (matching is_internal semantics),
+    then a single trailing -SP/-RB.
+    """
+    body = prop[1:] if prop.startswith("#") else prop
+    return len(_strip_standard_suffix(body))
 
 
 def check_property_suffix(components: PVComponents) -> List[ValidationMessage]:
@@ -525,10 +537,11 @@ def normalize_for_confusion(prop: str) -> str:
     """Normalize a property name for confusable character detection.
 
     Maps visually confusable glyphs to a canonical skeleton: I→1, l→1, O→0, VV→W,
-    lowercased for case-insensitive comparison. A run of zeros that is followed by a
-    digit (i.e. not immediately before a letter/underscore/dash and not at the end)
-    is collapsed to a single '@' marker, so e.g. "Ch001" and "Ch0001" share a
-    skeleton; a trailing zero, or a zero directly before a letter, is kept as-is.
+    lowercased for case-insensitive comparison. Only the LEADING zeros of a digit
+    group (a zero-run preceded by a non-digit and followed by a digit) are collapsed
+    to a single '@' marker, so e.g. "Ch001" and "Ch0001" share a skeleton. Interior
+    and trailing zero-runs are kept as-is, so genuinely different numbers like
+    "Val100" and "Val1000" (or "Amp30" and "Amp300") do NOT collide.
 
     NOTE (spec decision, pending Alfio): this deliberately does NOT strip a leading
     zero when the alternative has none, so "Temp01" and "Temp1" are treated as

@@ -19,6 +19,17 @@ from .exceptions import NamingServiceConnectionError, NamingServiceResponseError
 logger = logging.getLogger("pvvalidator")
 
 
+def _mnemonic_path_matches(path: str, full: str) -> bool:
+    """True if *full* is the trailing '-'-joined segment(s) of *path*.
+
+    The queried mnemonic is always the leaf, so the subsystem/device must be the
+    last segment and its parent the immediately-preceding one. Boundary-anchored:
+    "DTL-010" matches "Acc-DTL-010" but "TL-010" does not — avoiding the
+    substring false-positive of a plain ``full in path`` test.
+    """
+    return path == full or path.endswith("-" + full)
+
+
 class NamingServiceClient:
     """Client for ESS Naming Service REST API.
 
@@ -273,7 +284,7 @@ class NamingServiceClient:
                 item.get("status") == "Approved"
                 and item.get("type") == "System Structure"
                 and item.get("level") == "3"
-                and full in item.get("mnemonicPath", "")
+                and _mnemonic_path_matches(item.get("mnemonicPath", ""), full)
                 for item in parts
             )
         except NamingServiceConnectionError:
@@ -334,7 +345,7 @@ class NamingServiceClient:
                 item.get("status") == "Approved"
                 and item.get("type") == "Device Structure"
                 and item.get("level") == "3"
-                and full in item.get("mnemonicPath", "")
+                and _mnemonic_path_matches(item.get("mnemonicPath", ""), full)
                 for item in parts
             )
         except NamingServiceConnectionError:
@@ -532,7 +543,9 @@ class NamingServiceClient:
             nearby.add(cand)
 
         if nearby:
-            best_match = self._closest_match(mnemonic, list(nearby))
+            # sorted() (not list(set)) so the tie-break in _closest_match is
+            # deterministic across processes (set iteration order is randomised).
+            best_match = self._closest_match(mnemonic, sorted(nearby))
             if best_match:
                 return f'Did you mean "{best_match}"?'
 
