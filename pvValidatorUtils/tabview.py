@@ -6,18 +6,31 @@ Modified by Alfio Rizzo (alfio.rizzo@ess.eu) for pvValidator.py
 """
 
 import csv
-import curses
-import curses.ascii
 import os
 import re
 import sys
 import unicodedata
 from collections import Counter
-from curses.textpad import Textbox
 from operator import itemgetter
 from textwrap import wrap
 
-import _curses
+# curses is optional at import time: it is unavailable on stock Windows (no
+# `_curses`) and irrelevant for the pure-Python / JSON / CSV / stdout code paths.
+# Keeping the import guarded lets `import pvValidatorUtils.parser` (and the other
+# pure-Python modules) work without a terminal UI stack; view() gates on it below.
+try:
+    import curses
+    import curses.ascii
+    from curses.textpad import Textbox
+
+    import _curses
+
+    _HAS_CURSES = True
+except ImportError:  # pragma: no cover - platform without curses (e.g. Windows)
+    curses = None
+    _curses = None
+    Textbox = None
+    _HAS_CURSES = False
 
 
 class ReloadException(Exception):
@@ -1274,6 +1287,11 @@ def view(
         ioctitle:
         readme:
     """
+    if not _HAS_CURSES:
+        raise RuntimeError(
+            "The interactive TUI needs the curses module, which is not available "
+            "on this platform. Use --stdout, -o <csvfile>, or --format json/html instead."
+        )
     if info is None:
         info = ""
     try:

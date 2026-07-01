@@ -241,7 +241,7 @@ def _fix_legacy_prefix(components: PVComponents) -> Optional[FixSuggestion]:
                 return FixSuggestion(
                     original=pv,
                     suggested=f"{prefix_part}:{new_prop}",
-                    rule_id="LEGACY",
+                    rule_id="LEGACY-PREFIX",
                     description=f'Removed legacy prefix "{legacy}" (accepted but discouraged)',
                     applicability=Applicability.SAFE,
                 )

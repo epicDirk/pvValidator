@@ -89,9 +89,13 @@ class NamingServiceClient:
             NamingServiceConnectionError: If the service is unreachable.
         """
         try:
-            self.session.head(self.base_url, timeout=1)
+            resp = self.session.head(self.base_url, timeout=self.timeout)
+            resp.raise_for_status()
             return True
-        except (requests.exceptions.ConnectionError, ConnectionError, OSError) as e:
+        except (requests.exceptions.RequestException, OSError) as e:
+            # RequestException covers ConnectionError, Timeout AND HTTPError from
+            # raise_for_status() — so an HTTP 5xx no longer counts as "reachable".
+            # OSError kept for environments that surface timeouts as a bare OSError.
             raise NamingServiceConnectionError(
                 f"Failed to connect to Naming Service at {self.base_url}: {e}"
             ) from e
@@ -127,15 +131,45 @@ class NamingServiceClient:
             )
             resp.raise_for_status()
             data = resp.json()
-        except ValueError as e:  # malformed JSON in an otherwise-OK response
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            # Transient network failure — raise a *connection* error so callers do
+            # NOT cache a negative result (a later PV can succeed on retry). NOTE:
+            # this must come before the ValueError/RequestException branches, and
+            # OSError must NOT be in this tuple (RequestException subclasses OSError,
+            # which would otherwise route malformed-JSON / HTTP errors here too).
+            logger.warning(
+                "Naming Service parts query for '%s' unreachable: %s", mnemonic, e
+            )
+            raise NamingServiceConnectionError(
+                f"Naming Service unreachable while querying parts for '{mnemonic}': {e}"
+            ) from e
+        except (
+            ValueError
+        ) as e:  # malformed JSON (JSONDecodeError) in an otherwise-OK response
             raise NamingServiceResponseError(
                 f"Malformed JSON from Naming Service for parts '{mnemonic}': {e}"
             ) from e
-        except requests.exceptions.RequestException as e:
-            logger.warning("Naming Service parts query for '%s' failed: %s", mnemonic, e)
+        except (
+            requests.exceptions.RequestException
+        ) as e:  # HTTP 4xx/5xx etc. — semantic
+            logger.warning(
+                "Naming Service parts query for '%s' failed: %s", mnemonic, e
+            )
             raise NamingServiceResponseError(
                 f"Failed to query parts for '{mnemonic}': {e}"
             ) from e
+        except OSError as e:  # bare socket/OS error not wrapped by requests — transient
+            raise NamingServiceConnectionError(
+                f"Naming Service unreachable while querying parts for '{mnemonic}': {e}"
+            ) from e
+        # Shape validation: the parts endpoint returns a JSON array of objects.
+        # A wrong shape (dict/str/None) would otherwise crash callers with AttributeError.
+        if not isinstance(data, list) or not all(
+            isinstance(item, dict) for item in data
+        ):
+            raise NamingServiceResponseError(
+                f"Unexpected parts payload for '{mnemonic}': expected a list of objects"
+            )
         self._cache_put(self._parts_cache, mnemonic, data)
         return data
 
@@ -150,15 +184,38 @@ class NamingServiceClient:
             )
             resp.raise_for_status()
             data = resp.json()
-        except ValueError as e:  # malformed JSON in an otherwise-OK response
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            # Transient — see the ordering note in _get_parts (OSError excluded here).
+            logger.warning(
+                "Naming Service device-name query for '%s' unreachable: %s", name, e
+            )
+            raise NamingServiceConnectionError(
+                f"Naming Service unreachable while querying device name '{name}': {e}"
+            ) from e
+        except (
+            ValueError
+        ) as e:  # malformed JSON (JSONDecodeError) in an otherwise-OK response
             raise NamingServiceResponseError(
                 f"Malformed JSON from Naming Service for device name '{name}': {e}"
             ) from e
-        except requests.exceptions.RequestException as e:
-            logger.warning("Naming Service device-name query for '%s' failed: %s", name, e)
+        except (
+            requests.exceptions.RequestException
+        ) as e:  # HTTP 4xx/5xx etc. — semantic
+            logger.warning(
+                "Naming Service device-name query for '%s' failed: %s", name, e
+            )
             raise NamingServiceResponseError(
                 f"Failed to query device name '{name}': {e}"
             ) from e
+        except OSError as e:  # bare socket/OS error not wrapped by requests — transient
+            raise NamingServiceConnectionError(
+                f"Naming Service unreachable while querying device name '{name}': {e}"
+            ) from e
+        # Shape validation: the deviceNames endpoint returns a single JSON object.
+        if not isinstance(data, dict):
+            raise NamingServiceResponseError(
+                f"Unexpected device-name payload for '{name}': expected an object"
+            )
         self._cache_put(self._names_cache, name, data)
         return data
 
@@ -187,10 +244,12 @@ class NamingServiceClient:
                 and item.get("level") in ("1", "2")
                 for item in parts
             )
+        except NamingServiceConnectionError:
+            return False  # transient failure — do NOT cache, retry on the next PV
         except NamingServiceResponseError:
             result = False
 
-        self._sys_cache[cache_key] = result
+        self._cache_put(self._sys_cache, cache_key, result)
         return result
 
     def validate_subsystem(self, system: str, subsystem: str) -> bool:
@@ -217,10 +276,12 @@ class NamingServiceClient:
                 and full in item.get("mnemonicPath", "")
                 for item in parts
             )
+        except NamingServiceConnectionError:
+            return False  # transient failure — do NOT cache, retry on the next PV
         except NamingServiceResponseError:
             result = False
 
-        self._sys_cache[cache_key] = result
+        self._cache_put(self._sys_cache, cache_key, result)
         return result
 
     def validate_discipline(self, discipline: str) -> bool:
@@ -244,10 +305,12 @@ class NamingServiceClient:
                 and item.get("level") == "1"
                 for item in parts
             )
+        except NamingServiceConnectionError:
+            return False  # transient failure — do NOT cache, retry on the next PV
         except NamingServiceResponseError:
             result = False
 
-        self._dev_cache[cache_key] = result
+        self._cache_put(self._dev_cache, cache_key, result)
         return result
 
     def validate_device(self, discipline: str, device: str) -> bool:
@@ -274,10 +337,12 @@ class NamingServiceClient:
                 and full in item.get("mnemonicPath", "")
                 for item in parts
             )
+        except NamingServiceConnectionError:
+            return False  # transient failure — do NOT cache, retry on the next PV
         except NamingServiceResponseError:
             result = False
 
-        self._dev_cache[cache_key] = result
+        self._cache_put(self._dev_cache, cache_key, result)
         return result
 
     def validate_name(self, ess_name: str) -> Dict[str, Any]:
@@ -317,6 +382,12 @@ class NamingServiceClient:
                     "status": status,
                     "message": f'The Name "{ess_name}" has unknown status "{status}"',
                 }
+        except NamingServiceConnectionError:
+            return {
+                "registered": False,
+                "status": "",
+                "message": f'The Name "{ess_name}" could not be checked — Naming Service unreachable',
+            }
         except NamingServiceResponseError:
             return {
                 "registered": False,
@@ -389,16 +460,26 @@ class NamingServiceClient:
         """
         try:
             resp = self.session.get(
-                self.base_url + "rest/parts/mnemonic/search/"
+                self.base_url
+                + "rest/parts/mnemonic/search/"
                 + url_quote(query, safe="-:"),
                 timeout=self.timeout,
             )
             resp.raise_for_status()
-            return resp.json()
-        except requests.exceptions.RequestException:
+            data = resp.json()
+        except (ValueError, requests.exceptions.RequestException, OSError):
+            # ValueError covers malformed JSON on requests<2.27 (allowed by the
+            # dependency floor), where JSONDecodeError is not a RequestException.
             return []
+        # search is a best-effort hint source — degrade to [] on an unexpected shape
+        # and drop non-object entries so downstream .get() calls stay safe.
+        if not isinstance(data, list):
+            return []
+        return [item for item in data if isinstance(item, dict)]
 
-    def suggest_correction(self, mnemonic: str, category: Optional[str] = None) -> Optional[str]:
+    def suggest_correction(
+        self, mnemonic: str, category: Optional[str] = None
+    ) -> Optional[str]:
         """Suggest a correction for an unrecognized mnemonic.
 
         Uses a combination of API prefix search and local edit-distance
@@ -413,11 +494,16 @@ class NamingServiceClient:
         """
         # Strategy 1: API exact-prefix search
         results = self.search_parts(mnemonic)
-        approved = [
-            r for r in results
-            if r.get("status") == "Approved"
-            and r.get("mnemonic", "").lower() != mnemonic.lower()
-        ] if results else []
+        approved = (
+            [
+                r
+                for r in results
+                if r.get("status") == "Approved"
+                and r.get("mnemonic", "").lower() != mnemonic.lower()
+            ]
+            if results
+            else []
+        )
         if approved:
             best = approved[0]
             name = best.get("name", "")
@@ -472,7 +558,9 @@ class NamingServiceClient:
         return list(candidates)
 
     @staticmethod
-    def _closest_match(query: str, candidates: List[str], max_distance: int = 2) -> Optional[str]:
+    def _closest_match(
+        query: str, candidates: List[str], max_distance: int = 2
+    ) -> Optional[str]:
         """Find the closest match by Levenshtein edit distance.
 
         Only returns a match if the distance is <= max_distance.
@@ -505,8 +593,8 @@ class NamingServiceClient:
             for j in range(1, len2 + 1):
                 cost = 0 if s1[i - 1] == s2[j - 1] else 1
                 d[i][j] = min(
-                    d[i - 1][j] + 1,       # deletion
-                    d[i][j - 1] + 1,        # insertion
+                    d[i - 1][j] + 1,  # deletion
+                    d[i][j - 1] + 1,  # insertion
                     d[i - 1][j - 1] + cost,  # substitution
                 )
                 # Transposition

@@ -4,12 +4,26 @@ import logging
 import os
 import sys
 
-from pvValidatorUtils import epicsUtils, pvUtils, version
+from pvValidatorUtils import version
 from pvValidatorUtils.exceptions import PVValidatorError
 
 
 def pvinput(args):
-    """Handle input for PV validation"""
+    """Build the epicsUtils PV container for the classic validation pipeline.
+
+    epicsUtils is a compiled SWIG module; importing it lazily here keeps the
+    pure-Python CLI paths (--explain / --format / --suggest / --fix on a file
+    list) importable and runnable without EPICS/SWIG being built.
+    """
+    from pvValidatorUtils import epicsUtils
+
+    if epicsUtils is None:
+        raise PVValidatorError(
+            "The EPICS integration (compiled SWIG module) is not available in this "
+            "environment. -s/-e/-m and the classic table output need it; use -i with "
+            "--format json/html or --suggest/--fix for pure-Python validation."
+        )
+
     pvepics = None
 
     if args.iocserver:  # PVs from the input IOC
@@ -54,6 +68,13 @@ class DiscoverAction(argparse.Action):
     """Custom action to handle immediate discovery"""
 
     def __call__(self, parser, namespace, values, option_string=None):
+        from pvValidatorUtils import epicsUtils
+
+        if epicsUtils is None:
+            print(
+                "Error: IOC discovery needs the compiled EPICS module (not available)."
+            )
+            raise SystemExit(10)
         print(epicsUtils(True).getServerList())
         raise SystemExit(0)
 
@@ -228,22 +249,46 @@ def main():
     if not (args.iocserver or args.pvfile or args.epicsdb or args.msi):
         parser.error("one of the arguments -s -i -e -m is required")
 
-    # --verbose implies --suggest (show fix suggestions alongside validation)
-    # But NOT when --format is specified (--format has its own output path)
-    if args.verbose and not args.suggest and not args.fix and not args.output_format:
+    # --suggest/--fix render their own output; combining them with a competing
+    # output sink silently dropped it (e.g. -o wrote no file, --format emitted no
+    # JSON). Reject the conflict up front instead of resolving it by dispatch order.
+    if (args.suggest or args.fix) and (
+        args.output_format or args.csvfile or args.stdout
+    ):
+        parser.error(
+            "--suggest/--fix cannot be combined with --format, -o or --stdout "
+            "(each produces its own output)"
+        )
+
+    # --verbose implies --suggest (show fix suggestions alongside validation), but
+    # ONLY when no other output sink is selected — otherwise --verbose used to hijack
+    # -o/--stdout/--format and silently drop the requested output.
+    if (
+        args.verbose
+        and not args.suggest
+        and not args.fix
+        and not args.output_format
+        and not args.csvfile
+        and not args.stdout
+    ):
         args.suggest = True
 
-    # Handle --suggest or --fix (uses autofix module)
+    # Handle --suggest or --fix (uses autofix module).
+    # File input (-i/-e/-m) is read as plain text by _load_pv_list, so only the
+    # IOC-server source needs the compiled epicsUtils container here.
     if args.suggest or args.fix:
-        pvepics = pvinput(args)
+        pvepics = pvinput(args) if args.iocserver else None
         _run_with_autofix(args, pvepics)
         return
 
-    # Handle --format json/html separately (uses new reporter module)
+    # Handle --format json/html separately (uses new reporter module).
     if args.output_format:
-        pvepics = pvinput(args)
+        pvepics = pvinput(args) if args.iocserver else None
         _run_with_reporter(args, pvepics)
         return
+
+    # Classic pipeline (TUI / CSV / stdout table) needs the epicsUtils container.
+    from pvValidatorUtils import pvUtils
 
     pvepics = pvinput(args)
 
@@ -289,6 +334,9 @@ def _load_pv_list(args, pvepics):
         sys.exit(1)
     pv_list = []
     if args.pvfile:
+        if not os.path.isfile(args.pvfile):
+            print(f"Error: {args.pvfile} is not a valid file")
+            sys.exit(1)
         with open(args.pvfile, "r", encoding="utf-8-sig") as f:
             for line in f:
                 line = line.strip()
@@ -360,6 +408,11 @@ def _run_with_reporter(args, pvepics):
         reporter = HTMLReporter()
         print(reporter.generate(results, metadata))
 
+    # Exit-code contract (1 = errors), consistent with the classic --stdout/-o path
+    # so JSON/HTML output is usable as a CI gate (previously always exited 0).
+    if any((not r.format_valid) or r.has_errors for r in results):
+        sys.exit(1)
+
 
 def _explain_rule(rule_id):
     """Show full documentation for a specific validation rule."""
@@ -406,6 +459,7 @@ def _run_with_autofix(args, pvepics):
     fixed_count = 0
     manual_count = 0
     valid_count = 0
+    fixed = {}  # pv -> applied result, reused by the exit-code check (no recompute)
 
     for pv in pv_list:
         suggestions = suggest_fixes(pv)
@@ -444,8 +498,10 @@ def _run_with_autofix(args, pvepics):
                     elif choice in ("a", "all"):
                         args.interactive = False  # disable interactive for remaining
                         fixed_count += 1
+                        fixed[pv] = result
                     elif choice in ("y", "yes", ""):
                         fixed_count += 1
+                        fixed[pv] = result
                     else:
                         valid_count += 1
                         continue
@@ -455,6 +511,7 @@ def _run_with_autofix(args, pvepics):
                     for s in auto_suggestions:
                         print(f"      [{s.rule_id}] {s.description}")
                     fixed_count += 1
+                    fixed[pv] = result
             else:
                 valid_count += 1
         else:
@@ -481,3 +538,45 @@ def _run_with_autofix(args, pvepics):
     else:
         need_fix = total - valid_count
         print(f"Total: {total} PVs | Need fixes: {need_fix} | Valid: {valid_count}")
+
+    # Exit-code contract (1 = errors), consistent with the classic pipeline AND the
+    # reporter path (single-PV rules AND cross-PV uniqueness). For --fix we judge the
+    # FIXED form (reusing the results already computed in the loop — no recompute);
+    # for --suggest, the originals.
+    from pvValidatorUtils.parser import parse_pv
+    from pvValidatorUtils.rules import (
+        Severity,
+        check_all_rules,
+        check_property_uniqueness,
+    )
+
+    finals = [fixed.get(p, p) for p in pv_list] if args.fix else pv_list
+
+    def _has_error(pv_str):
+        comps = parse_pv(pv_str)
+        if comps is None:
+            return True  # invalid format counts as an error
+        return any(m.severity == Severity.ERROR for m in check_all_rules(comps))
+
+    has_errors = any(_has_error(f) for f in finals)
+
+    # Cross-PV property uniqueness (PROP-1) — excluded from check_all_rules, so gate
+    # on it separately, mirroring _run_with_reporter, or --suggest/--fix would exit 0
+    # on duplicate/confusable properties while --format json exits 1.
+    if not has_errors:
+        device_properties = {}
+        for f in finals:
+            comps = parse_pv(f)
+            if comps is not None:
+                device_properties.setdefault(comps.ess_name, []).append(comps.property)
+        for dev_key, props in device_properties.items():
+            if len(props) > 1:
+                uniq = check_property_uniqueness(dev_key, props)
+                if any(
+                    m.severity == Severity.ERROR for msgs in uniq.values() for m in msgs
+                ):
+                    has_errors = True
+                    break
+
+    if has_errors:
+        sys.exit(1)

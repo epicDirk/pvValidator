@@ -3,9 +3,18 @@ from os import environ
 from time import sleep
 
 import pytest
-from run_iocsh import IOC
 
+# NOTE: run_iocsh is imported lazily inside pvobj_fromioc (below), not here. A
+# top-level `from run_iocsh import IOC` made the WHOLE module fail collection when
+# run_iocsh was absent (it is an ESS-network-only extra installed with `|| true`),
+# and `-k` does not help because it runs after collection. Only the epics_ioc test
+# needs it, and that test is marker-skipped offline.
 from pvValidatorUtils import epicsUtils, pvUtils
+
+# Every test here drives the classic pvUtils pipeline, which builds an epicsUtils
+# (SWIG) PV container — so the whole module needs the compiled extensions. conftest
+# skips these when SWIG is absent (pure-Python checkout); they run in the e3/Docker image.
+pytestmark = pytest.mark.swig
 
 _test_dir = str(pathlib.Path(__file__).parent)
 fmtfile = _test_dir + "/pvlist_fmt.txt"
@@ -59,6 +68,8 @@ def pvobj_pvsubs():
 @pytest.fixture
 def pvobj_fromioc():
     """This fixture is to check the PV fetching from an IOC"""
+    from run_iocsh import IOC  # lazy import — only the epics_ioc test needs it
+
     requirepath = environ.get("E3_REQUIRE_LOCATION")
     assert requirepath, "Source your EPICS Env"
     environ["IOCNAME"] = "Sys-Sub:SC-IOC-001"
@@ -128,14 +139,52 @@ def test_pvprop(pvobj_pvcheck: pvUtils):
         pvobj_pvcheck.run()
     for c, pv in enumerate(pvlist):
         if c > RULE_FAIL_BOUNDARY:
-            assert not pvobj_pvcheck.VWarnD[pv], (
-                "PV " + pv + " should have a rule warning"
-            )
+            # PVs after the boundary are warning-only: they MUST carry a rule warning.
+            # (Previously this asserted `not VWarnD` — inverted — and the branch was
+            #  dead because the file had no PVs past the boundary.)
+            assert pvobj_pvcheck.VWarnD[pv], "PV " + pv + " should have a rule warning"
         else:
             assert not pvobj_pvcheck.VRuleD[pv], (
                 "PV " + pv + " should have a rule failure"
             )
     assert pvobj_pvcheck.PVInternal == 2, "PV internal wrongly counted!"
+
+
+def test_structural_error_is_status_effective(tmp_path):
+    """P0 regression: a structural error (ELEM-6) must be status- and exit-effective.
+
+    Previously the classic pipeline wrote structural findings to datainfo only, so
+    an ELEM-6 error left VRuleD=True and exited 0. It must now fail the rule check.
+    """
+    f = tmp_path / "pvs.txt"
+    f.write_text(
+        "ABCDEFG-010:EMR-TT-001:Temperature\n"
+    )  # System "ABCDEFG" = 7 chars -> ELEM-6
+    pv = pvUtils(pvepics=epicsUtils(), checkonlyfmt=True, pvfile=str(f), stdout=True)
+    with pytest.raises(SystemExit):  # errors -> SystemExit(1)
+        pv.run()
+    name = "ABCDEFG-010:EMR-TT-001:Temperature"
+    assert pv.VRuleD[name] is False, "ELEM-6 structural error must fail the rule check"
+    assert pv.exiterror is True
+
+
+def test_mtca_warning_is_status_effective(tmp_path):
+    """F2 regression: the classic pipeline must now run check_mtca_naming (EXC-MTCA).
+
+    A non-3-digit MTCA index is a warning that used to be invisible in the legacy
+    path; it must now surface as a rule warning (VWarnD=True) without a hard failure.
+    """
+    f = tmp_path / "pvs.txt"
+    f.write_text(
+        "PBI-BCM01:Ctrl-MTCA-12:Status\n"
+    )  # MTCA index 12 (not 3 digits) -> EXC-MTCA
+    pv = pvUtils(pvepics=epicsUtils(), checkonlyfmt=True, pvfile=str(f), stdout=True)
+    pv.run()  # warnings only -> no SystemExit
+    name = "PBI-BCM01:Ctrl-MTCA-12:Status"
+    assert (
+        pv.VWarnD[name] is True
+    ), "MTCA warning must be status-effective in the classic path"
+    assert pv.exiterror is False
 
 
 def test_epicsdb(pvobj_pvdb: pvUtils):
@@ -166,6 +215,7 @@ def test_epicssubs(pvobj_pvsubs: pvUtils):
     ), "Wrong PV name extracted from EPICS Db using substitution file!"
 
 
+@pytest.mark.epics_ioc
 def test_pvepics(pvobj_fromioc: pvUtils):
     """Testing the PV list size fetched from an IOC"""
     pvlist = pvobj_fromioc.pvepics.pvstringlist
@@ -175,6 +225,7 @@ def test_pvepics(pvobj_fromioc: pvUtils):
     assert pvlist.size() <= 20, "Unexpectedly many PVs from IOC"
 
 
+@pytest.mark.ess_network
 def test_backend(pvobj_backend: pvUtils):
     """Testing the reading of the text file, PV format, property and validation via naming service api"""
     lines = get_lines(apifile)

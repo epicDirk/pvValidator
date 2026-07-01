@@ -2,6 +2,59 @@
 
 All notable changes to pvValidator are documented here.
 
+## [Unreleased] — QA round 2: correctness & robustness (2026-07-01)
+
+### Fixed
+- **P0 — structural errors are now status- and exit-effective.** The classic `pvUtils`
+  pipeline wrote element/index/legacy findings to `datainfo` only, so a structural error
+  (e.g. ELEM-6, a 7-char System) left `VRuleD=True` and `--noapi` exited **0**. Structural
+  ERROR/WARNING now flow through `_checkDataMsg` into `PVErrList`/`PVWarnList`
+  (`PVErrList`/`PVWarnList` are initialised in `__init__`). *Verified: exit 1 in the real CLI.*
+- **P0 — pure-Python import decoupling.** `import pvValidatorUtils.parser` no longer pulls in
+  `pvUtils → tabview → curses`: `__init__` exposes `pvUtils` lazily, `curses` is guarded in
+  `tabview`, and `pvValidator.py` imports SWIG lazily (a plain `-i` file needs no `epicsUtils`).
+  Pure-Python modules and `--explain`/`--format`/`--suggest` now work without `_curses`/EPICS.
+- **Two rule paths unified.** The classic path now also runs `check_legacy_index`,
+  `check_pascal_case`, `check_mtca_naming` — same coverage as the JSON/HTML reporter.
+- **Exit codes consistent across output modes.** `--format json/html` and `--suggest/--fix`
+  now exit 1 when errors are present (previously always 0).
+- **naming_client:** `check_connectivity()` uses `raise_for_status()` + the configured
+  `timeout` (HTTP 5xx no longer counts as "reachable"); JSON shape is validated
+  (dict/list mismatches raise `NamingServiceResponseError` instead of `AttributeError`);
+  `_sys_cache`/`_dev_cache` are bounded; transient connection/timeout failures are **not**
+  cached as "not approved"; `search_parts` tolerates malformed JSON / wrong shape → `[]`.
+- **Rule-ID drift.** `LEGACY` → `LEGACY-PREFIX` (rules, autofix, web UI); `IDX-STYLE`,
+  `PROP-EMPTY`, `IDX-LONG` added to the YAML so `--explain` resolves them. New
+  `test_rule_id_sync.py` fails if any emitted rule ID is missing from the YAML/allowlist.
+- **Property character rule** is now an allowlist (ASCII alphanumeric + `-_`), so spaces,
+  tabs and non-ASCII (`Foo Bar`, `Temp°C`) are correctly flagged (were passing as VALID).
+- **`--verbose` no longer hijacks `-o`/`--stdout`** (the CSV was silently not written);
+  `--suggest/--fix` combined with `--format`/`-o` is now rejected with a clear error.
+- **C++ MSI:** `subFile` gets a constructor (`fp=nullptr`), fixing undefined behaviour when
+  `fopen()` fails and cleanup reads an uninitialised `FILE*`; `addMacroReplacements` no longer
+  leaks the `macParseDefns` pairs array on the empty-definition / install-failure paths.
+- **Smaller:** no-longer-spurious `PROP-3` for short known properties with `-SP`/`-RB`
+  (`On-SP`); `_checkValidName` splits the system part on the first dash only (`split("-",1)`);
+  reporter summary buckets partition the total (warnings-only no longer double-counted);
+  the parser rejects a trailing-dash empty index; CSV output no longer crashes on empty input.
+
+### Changed
+- **Test selection is marker-based.** `test_pvepics`→`epics_ioc`, `test_backend`→`ess_network`;
+  the fragile `-k "not backend and not pvepics and not test_all"` (which also dropped six
+  legitimate `test_all_*` offline tests via substring match) is gone from README / GitLab CI /
+  Dockerfile. `run_iocsh` is imported lazily so offline collection never breaks. New `swig`
+  marker auto-skips SWIG-dependent tests where the extension is absent.
+- **CI/build:** the GitLab offline job selects tests by marker (no `-k`). The local Docker build
+  (outer, dev tooling — not part of this repo) was additionally hardened: base pinned to a digest,
+  the editable install split into its own `RUN` so `|| true` no longer masks it (only the ESS-only
+  `run-iocsh` extra may fail).
+- **`test_pvprop`:** corrected the inverted, previously-dead warning assertion and added real
+  warning-only PVs so the branch actually runs.
+
+### Added
+- `test/test_qa_round2.py` — regression tests for the new findings (parser, rules, naming_client,
+  reporter exit/summary). `test/test_rule_id_sync.py` — YAML↔code rule-ID sync gate.
+
 ## [Unreleased] — Packaging fix + QA round (2026-07-01)
 
 ### Fixed

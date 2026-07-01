@@ -108,8 +108,9 @@ The suite runs **offline by default**; tests that need the ESS Naming Service or
 opt-in (marked `ess_network` / `epics_ioc` and skipped otherwise).
 
 ```bash
-# Offline tests (default — no ESS network, no IOC)
-pytest test/ -v -k "not backend and not pvepics and not test_all"
+# Offline tests (default — no ESS network, no IOC). Selection is marker-based:
+# ess_network + epics_ioc tests auto-skip without --ess-network (no fragile -k needed).
+pytest test/ -v
 
 # Include ESS Naming Service tests (needs ESS network)
 pytest test/ -v --ess-network

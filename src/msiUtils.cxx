@@ -202,7 +202,8 @@ void msiUtils::inputOpenFile(inputData *pinputData,
   pinputData->inputFileList.push_front(inFile);
 }
 
-// Duplicate free function inputAddPath() removed — identical to msiUtils::inputAddPath() below
+// Duplicate free function inputAddPath() removed — identical to
+// msiUtils::inputAddPath() below
 
 void msiUtils::inputAddPath(inputData *const pinputData,
                             const char *const path) {
@@ -275,7 +276,8 @@ void msiUtils::abortExit(const int status) {
     fclose(stdout);
     unlink(outFile);
   }
-  throw std::runtime_error("msi: fatal error (status " + std::to_string(status) + ")");
+  throw std::runtime_error("msi: fatal error (status " +
+                           std::to_string(status) + ")");
 }
 
 /*start of code that handles substitution file*/
@@ -697,13 +699,16 @@ void msiUtils::addMacroReplacements(MAC_HANDLE *const macPvt,
   if (status == -1) {
     throw std::runtime_error("msi: Error from macParseDefns");
   }
-  if (status) {
-    status = macInstallMacros(macPvt, pairs);
-    if (!status) {
-      throw std::runtime_error("msi: Error from macInstallMacros");
-    }
+  // macParseDefns allocates *pairs contiguously whenever status >= 0 (including
+  // the status==0 "no definitions" case), and the caller owns it. Previously it
+  // was freed only inside `if (status)`, leaking one pairs array per empty
+  // definition string, and also leaking on the macInstallMacros-failure throw.
+  // Free it on every non-(-1) path.
+  if (status > 0 && !macInstallMacros(macPvt, pairs)) {
     free(pairs);
+    throw std::runtime_error("msi: Error from macInstallMacros");
   }
+  free(pairs);
 }
 
 void msiUtils::catMacroReplacements(subInfo *psubInfo, const char *value) {

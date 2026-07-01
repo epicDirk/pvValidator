@@ -353,10 +353,12 @@ function checkRules(c) {
     else if(elems[e][2]&&!/^[A-Za-z]/.test(v))m.push({s:'error',m:elems[e][0]+' must start with letter',r:'ELEM-2'});}
   if(!c.formatType.startsWith('high-level')){
     if(!c.index)m.push({s:'error',m:'Device index is missing',r:'IDX-MANDATORY'});
-    else if(c.index.length>6)m.push({s:'error',m:'Index exceeds 6 chars',r:'IDX-LEN'});
-    else if(!/^\d{1,4}$/.test(c.index)&&!/^\d{3}[a-z]{0,3}$/.test(c.index)&&!/^\d{1,6}$/.test(c.index))
-      m.push({s:'warning',m:'Non-standard index',r:'IDX-STYLE'});}
-  for(var l=0;l<LEGACY.length;l++)if(p.startsWith(LEGACY[l])){m.push({s:'warning',m:'Legacy prefix '+LEGACY[l],r:'LEGACY'});break;}
+    else{
+      if(/^\d{1,4}$/.test(c.index)||/^\d{3}[a-z]{0,3}$/.test(c.index)){/* canonical style */}
+      else if(/^\d{5,6}$/.test(c.index)){if(c.discipline!=='Cryo'&&c.discipline!=='Vac')m.push({s:'warning',m:'Index has '+c.index.length+' digits; Scientific style is 1-4 digits',r:'IDX-LONG'});}
+      else m.push({s:'warning',m:'Non-standard index',r:'IDX-STYLE'});
+      if(c.index.length>6)m.push({s:'error',m:'Index exceeds 6 chars',r:'IDX-LEN'});}}
+  for(var l=0;l<LEGACY.length;l++)if(p.startsWith(LEGACY[l])){m.push({s:'warning',m:'Legacy prefix '+LEGACY[l],r:'LEGACY-PREFIX'});break;}
   // PROP-5: PascalCase check
   if(p&&!p.startsWith('#')){var clean=p;if(clean.endsWith('-SP'))clean=clean.slice(0,-3);else if(clean.endsWith('-RB'))clean=clean.slice(0,-3);
     if(clean.length>4&&(clean===clean.toUpperCase()||clean===clean.toLowerCase()))m.push({s:'warning',m:'Should use PascalCase',r:'PROP-5'});}
@@ -391,7 +393,8 @@ var RULE_INFO = {
   'ELEM-2':{ref:'ESS-0000757 \u00a73 Rule 2',why:'Digit-start is reserved for subsystem section numbers (e.g., DTL-010).',fix:'Start with a letter.'},
   'IDX-LEN':{ref:'ESS-0000757 \u00a75.2',why:'Same 6-character limit as other name elements.',fix:'Shorten the index. Standard: 1-4 digits.'},
   'IDX-STYLE':{ref:'ESS-0000757 \u00a75.2',why:'Should follow Scientific (1-4 digits) or P&ID (3 digits + lowercase) style.',fix:'Adjust to match your discipline style.'},
-  'LEGACY':{ref:'ESS-0000757 Annex C',why:'Cmd_, P_, FB_, SP_ prefixes are from older naming schemes.',fix:'Remove the prefix for new PVs.',suggestion:function(pv,p){for(var i=0;i<LEGACY.length;i++)if(p.startsWith(LEGACY[i]))return pv.replace(/:([^:]+)$/,':'+p.slice(LEGACY[i].length));return null;}},
+  'IDX-LONG':{ref:'ESS-0000757 \u00a75.2',why:'Scientific style is 1-4 digits; 5-6 digit indexes are tolerated (legacy) but discouraged.',fix:'Use 1-4 digits for new equipment (Cryo/Vac 5-digit is a documented exception).'},
+  'LEGACY-PREFIX':{ref:'ESS-0000757 Annex C',why:'Cmd_, P_, FB_, SP_ prefixes are from older naming schemes.',fix:'Remove the prefix for new PVs.',suggestion:function(pv,p){for(var i=0;i<LEGACY.length;i++)if(p.startsWith(LEGACY[i]))return pv.replace(/:([^:]+)$/,':'+p.slice(LEGACY[i].length));return null;}},
   'PROP-2-WARN':{ref:'ESS-0000757 \u00a76.2 Rule 2',why:'Recommended limit is 20 chars. You can go to 25 with justification.',fix:'Consider abbreviating.'},
   'PROP-EMPTY':{ref:'ESS-0000757 \u00a76.2',why:'Every PV needs a property name after the last colon.',fix:'Add a property name (e.g., Temperature, Status, Pressure).'},
   'IDX-MANDATORY':{ref:'ESS-0000757 \u00a75.2',why:'Every device needs an index to distinguish multiple instances.',fix:'Add a numeric index (e.g., 001).'},

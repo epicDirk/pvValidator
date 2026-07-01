@@ -203,11 +203,48 @@ index:
     example_good: "DTL-010:EMR-TT-001:Temperature"
     example_bad: "DTL-010:EMR-TT-0000001:Temperature"
 
+  - id: "IDX-STYLE"
+    check: "style"
+    severity: "warning"
+    message: "Index does not follow Scientific or P&ID style"
+    reference: "Section 5.2"
+    why: >
+      Generic style warning emitted by the validation engine when an index matches
+      neither the Scientific (IDX-SCIENTIFIC) nor the P&ID (IDX-PID) pattern.
+    fix: "Use 1-4 digits (Scientific) or 3 digits + optional lowercase (P&ID)."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-A01:Temperature"
+
+  - id: "IDX-LONG"
+    check: "long_numeric"
+    severity: "warning"
+    message: "Numeric index has 5-6 digits (Scientific style is 1-4)"
+    reference: "Section 5.2.1"
+    why: >
+      Purely numeric 5-6 digit indexes are tolerated for legacy equipment but fall
+      outside the 1-4 digit Scientific style, so they are surfaced as a warning
+      rather than silently accepted. Cryo/Vac 5-digit is covered by LEGACY-5DIGIT.
+    fix: "Use 1-4 digits for new equipment."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-12345:Temperature"
+
 # ============================================================
 # PV Property Rules
 # ============================================================
 
 property:
+  - id: "PROP-EMPTY"
+    check: "required"
+    severity: "error"
+    message: "The PV Property is missing"
+    reference: "Section 6.2"
+    why: >
+      Every PV must end with a property name after the last colon; an empty
+      property is not a valid PV.
+    fix: "Add a property name (e.g., Temperature, Status, Pressure)."
+    example_good: "DTL-010:EMR-TT-001:Temperature"
+    example_bad: "DTL-010:EMR-TT-001:"
+
   - id: "PV-LEN"
     check: "pv_max_length"
     value: 60

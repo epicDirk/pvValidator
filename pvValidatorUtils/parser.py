@@ -179,7 +179,10 @@ def _parse_device_part(dev_part: str) -> tuple:
     # Rejoin remaining segments as index
     index = "-".join(segments[2:])
 
-    if not discipline or not device:
+    # Reject empty discipline/device/index. Without the `not index` guard a
+    # trailing dash ("EMR-TT-") produced an empty index that parsed as valid —
+    # asymmetric with the 2-segment form ("EMR-TT") which is rejected above.
+    if not discipline or not device or not index:
         return None, None, None
 
     return discipline, device, index

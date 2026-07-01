@@ -66,6 +66,14 @@ typedef struct subFile {
   char *pnextChar;
   tokenType token;
   char string[MAX_BUFFER_SIZE];
+  // Default-initialise so a subFile allocated in substituteOpen() before
+  // fopen() has fp == nullptr. Otherwise, if fopen() fails and abortExit()
+  // throws, the cleanup in freeSubFile() reads an uninitialised fp -> undefined
+  // behaviour.
+  subFile() : fp(nullptr), lineNum(0), pnextChar(nullptr), token(tokenEOF) {
+    inputBuffer[0] = '\0';
+    string[0] = '\0';
+  }
 } subFile;
 
 // /* Module to read the substitution file */

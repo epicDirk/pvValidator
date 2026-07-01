@@ -41,6 +41,20 @@ def pytest_configure(config):
         "markers",
         "packaging: builds the sdist/wheel to verify bundled data files ship",
     )
+    config.addinivalue_line(
+        "markers",
+        "swig: requires the compiled SWIG extensions (epicsUtils/msiUtils)",
+    )
+
+
+def _has_swig() -> bool:
+    """True if the compiled SWIG extension is importable (EPICS/e3 environment)."""
+    try:
+        from pvValidatorUtils import epicsUtils
+
+        return epicsUtils is not None
+    except Exception:
+        return False
 
 
 def pytest_collection_modifyitems(config, items):
@@ -57,6 +71,17 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "epics_ioc" in item.keywords:
             item.add_marker(skip_ioc)
+
+    # Skip SWIG-dependent tests when the compiled extensions are not built (e.g. a
+    # plain Windows / pure-Python checkout). Lets `pytest test/` collect cleanly
+    # everywhere; in the e3/Docker image SWIG is present so these still run.
+    if not _has_swig():
+        skip_swig = pytest.mark.skip(
+            reason="needs compiled SWIG extensions (epicsUtils/msiUtils)"
+        )
+        for item in items:
+            if "swig" in item.keywords:
+                item.add_marker(skip_swig)
 
 
 # ---------------------------------------------------------------------------

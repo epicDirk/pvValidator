@@ -17,3 +17,6 @@ DTL-010:EMR-TT-010:Temperature-R
 DTL-010:EMR-TT-010:Temperature-RBV
 DTL-010:EMR-TT-010:Temperature_RBV
 DTL-010:EMR-TT-011:#Te
+DTL-010:EMR-TT-002:temperature
+DTL-010:EMR-TT-003:massflow
+DTL-010:EMR-TT-12345:Pressure

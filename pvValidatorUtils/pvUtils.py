@@ -31,7 +31,10 @@ from pvValidatorUtils.rules import (
     check_device_index,
     check_element_characters,
     check_element_lengths,
+    check_legacy_index,
     check_legacy_prefix,
+    check_mtca_naming,
+    check_pascal_case,
     check_property_uniqueness,
     effective_property_length,
 )
@@ -116,6 +119,11 @@ class pvUtils:
         self.SysStructCheckList = {}
         self.DevStructCheckList = {}
         self.EssNameCheckList = {}
+        # Error/Warning tracking lists — initialised here (NOT in _checkPropRules)
+        # so the structural checks in _checkValidFormat, which runs first, can feed
+        # them and thereby become status- and exit-code-effective (see _checkStructuralRules).
+        self.PVErrList = []
+        self.PVWarnList = []
         self.PVRuleFail = 0
         self.PVInternal = 0
         self.PVRuleWarn = 0
@@ -281,7 +289,10 @@ class pvUtils:
                 print(self.infovalidation)
             else:
                 self.data[0].append(self.ioctitle)
-                self.data[1].append(self.infovalidation)
+                # With an empty PV list, self.data holds only the header row, so
+                # self.data[1] does not exist — guard against IndexError.
+                if len(self.data) > 1:
+                    self.data[1].append(self.infovalidation)
                 with open(self.csvfile, "w", newline="", encoding="utf-8") as f:
                     writer = csv.writer(f)
                     writer.writerows(self.data)
@@ -331,7 +342,11 @@ class pvUtils:
         for essname in self.PVDict.keys():
             s = essname.split(":")[0]
             try:
-                sys_name, subsys = s.split("-")
+                # Split on the FIRST dash only, matching parser._parse_system_part.
+                # A plain s.split("-") mis-handled a system part with 2+ dashes
+                # (e.g. "A-B-C" -> ValueError -> queried "A-B-C" and skipped the
+                # subsystem check entirely). "A-B-C" now -> sys="A", subsys="B-C".
+                sys_name, subsys = s.split("-", 1)
             except ValueError:
                 sys_name = s
                 subsys = ""
@@ -359,9 +374,7 @@ class pvUtils:
                 confusables = self.api_client.find_confusables(
                     sys_name, category="system"
                 )
-                for msg in check_confusable_element(
-                    sys_name, confusables, "system"
-                ):
+                for msg in check_confusable_element(sys_name, confusables, "system"):
                     scheck += f"Warning: {msg.message}\n"
 
             # Subsystem check
@@ -463,17 +476,33 @@ class pvUtils:
                 self.VFormD[pv] = False
 
     def _checkStructuralRules(self, pv, components):
-        """Run element length, character, index, and legacy checks."""
+        """Run element, index, and legacy checks — and make them status-effective.
+
+        Previously these findings were written to ``datainfo`` only, so ELEM/IDX/
+        LEGACY/MTCA errors were displayed but never reached ``PVErrList``/
+        ``PVWarnList`` — a structural error left ``VRuleD=True`` and produced exit
+        code 0 (the P0 finding). Routing ERROR/WARNING through ``_checkDataMsg``
+        gives the classic pipeline the SAME rule coverage as ``check_all_rules``
+        (used by the JSON/HTML reporter), closing the two-rule-path divergence.
+        """
         for check_fn in [
             check_element_lengths,
             check_element_characters,
             check_device_index,
             check_legacy_prefix,
+            check_legacy_index,
+            check_pascal_case,
+            check_mtca_naming,
         ]:
             for msg in check_fn(components):
                 text = f"{msg.severity.value}: {msg.message}\n"
-                if text not in self.datainfo.get(pv, ""):
-                    self.datainfo[pv] = self.datainfo.get(pv, "") + text
+                if msg.severity == Severity.ERROR:
+                    self._checkDataMsg(pv1=pv, err1=text)
+                elif msg.severity == Severity.WARNING:
+                    self._checkDataMsg(pv1=pv, warn1=text)
+                else:  # INFO (e.g. EXC-TGT) — informational, not status-effective
+                    if text not in self.datainfo.get(pv, ""):
+                        self.datainfo[pv] = self.datainfo.get(pv, "") + text
 
     def _isValidFormat(self, pvelem, pv):
         if pvelem == []:
@@ -501,9 +530,10 @@ class pvUtils:
 
         Uses O(n) normalized uniqueness check from rules.py for confusable
         detection, plus individual property checks.
+
+        NOTE: PVErrList/PVWarnList are initialised in __init__ (not here) so the
+        structural checks that run earlier in _checkValidFormat are preserved.
         """
-        self.PVErrList = []
-        self.PVWarnList = []
         TempErr = ["-Drv01-SyncErr-Alrm", "-Enc01-LtchAutRstSp"]
         tmperrmsg = "      !!!This issue is fixed since version 8 of ECMCCFG Module!!!Suggest to update your EPICS Module!!!\n"
 
@@ -571,7 +601,12 @@ class pvUtils:
                             warn1=f"Warning: The PV Property is below {min_prop_warn} characters ({prop_eff_len})\n",
                         )
 
-                if any(c in self.charnotallow for c in prop):
+                # ESS-0000757 §6.2 Rule 11: ASCII alphanumeric only. Allowlist (not
+                # the charnotallow blocklist) so spaces/tabs/non-ASCII are caught too,
+                # matching rules.check_property_characters. '#' handled separately below.
+                if any(
+                    not (c.isascii() and c.isalnum()) and c not in "-_#" for c in prop
+                ):
                     self._checkDataMsg(
                         pv1=pv,
                         err1="Error: The PV Property contains not allowed character(s)\n",
@@ -734,4 +769,10 @@ class pvUtils:
         self.license = meta.get("License")
         self.platform = meta.get_all("Platform")
         self.description = meta.get("Summary")
-        self.epicsinfo = epicsUtils().getVersion
+        # epicsUtils is a compiled SWIG module — absent in pure-Python setups.
+        # Guard so metadata/version output does not require EPICS to be built.
+        self.epicsinfo = (
+            epicsUtils().getVersion
+            if epicsUtils is not None
+            else "EPICS module not compiled"
+        )

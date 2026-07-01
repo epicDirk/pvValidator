@@ -181,8 +181,10 @@ def check_property_length(components: PVComponents) -> List[ValidationMessage]:
 
     # <4 chars: check against known short property names
     if 0 < effective_len < MIN_PROP_LENGTH_WARN:
-        # Strip prefix markers for comparison
-        clean = prop.lstrip("#")
+        # Compare against the whitelist using the *effective* name: strip the
+        # leading '#' AND the -SP/-RB suffix, so a valid short setpoint/readback
+        # like "On-SP" or "Set-SP" is recognised (was spuriously flagged PROP-3).
+        clean = _strip_standard_suffix(prop.lstrip("#"))
         if clean not in KNOWN_SHORT_PROPERTIES:
             msgs.append(
                 ValidationMessage(
@@ -195,12 +197,24 @@ def check_property_length(components: PVComponents) -> List[ValidationMessage]:
     return msgs
 
 
+STANDARD_SUFFIXES = ("-SP", "-RB")
+
+
+def _strip_standard_suffix(prop: str) -> str:
+    """Remove a single trailing standard suffix (-SP / -RB) if present.
+
+    Shared by effective_property_length, check_property_length (the <4-char
+    whitelist check) and check_pascal_case so all three treat suffixes the same.
+    """
+    for suffix in STANDARD_SUFFIXES:
+        if prop.endswith(suffix):
+            return prop[: -len(suffix)]
+    return prop
+
+
 def effective_property_length(prop: str) -> int:
     """Property length excluding -SP/-RB suffix (ESS-0000757 §6.2 Rule 9)."""
-    for suffix in ("-SP", "-RB"):
-        if prop.endswith(suffix):
-            return len(prop) - len(suffix)
-    return len(prop)
+    return len(_strip_standard_suffix(prop))
 
 
 def check_property_suffix(components: PVComponents) -> List[ValidationMessage]:
@@ -272,8 +286,11 @@ def check_property_characters(components: PVComponents) -> List[ValidationMessag
             )
         )
 
-    # No disallowed characters
-    if any(c in DISALLOWED_CHARS for c in prop):
+    # Character set (ESS-0000757 §6.2 Rule 11: ASCII alphanumeric only).
+    # Use an ALLOWLIST, not a blocklist: a fixed DISALLOWED_CHARS set silently let
+    # through spaces, tabs and every non-ASCII letter (e.g. "Foo Bar", "Temp°C").
+    # '#' is permitted here because its placement is validated separately below.
+    if any(not (c.isascii() and c.isalnum()) and c not in "-_#" for c in prop):
         msgs.append(
             ValidationMessage(
                 Severity.ERROR,
@@ -392,10 +409,24 @@ def check_device_index(components: PVComponents) -> List[ValidationMessage]:
     scientific = re.compile(r"^\d{1,4}$")
     # P&ID style: 3 numeric digits + optional 1-3 lowercase letters
     pid = re.compile(r"^\d{3}[a-z]{0,3}$")
-    # Extended: up to 4 digits (special cases)
-    extended = re.compile(r"^\d{1,6}$")
+    # 5-6 purely numeric digits: tolerated (legacy) but no longer SILENT — it now
+    # surfaces a visible IDX-LONG warning instead of passing as if canonical.
+    long_numeric = re.compile(r"^\d{5,6}$")
 
-    if not (scientific.match(idx) or pid.match(idx) or extended.match(idx)):
+    if scientific.match(idx) or pid.match(idx):
+        pass  # canonical style — no message
+    elif long_numeric.match(idx):
+        # Cryo/Vac legacy 5-digit is already reported by check_legacy_index
+        # (LEGACY-5DIGIT); avoid a duplicate warning for that discipline.
+        if components.discipline not in ("Cryo", "Vac"):
+            msgs.append(
+                ValidationMessage(
+                    Severity.WARNING,
+                    f'Index "{idx}" has {len(idx)} digits; Scientific style is 1-4 digits',
+                    "IDX-LONG",
+                )
+            )
+    else:
         msgs.append(
             ValidationMessage(
                 Severity.WARNING,
@@ -425,7 +456,7 @@ def check_legacy_prefix(components: PVComponents) -> List[ValidationMessage]:
                 ValidationMessage(
                     Severity.WARNING,
                     f'Property uses legacy prefix "{prefix}" (accepted but discouraged)',
-                    "LEGACY",
+                    "LEGACY-PREFIX",
                 )
             )
             break
@@ -452,12 +483,8 @@ def check_pascal_case(components: PVComponents) -> List[ValidationMessage]:
     prop = components.property
     if not prop or prop.startswith("#"):
         return []
-    # Strip standard suffixes before checking
-    clean = prop
-    for suffix in ("-SP", "-RB"):
-        if clean.endswith(suffix):
-            clean = clean[: -len(suffix)]
-            break
+    # Strip standard suffixes before checking (shared helper — see _strip_standard_suffix)
+    clean = _strip_standard_suffix(prop)
     if len(clean) <= 4 or clean in KNOWN_SHORT_PROPERTIES:
         return []
     if clean.isupper() or clean.islower():
@@ -497,8 +524,16 @@ def check_mtca_naming(components: PVComponents) -> List[ValidationMessage]:
 def normalize_for_confusion(prop: str) -> str:
     """Normalize a property name for confusable character detection.
 
-    Maps: I→1, l→1, O→0, VV→W, strips leading zeros.
-    Result is lowercase for case-insensitive comparison.
+    Maps visually confusable glyphs to a canonical skeleton: I→1, l→1, O→0, VV→W,
+    lowercased for case-insensitive comparison. A run of zeros that is followed by a
+    digit (i.e. not immediately before a letter/underscore/dash and not at the end)
+    is collapsed to a single '@' marker, so e.g. "Ch001" and "Ch0001" share a
+    skeleton; a trailing zero, or a zero directly before a letter, is kept as-is.
+
+    NOTE (spec decision, pending Alfio): this deliberately does NOT strip a leading
+    zero when the alternative has none, so "Temp01" and "Temp1" are treated as
+    DISTINCT (not a PROP-1 collision). Changing that would alter pass/fail behaviour
+    for existing PVs; see the QA report.
     """
     result = prop.lower()
     result = result.replace("l", "1").replace("i", "1")

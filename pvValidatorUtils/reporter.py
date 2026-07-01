@@ -38,7 +38,14 @@ class JSONReporter:
 
     def _summary(self, results: List[ValidationResult]) -> Dict:
         total = len(results)
-        valid = sum(1 for r in results if r.format_valid and not r.has_errors)
+        # "valid" means strictly clean — exclude warnings-only PVs so the buckets
+        # (valid / warnings / errors / invalid_format) partition the total instead
+        # of counting a warnings-only PV as both valid AND a warning.
+        valid = sum(
+            1
+            for r in results
+            if r.format_valid and not r.has_errors and not r.has_warnings
+        )
         errors = sum(1 for r in results if r.has_errors)
         warnings = sum(1 for r in results if r.has_warnings and not r.has_errors)
         invalid_format = sum(1 for r in results if not r.format_valid)
@@ -195,7 +202,14 @@ function filterTable(q) {{
 
     def _summary(self, results):
         total = len(results)
-        valid = sum(1 for r in results if r.format_valid and not r.has_errors)
+        # "valid" means strictly clean — exclude warnings-only PVs so the buckets
+        # (valid / warnings / errors / invalid_format) partition the total instead
+        # of counting a warnings-only PV as both valid AND a warning.
+        valid = sum(
+            1
+            for r in results
+            if r.format_valid and not r.has_errors and not r.has_warnings
+        )
         errors = sum(1 for r in results if r.has_errors)
         warnings = sum(1 for r in results if r.has_warnings and not r.has_errors)
         return {

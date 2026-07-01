@@ -231,14 +231,14 @@ class TestLegacyPrefixFix:
     def test_legacy_prefix_stripped(self, prefix, prop, expected):
         pv = f"DTL-010:EMR-TT-001:{prop}"
         fixes = suggest_fixes(pv)
-        legacy = [f for f in fixes if f.rule_id == "LEGACY"]
+        legacy = [f for f in fixes if f.rule_id == "LEGACY-PREFIX"]
         assert len(legacy) == 1
         assert legacy[0].auto_fixable
         assert legacy[0].suggested.endswith(f":{expected}")
 
     def test_no_legacy_prefix_no_fix(self):
         fixes = suggest_fixes("DTL-010:EMR-TT-001:Temperature")
-        legacy = [f for f in fixes if f.rule_id == "LEGACY"]
+        legacy = [f for f in fixes if f.rule_id == "LEGACY-PREFIX"]
         assert len(legacy) == 0
 
     def test_legacy_prefix_removed_by_apply(self):
