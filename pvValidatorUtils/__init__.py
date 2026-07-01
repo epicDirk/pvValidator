@@ -4,7 +4,7 @@ except ImportError:
     epicsUtils = None  # SWIG module not compiled
 
 try:
-    from .msiUtils import msiUtils  # noqa
+    from . import msiUtils  # noqa — SWIG *module*; pvUtils calls msiUtils.msiUtils(...)
 except ImportError:
     msiUtils = None  # SWIG module not compiled — needed only for the EPICS `-e` db path
 
