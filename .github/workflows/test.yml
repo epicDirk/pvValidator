@@ -32,7 +32,7 @@ jobs:
         # SWIG-dependent tests (test_validator, test_naming_api, test_cassettes)
         # run in GitLab CI Docker with the full e3 environment.
         run: |
-          pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py test/test_autofix.py test/test_pict.py test/test_db_parser.py test/test_fuzzing.py test/test_packaging.py test/test_naming_client_robustness.py test/test_reporter_escaping.py test/test_rule_loader_sync.py -v --tb=short --junitxml=test-results.xml
+          pytest test/test_parser.py test/test_rules.py test/test_rule_loader.py test/test_reporter.py test/test_autofix.py test/test_pict.py test/test_db_parser.py test/test_fuzzing.py test/test_packaging.py test/test_naming_client_robustness.py test/test_reporter_escaping.py test/test_rule_loader_sync.py test/test_backcompat.py -v --tb=short --junitxml=test-results.xml
 
   test-distribution:
     name: Built distribution contains bundled data

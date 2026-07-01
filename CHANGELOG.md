@@ -2,6 +2,35 @@
 
 All notable changes to pvValidator are documented here.
 
+## [Unreleased] — Packaging fix + QA round (2026-07-01)
+
+### Fixed
+- **Packaging (the reported bug)**: `pyproject.toml` `package-data` was missing
+  `data/**/*`, so a real (non-editable) `pip install` shipped without
+  `ess-0000757-rev10.yaml` and silently fell back to the ~6-rule built-in defaults.
+  Added `data/**/*`, `include-package-data`, and a `MANIFEST.in` so **both** wheel and
+  sdist ship the rule data; constrained `packages.find` to `pvValidatorUtils*`
+  (`test/` no longer leaks into the wheel).
+- **Package import**: guarded the `msiUtils` SWIG import (like `epicsUtils`) so the
+  package imports without compiled SWIG — fixes the pure-Python CI, which previously
+  errored at collection (last two runs were red).
+
+### Changed
+- **pyproject.toml**: modern SPDX license expression (`GPL-3.0-only`), dropped the
+  deprecated GPL classifier, pinned `requests`/`pyyaml` floors, single author entry.
+  Build now emits zero setuptools deprecation warnings.
+- **naming_client.py**: bounded response caches, `close()`/context-manager,
+  malformed-JSON handling, distinct connection-vs-HTTP logging.
+
+### Added
+- `test/test_packaging.py` + CI jobs (GitHub `test-distribution`, GitLab `test:dist`)
+  that build the real wheel/sdist and assert the rule YAML is bundled — the gate that
+  would have caught the reported bug.
+- Regression tests: HTML-report escaping, builtin-defaults↔YAML sync, v1.8.0
+  backwards-compatibility, naming-client robustness.
+- `docs/ESS-RESOURCES.md` (naming API repos, e3 env versions, artifactory), linked from
+  CONTRIBUTING; fixed the documented CMake version (3.0+ → 3.12+).
+
 ## [2.0.0] — 2026-03-30
 
 ### Security
